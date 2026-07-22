@@ -1,0 +1,28 @@
+{
+  "source": {
+    "file": "reference/all_gvpt2.json",
+    "sha256": "dcf15fed05932b9cc853ad6a8f87eebe73d8e9180c733a65b3e2336449d7162f",
+    "program": "ORCA 6.1.0-f.0 RELEASE",
+    "keywords": "wB97X-D4 VeryTightSCF DefGrid3 NoFrozenCore VPT2 aug-cc-pVTZ",
+    "intensity_source": "harmonic_IR_intensity"
+  },
+  "limitations": [
+    "ORCA labels these as approximate intensities copied from harmonic IR intensities",
+    "the ORCA and archived PySCF geometries are close but not identical",
+    "the benchmark validates units, scale, and isotope/mode trends rather than exact agreement"
+  ],
+  "systems": {
+    "H2O": [
+      {"mode_index": 1, "frequency_cm": 3690.106, "intensity_km_per_mol": 5.809},
+      {"mode_index": 2, "frequency_cm": 3777.534, "intensity_km_per_mol": 65.819}
+    ],
+    "HDO": [
+      {"mode_index": 1, "frequency_cm": 2736.298, "intensity_km_per_mol": 18.216},
+      {"mode_index": 2, "frequency_cm": 3733.855, "intensity_km_per_mol": 39.525}
+    ],
+    "D2O": [
+      {"mode_index": 1, "frequency_cm": 2692.639, "intensity_km_per_mol": 4.542},
+      {"mode_index": 2, "frequency_cm": 2801.496, "intensity_km_per_mol": 39.377}
+    ]
+  }
+}

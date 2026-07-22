@@ -1,0 +1,60 @@
+{
+  "archive_version": 1,
+  "created_for_package_version": "0.1.0a1",
+  "checked_in_report": {
+    "path": "convergence_report.json",
+    "command": "uv run python scripts/validate_archived_grids.py --nmax 12 --output validation_data/convergence_report.json"
+  },
+  "independent_intensity_benchmark": {
+    "path": "orca_stretch_intensity_benchmarks.json",
+    "sha256": "997db107014034c31378b8676ee975aa268d25e03972297a956bf79ca83c8a7c"
+  },
+  "coordinate_definition": {
+    "bond1_zero_based": [0, 1],
+    "bond2_zero_based": [0, 2],
+    "grid_A": {"minimum": 0.7, "maximum": 1.7, "points": 41},
+    "keo": "constant Wilson-G matrix"
+  },
+  "electronic_structure": {
+    "method": "wb97x",
+    "basis": "aug-cc-pVTZ",
+    "density_fitting": true,
+    "effective_auxbasis": "aug-cc-pVTZ-jkfit",
+    "dispersion": "d4",
+    "software_versions": "not recorded by the legacy cache or generation log"
+  },
+  "legacy_limitations": [
+    "schema 1 omits exact software versions, SCF tolerance, and DFT grid level",
+    "the archived log intensities use a superseded frequency-independent formula",
+    "these files are validation fixtures, not schema-v2 production caches"
+  ],
+  "systems": {
+    "H2O": {
+      "grid": "grids/H2O_2d_41x41_wb97x_aug-cc-pVTZ_d4.npz",
+      "grid_sha256": "ebf2984ddcc7c666bcf245ff5ecff35e3e4222bb22f434fe8e63265f44c01774",
+      "log": "logs/H2O_2d_41x41.log",
+      "log_sha256": "874e804bbfba53a1c3a992ba4b1840f3caeecfb57bb6af50d1f5bae33a2e2571",
+      "geometry": "geometries/H2O.pyscf_opt.mmol",
+      "geometry_sha256": "0946bf1d627d42f37ffe1b63d700db38586d0547cc11fc51796cc3e9a3bcf004",
+      "runtime_seconds": 742.74
+    },
+    "HDO": {
+      "grid": "grids/HDO_2d_41x41_wb97x_aug-cc-pVTZ_d4.npz",
+      "grid_sha256": "06d175cc6502c27220d3bfbf46f74e54b4a3619c32bde806fda144276edde3d2",
+      "log": "logs/HDO_2d_41x41.log",
+      "log_sha256": "b091b797908cfeb77b5a7752e751c9433820163e8fa2786035b2bb89ad82decd",
+      "geometry": "geometries/HDO.pyscf_opt.mmol",
+      "geometry_sha256": "8eccf41fe0a48e5decb0741cd6f6dec04475282a2631c0d683e284e4f5912dd0",
+      "runtime_seconds": 628.10
+    },
+    "D2O": {
+      "grid": "grids/D2O_2d_41x41_wb97x_aug-cc-pVTZ_d4.npz",
+      "grid_sha256": "be9c2e62c04ba7ddfaa9429a2868e3f02d02e402f23875fa66ddc542c4fd5dbb",
+      "log": "logs/D2O_2d_41x41.log",
+      "log_sha256": "d0315c11cb017ffbb1a93cf17916fe63c851288c2d9db779228e1f18a45cbd82",
+      "geometry": "geometries/D2O.pyscf_opt.mmol",
+      "geometry_sha256": "a1233aa282fdd710e1e9a9488852f28e2060adf6d042acfebfe11195b5acb109",
+      "runtime_seconds": 731.23
+    }
+  }
+}

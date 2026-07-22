@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev --extra pyscf
+      - run: uv run ruff check src tests scripts/validate_archived_grids.py
+      - run: uv run ruff format --check src tests scripts/validate_archived_grids.py
+      - run: uv run pytest -q
+      - run: uv run python scripts/validate_archived_grids.py --nmax 12 --output regenerated-report.json
+      - run: cmp validation_data/convergence_report.json regenerated-report.json
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          version=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          test "${GITHUB_REF_NAME#v}" = "$version"
+      - run: uv build
+      - run: uvx twine check dist/*
+      - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.vscf_two_mode
+      - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.vscf_two_mode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/*
+
+  publish:
+    if: ${{ vars.PUBLISH_TO_PYPI == 'true' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          args=(
+            "$GITHUB_REF_NAME"
+            dist/*
+            --verify-tag
+            --generate-notes
+            --title "$GITHUB_REF_NAME"
+          )
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" =~ (a|b|rc)[0-9]+$ ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}"

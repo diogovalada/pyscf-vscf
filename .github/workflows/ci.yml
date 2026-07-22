@@ -1,0 +1,60 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pure:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --extra dev
+      - run: uv run ruff check src tests scripts/validate_archived_grids.py
+      - run: uv run ruff format --check src tests scripts/validate_archived_grids.py
+      - run: uv run pytest -m "not pyscf and not slow and not cache" -q
+
+  pyscf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev --extra pyscf
+      - run: uv run pytest -m pyscf -q
+
+  archived-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev
+      - run: uv run pytest -m cache -q
+      - run: uv run python scripts/validate_archived_grids.py --nmax 12 --output regenerated-report.json
+      - run: cmp validation_data/convergence_report.json regenerated-report.json
+
+  distribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev
+      - run: uv run python -m build
+      - run: uv run twine check dist/*
+      - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.vscf_two_mode
+      - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.vscf_two_mode

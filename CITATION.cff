@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use pyscf-vscf in research, cite this software using the metadata below."
+title: "pyscf-vscf: PySCF-backed reduced-dimensional vibrational spectroscopy"
+type: software
+authors:
+  - family-names: Valada
+    given-names: Diogo
+version: 0.1.0a1
+license: MIT
+repository-code: "https://github.com/diogovalada/pyscf-vscf"
+url: "https://github.com/diogovalada/pyscf-vscf"
+keywords:
+  - VSCF
+  - vibrational spectroscopy
+  - PySCF
+  - DVR

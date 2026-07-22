@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyscf-vscf"
+version = "0.1.0a1"
+description = "PySCF-backed reduced-dimensional VSCF and DVR vibrational spectroscopy"
+authors = [
+    { name = "Diogo Valada" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["VSCF", "DVR", "PySCF", "vibrational spectroscopy", "quantum chemistry"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.10"
+]
+
+[project.urls]
+Homepage = "https://github.com/diogovalada/pyscf-vscf"
+Repository = "https://github.com/diogovalada/pyscf-vscf"
+Issues = "https://github.com/diogovalada/pyscf-vscf/issues"
+Changelog = "https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+pyscf = [
+    "pyscf>=2.3",
+    "pyscf-dispersion",
+    "dftd4>=3.6",
+    "geometric>=1.0"
+]
+validation = [
+    "pyscf>=2.3",
+    "pyscf-dispersion",
+    "dftd4>=3.6",
+    "geometric>=1.0",
+    "pytest",
+    "pytest-cov"
+]
+dev = [
+    "build",
+    "pytest",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "twine"
+]
+
+[project.scripts]
+pyscf-vscf = "pyscf_vscf.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+markers = [
+    "pyscf: requires the PySCF backend",
+    "slow: slow tests not intended for default local runs",
+    "scientific: scientific regression or benchmark checks",
+    "cache: requires existing cache artifacts",
+]
+
+[tool.ruff]
+line-length = 99
+
+[tool.coverage.run]
+source = ["pyscf_vscf"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
