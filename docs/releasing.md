@@ -15,8 +15,10 @@ committed.
 2. Confirm `CHANGELOG.md`, `CITATION.cff`, `pyproject.toml`, and
    `pyscf_vscf.__version__` agree.
 3. Run the pure and optional PySCF test suites, regenerate both archived
-   validation reports, and compare them byte-for-byte with the committed
-   reports.
+   validation reports, and compare them with the committed reports using
+   `scripts/compare_validation_reports.py`. The comparison requires identical
+   structure and discrete values and uses only tight floating-point tolerances
+   (`rtol=1e-9`, `atol=1e-15`) for cross-platform eigensolver roundoff.
 4. Build and inspect both distributions with `uv build` and
    `uvx twine check dist/*`.
 5. Confirm that the sdist contains the scripts, geometries, and archived data

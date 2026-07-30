@@ -65,6 +65,11 @@ neither PySCF nor an external program:
 uv run python scripts/validate_archived_grids.py --output validation_data/report.json
 ```
 
+For release verification, write regenerated reports to temporary paths and
+compare them with `scripts/compare_validation_reports.py`. The comparator
+requires identical JSON structure and exact discrete values while allowing
+only tightly bounded floating-point roundoff across numerical-library builds.
+
 It verifies file hashes, computes corrected intensities, assigns states by
 phase-canonical wavefunction overlap, and reports frequency/intensity spreads
 for 41x41, nested 21x21, and narrowed-window variants. It also checks the two
