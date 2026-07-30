@@ -40,3 +40,31 @@ or like-for-like rovibrational validation.
 
 The original computed data and derived summaries in this directory are
 licensed under CC BY 4.0 as described in the repository's `DATA_LICENSE.md`.
+
+## NH3 three-mode archive
+
+`nh3_three_mode/` is a schema-v2 non-water validation set for three frozen
+local N-H coordinates. It contains all three pair surfaces at the production
+electronic-structure settings, independent 25- and 31-point matrices, and
+nested window expansions through 49 points. The expansion caches reuse only
+exactly nested checked points and record every source cache and newly evaluated
+outer-ring count.
+
+Run the PySCF-free analysis:
+
+```bash
+uv run python scripts/validate_nh3_three_mode.py
+```
+
+The final 37/43/49-point sequence accepts the fundamental,
+binary-combination, and triple-combination manifolds. Their largest exact or
+VSCF centroid spread is 15.32 cm^-1. The first overtone has a 67.91 cm^-1 VSCF
+centroid spread and is explicitly retained as nonconverged. All state-specific
+VSCF calculations converge, the largest VSCF/exact centroid error is
+4.43 cm^-1, and the minimum exact product-manifold weight is 0.819.
+
+The archive contains 11,961 independently evaluated NH3 electronic points.
+On the recorded AMD Ryzen 7 6800HS, surface generation and nested expansion
+took about 2.9 hours in total with eight one-thread workers. Cached analysis
+takes about 17 minutes at the default 30-state exact-reference setting and does
+not require PySCF.

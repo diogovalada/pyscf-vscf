@@ -5,7 +5,8 @@ type: software
 authors:
   - family-names: Valada
     given-names: Diogo
-version: 0.1.0a1
+version: 0.1.0a2
+date-released: 2026-07-30
 license: MIT
 repository-code: "https://github.com/diogovalada/pyscf-vscf"
 url: "https://github.com/diogovalada/pyscf-vscf"

@@ -122,6 +122,106 @@ class NModePotential:
         )
 
 
+def nmode_model_from_pair_surfaces(
+    coordinates: Sequence[np.ndarray],
+    masses_amu: Sequence[float],
+    pair_surfaces_Eh: Mapping[Pair, np.ndarray],
+    *,
+    reference_indices: Sequence[int] | None = None,
+    mode_labels: Sequence[str] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    consistency_tolerance_Eh: float = 1e-8,
+) -> NModePotential:
+    """Assemble a one-plus-two-mode model from overlapping pair surfaces.
+
+    Each input surface may have an independent additive energy offset. The
+    one-mode cuts shared by different pair surfaces must agree within
+    ``consistency_tolerance_Eh``; their mean is used in the assembled model.
+    """
+
+    grids = tuple(_validated_grid(f"coordinates[{i}]", q) for i, q in enumerate(coordinates))
+    n_modes = len(grids)
+    if n_modes < 2:
+        raise ValueError("At least two coordinates are required")
+    if len(masses_amu) != n_modes:
+        raise ValueError("masses_amu must contain one mass per mode")
+
+    tolerance = float(consistency_tolerance_Eh)
+    if not np.isfinite(tolerance) or tolerance < 0.0:
+        raise ValueError("consistency_tolerance_Eh must be finite and non-negative")
+
+    if reference_indices is None:
+        references = tuple(q.size // 2 for q in grids)
+    else:
+        if len(reference_indices) != n_modes:
+            raise ValueError("reference_indices must contain one index per mode")
+        references = tuple(operator.index(index) for index in reference_indices)
+        for mode, (index, grid) in enumerate(zip(references, grids)):
+            if index < 0 or index >= grid.size:
+                raise ValueError(f"reference_indices[{mode}]={index} is outside the grid")
+
+    surfaces: dict[Pair, np.ndarray] = {}
+    cuts: list[list[np.ndarray]] = [[] for _ in range(n_modes)]
+    for raw_pair, values in pair_surfaces_Eh.items():
+        if len(raw_pair) != 2:
+            raise ValueError(f"Invalid two-mode key {raw_pair!r}; expected (i, j)")
+        i, j = operator.index(raw_pair[0]), operator.index(raw_pair[1])
+        if i < 0 or j < 0 or i >= n_modes or j >= n_modes or i >= j:
+            raise ValueError(f"Invalid two-mode key {(i, j)!r}; require 0 <= i < j < {n_modes}")
+        pair = (i, j)
+        if pair in surfaces:
+            raise ValueError(f"Duplicate two-mode surface for pair {pair}")
+        surface = _validated_array(
+            f"pair_surfaces_Eh[{i}, {j}]",
+            values,
+            (grids[i].size, grids[j].size),
+        )
+        surfaces[pair] = surface
+        ri, rj = references[i], references[j]
+        reference_energy = surface[ri, rj]
+        cuts[i].append(surface[:, rj] - reference_energy)
+        cuts[j].append(surface[ri, :] - reference_energy)
+
+    if not surfaces:
+        raise ValueError("pair_surfaces_Eh must contain at least one surface")
+
+    one_mode: list[np.ndarray] = []
+    maximum_disagreements: list[float] = []
+    for mode, candidates in enumerate(cuts):
+        if not candidates:
+            raise ValueError(f"Mode {mode} does not appear in any pair surface")
+        stacked = np.stack(candidates)
+        mean_cut = np.mean(stacked, axis=0)
+        disagreement = float(np.max(np.abs(stacked - mean_cut)))
+        if disagreement > tolerance:
+            raise ValueError(
+                f"Shared one-mode cuts for mode {mode} disagree by {disagreement:.3e} Eh, "
+                f"exceeding consistency_tolerance_Eh={tolerance:.3e}"
+            )
+        one_mode.append(mean_cut)
+        maximum_disagreements.append(disagreement)
+
+    couplings: dict[Pair, np.ndarray] = {}
+    for (i, j), surface in surfaces.items():
+        ri, rj = references[i], references[j]
+        couplings[(i, j)] = surface - surface[ri, rj] - one_mode[i][:, None] - one_mode[j][None, :]
+
+    assembled_metadata = dict(metadata or {})
+    assembled_metadata["pair_surface_assembly"] = {
+        "reference_indices": list(references),
+        "consistency_tolerance_Eh": tolerance,
+        "maximum_cut_disagreement_Eh": maximum_disagreements,
+    }
+    return NModePotential(
+        coordinates=grids,
+        masses_amu=tuple(masses_amu),
+        one_mode_potentials_Eh=tuple(one_mode),
+        two_mode_couplings_Eh=couplings,
+        mode_labels=None if mode_labels is None else tuple(mode_labels),
+        metadata=assembled_metadata,
+    )
+
+
 @dataclass(frozen=True)
 class VSCFSettings:
     """Numerical policy for state-specific VSCF iteration."""
@@ -529,6 +629,7 @@ __all__ = [
     "VSCFTransition",
     "dump_nmode_model",
     "load_nmode_model",
+    "nmode_model_from_pair_surfaces",
     "nmode_model_fingerprint",
     "product_states",
     "solve_vscf_state",

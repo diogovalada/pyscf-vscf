@@ -1,0 +1,113 @@
+{
+  "analysis_command": "uv run python scripts/validate_nh3_three_mode.py",
+  "files": {
+    "generation_25.log": {
+      "sha256": "6d4fd9073d3a182f0c6a32c41501fd3417dd00a7b115ecf1520cd862f315d4ce"
+    },
+    "generation_31.log": {
+      "sha256": "514420b0abe1a52d054d32ef761c1d145681e45977916d55c7f00219e4872ae7"
+    },
+    "generation_31_wide.log": {
+      "sha256": "292b050c84c3a56985ff67857eead5721155c134a89fee3d9bcaf0aad0a254ee"
+    },
+    "generation_37_wider.log": {
+      "sha256": "8bcf1ce0cfa7197d8ceaba5d0d29d12178e76c57dd8f6462283f747ab0247707"
+    },
+    "generation_43_widest.log": {
+      "sha256": "f7033c8ace7c5bfb77763717ee54b7d86ffe39d3e854269bba863ae211cd8f7c"
+    },
+    "generation_49_converged.log": {
+      "sha256": "755441785c19a9cc33d270678bfb26969ed53c83f0ca193ca89c971d01eaac42"
+    },
+    "generation_summary_25.json": {
+      "sha256": "a11a77c65dc6ba0681f17d82596873a7a2857177027b2aebd88ecbbb00ca4acb"
+    },
+    "generation_summary_31.json": {
+      "sha256": "d7469a1476c8e032167f89c91ef2ba43d6f9a09591745e2a187af5aaa43f12d3"
+    },
+    "generation_summary_31_wide.json": {
+      "sha256": "f5e99bcd3e88e862828592836164bff9491f5cb2b3b3c5ce54de24e1a618881d"
+    },
+    "generation_summary_37_wider.json": {
+      "sha256": "b711329ac91c20fb41c0fc648458f543b5d1a661a313b684068b4a0fbe114077"
+    },
+    "generation_summary_43_widest.json": {
+      "sha256": "122a2f326427051d2a3e72e2dc98c66006c4bc33564bd86e3f8f53014aef3bc2"
+    },
+    "generation_summary_49_converged.json": {
+      "sha256": "d684c8df51e3603a563d8ac640b84f1038a237f212b50b284fb04b34818704cf"
+    },
+    "nh3_initial.xyz": {
+      "sha256": "a079553a4ba845d4059a4b158640284033bfd649ed6795486ced5713f0dd1dae"
+    },
+    "nh3_optimized.xyz": {
+      "sha256": "e46de41d4823dfa0234da5c80999b81c506032af585647af102e85e97db97979"
+    },
+    "nh3_pair_12_25x25.npz": {
+      "sha256": "39d7affa12bb1754a96f4de8f9d77d31d1d025826559f41e7c8d60e3e5f13702"
+    },
+    "nh3_pair_12_31x31.npz": {
+      "sha256": "5d7b4680eb5abc5636b8791e84c3395443bf283285cdfeca4a46702cec637acb"
+    },
+    "nh3_pair_12_31x31_wide.npz": {
+      "sha256": "40bf8d2571876b470b2a282fe5f0f10c742a139eb72390096508dc5937ca599f"
+    },
+    "nh3_pair_12_37x37_wider.npz": {
+      "sha256": "792c4af7da8648b8c828eabe0823d04d8af68474959556135474b67ac330ecd3"
+    },
+    "nh3_pair_12_43x43_widest.npz": {
+      "sha256": "9104e5a64007c0bff68410b4562b8202e71e096186c352fee2daf3672628ead2"
+    },
+    "nh3_pair_12_49x49_converged.npz": {
+      "sha256": "d674a1068c11218d416ea22c430b70e380f4ac704fc3add187cec8e79a409fbd"
+    },
+    "nh3_pair_13_25x25.npz": {
+      "sha256": "4b5fa3160edff3e1561bf34c85b2813a328b4706a6c07a347d60f79ecf68446f"
+    },
+    "nh3_pair_13_31x31.npz": {
+      "sha256": "3930acdc09d4dc725837e8c1637e5ea68e96345ef97a7ea43f132cf7fb32634c"
+    },
+    "nh3_pair_13_31x31_wide.npz": {
+      "sha256": "026e21bdcc623164fc2adb97e8c7e61eb6ca314940b00b5759710796ad49be28"
+    },
+    "nh3_pair_13_37x37_wider.npz": {
+      "sha256": "47e7a323ff091a7f9f6d9267dbb292f80cceaea04fa695c99c42b9d3cc4afc5e"
+    },
+    "nh3_pair_13_43x43_widest.npz": {
+      "sha256": "ab9a1ce2621a885186517148b58a2de191afe9d7810003ecd0b2644c22c59219"
+    },
+    "nh3_pair_13_49x49_converged.npz": {
+      "sha256": "09386d478cb7d6f3431b286c2dbb4f2adfb00880c475536d7235b6c7465daa3f"
+    },
+    "nh3_pair_23_25x25.npz": {
+      "sha256": "5b6902d4fda7535654e8c8ace6b59de4e4161924a7d4239d299730ddc2ee4571"
+    },
+    "nh3_pair_23_31x31.npz": {
+      "sha256": "3bb61181f593e0e6a50f289ffe60be2f9cd3511984f0553402c262702003abf9"
+    },
+    "nh3_pair_23_31x31_wide.npz": {
+      "sha256": "a059fac1ba33dcc9d2d100ae2d96e0e06e5d455cf86dea974786b0af66a1a9a5"
+    },
+    "nh3_pair_23_37x37_wider.npz": {
+      "sha256": "db10fe60d6c8082b37c48873dc586ea6c9a9beb5882e8e04ef1ce1c50ff5bdb7"
+    },
+    "nh3_pair_23_43x43_widest.npz": {
+      "sha256": "367bb2374fa137e073c840440810878c2185a7c21d616f8a573883f53b2bc4c3"
+    },
+    "nh3_pair_23_49x49_converged.npz": {
+      "sha256": "67c3d3ad2f951ce4c5d939246ca1b325143dc617968527d118fce80f20e1e6df"
+    },
+    "report.json": {
+      "sha256": "c99116b177bd240a27d5033c217ffb6defcabaa01933403c362bc96ba3ef4a02"
+    },
+    "report_coarse_13_diagnostic.json": {
+      "sha256": "17fc4cc1790f7faa0c5d94bf129ae66a554bc16d376ea64f2126133baf9fc5d3"
+    },
+    "report_window_030_diagnostic.json": {
+      "sha256": "ba3dda0aea556b4559b285832af4db175528057be74536c28e37aa7e3aaf8bff"
+    }
+  },
+  "purpose": "reproducible non-water, three-mode package validation",
+  "regeneration_command": "uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 25 --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 31 --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 31 --half-width 0.30 --tag wide --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 31 --source-tag wide --target-npts 37 --target-half-width 0.36 --target-tag wider --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 37 --source-tag wider --target-npts 43 --target-half-width 0.42 --target-tag widest --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 43 --source-tag widest --target-npts 49 --target-half-width 0.48 --target-tag converged --workers 8 --threads-per-worker 1",
+  "schema_version": 1
+}

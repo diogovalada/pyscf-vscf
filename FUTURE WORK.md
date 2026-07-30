@@ -11,6 +11,9 @@ The following capabilities can wait for later releases:
 - VCI on top of converged VSCF modals, with polyad and energy pruning.
 - Dipole-surface n-mode expansion and VSCF/VCI transition intensities.
 - Automated PySCF generation of general n-mode PES/DMS expansions.
+- GPU4PySCF acceleration for electronic surface generation, after persistent
+  GPU-worker execution, CPU/GPU parity, and CUDA CI can be tested on supported
+  NVIDIA hardware.
 - Curvilinear and coordinate-dependent kinetic-energy operators.
 - Full-dimensional workflows and broader chemical-coordinate support.
 - Exactly constrained relaxed local-bond (`lbs-relaxed`) scans.
@@ -21,13 +24,19 @@ The following capabilities can wait for later releases:
 
 The package now has overlap-based state assignment, analytic model benchmarks,
 an independent Einstein-A intensity identity, explicit convergence reports,
-archived reproducible H2O/HDO/D2O grids, and a six-transition comparison with
-independent ORCA harmonic IR intensities. It also compares state-specific VSCF
-against exact 2D DVR on the same three archived molecular surfaces under a
-matched separable kinetic model. The ORCA check reproduces the molecular
-intensity scale and trend within 35.4% relative error. These checks establish
-software and reduced-dimensional numerical correctness; they do not certify
-every new electronic-structure surface or establish experimental accuracy.
+and archived reproducible molecular grids. The water validation compares
+state-specific VSCF against exact 2D DVR on three isotopologue surfaces and
+checks six intensities against independent ORCA harmonic data. A separate NH3
+archive exercises a non-water, three-local-mode 1MR/2MR Hamiltonian against
+exact 3D DVR. These checks establish software and reduced-dimensional numerical
+correctness; they do not certify every new electronic-structure surface or
+establish experimental accuracy.
+
+In the NH3 validation, the final three coordinate windows converge the
+fundamental, binary-combination, and triple-combination centroid frequencies
+within 15.32 cm^-1, and VSCF differs from exact 3D DVR by at most 4.43 cm^-1.
+The first-overtone centroid remains window-sensitive at 67.91 cm^-1 and is not
+part of the converged error budget.
 
 Before a quantitative molecular result set is published:
 

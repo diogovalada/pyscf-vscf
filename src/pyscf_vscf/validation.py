@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Mapping, Sequence
+from typing import TYPE_CHECKING, Mapping, Sequence
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .vscf import NModePotential
 
 
 StateLabel = tuple
@@ -40,6 +43,81 @@ class ConvergenceReport:
 
     def as_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class ExactProductDVR:
+    """Low-lying eigenpairs of a small direct-product n-mode DVR model."""
+
+    shape: tuple[int, ...]
+    evals: np.ndarray
+    evecs: np.ndarray
+
+
+def exact_nmode_dvr(model: NModePotential, *, nstates: int = 12) -> ExactProductDVR:
+    """Diagonalize an n-mode pair-expanded Hamiltonian for validation.
+
+    The Hamiltonian is applied as a ``LinearOperator`` and is therefore useful
+    for small reference calculations without materializing its dense matrix.
+    It is not intended as a production high-dimensional vibrational solver.
+    """
+
+    from scipy.sparse.linalg import LinearOperator, eigsh
+
+    from .dvr import sinc_kinetic_1d
+
+    shape = tuple(q.size for q in model.coordinates)
+    dimension = int(np.prod(shape, dtype=np.int64))
+    count = int(nstates)
+    if count < 1 or count >= dimension:
+        raise ValueError(f"nstates must satisfy 1 <= nstates < {dimension}")
+
+    potential = np.zeros(shape, dtype=float)
+    for mode, values in enumerate(model.one_mode_potentials_Eh):
+        view = [1] * model.n_modes
+        view[mode] = shape[mode]
+        potential += values.reshape(view)
+    for (i, j), values in model.two_mode_couplings_Eh.items():
+        view = [1] * model.n_modes
+        view[i] = shape[i]
+        view[j] = shape[j]
+        potential += values.reshape(view)
+
+    kinetic = tuple(
+        sinc_kinetic_1d(q, mass) for q, mass in zip(model.coordinates, model.masses_amu)
+    )
+
+    def matvec(vector: np.ndarray) -> np.ndarray:
+        wavefunction = np.asarray(vector, dtype=float).reshape(shape)
+        result = potential * wavefunction
+        for mode, matrix in enumerate(kinetic):
+            moved = np.moveaxis(wavefunction, mode, 0)
+            acted = np.tensordot(matrix, moved, axes=(1, 0))
+            result = result + np.moveaxis(acted, 0, mode)
+        return np.asarray(result).reshape(-1)
+
+    operator = LinearOperator(
+        (dimension, dimension),
+        matvec=matvec,
+        rmatvec=matvec,
+        dtype=float,
+    )
+    indices = np.arange(1, dimension + 1, dtype=float)
+    initial = np.sin(np.sqrt(2.0) * indices) + np.cos(np.sqrt(3.0) * indices)
+    initial /= np.linalg.norm(initial)
+    eigenvalues, eigenvectors = eigsh(
+        operator,
+        k=count,
+        which="SA",
+        v0=initial,
+        tol=1e-11,
+    )
+    order = np.argsort(eigenvalues)
+    evals = np.asarray(eigenvalues[order], dtype=float)
+    evecs = np.asarray(eigenvectors[:, order], dtype=float)
+    evals.setflags(write=False)
+    evecs.setflags(write=False)
+    return ExactProductDVR(shape=shape, evals=evals, evecs=evecs)
 
 
 def convergence_report(
@@ -151,4 +229,10 @@ def _finite_values(label: str, values: Sequence[float]) -> None:
         raise ValueError(f"Non-finite {label} values in convergence input")
 
 
-__all__ = ["ConvergenceReport", "StateErrorBudget", "convergence_report"]
+__all__ = [
+    "ConvergenceReport",
+    "ExactProductDVR",
+    "StateErrorBudget",
+    "convergence_report",
+    "exact_nmode_dvr",
+]

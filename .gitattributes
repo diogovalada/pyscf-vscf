@@ -1,0 +1,4 @@
+validation_data/**/*.json text eol=lf
+validation_data/**/*.log text eol=lf
+validation_data/**/*.xyz text eol=lf
+validation_data/**/*.npz binary
