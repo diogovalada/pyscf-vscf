@@ -9,6 +9,11 @@ diagnostics, transition energies, and a packaged runnable example.
 The following capabilities can wait for later releases:
 
 - VCI on top of converged VSCF modals, with polyad and energy pruning.
+- Backend-neutral VPT2/GVPT2 support, staged from a solver that consumes
+  user-supplied harmonic, cubic, and semi-diagonal quartic force fields to
+  optional backend adapters for automatic force-field generation. Reliable
+  resonance detection, deperturbation, and polyad diagonalization require
+  independent reference benchmarks before being exposed as supported features.
 - Dipole-surface n-mode expansion and VSCF/VCI transition intensities.
 - Automated PySCF generation of general n-mode PES/DMS expansions.
 - GPU4PySCF acceleration for electronic surface generation, after persistent
