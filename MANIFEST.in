@@ -16,3 +16,4 @@ include scripts/validate_archived_grids.py
 include scripts/generate_nh3_three_mode.py
 include scripts/expand_nh3_three_mode.py
 include scripts/validate_nh3_three_mode.py
+include scripts/compare_validation_reports.py
