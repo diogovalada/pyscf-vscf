@@ -248,7 +248,7 @@ def test_1d_normal_grid_and_displacement_validation() -> None:
         )
 
 
-def test_2d_lbs_grid_uses_sequential_frozen_bond_stretches() -> None:
+def test_2d_lbs_grid_realizes_both_frozen_bond_lengths() -> None:
     mol = _water()
     seen: list[np.ndarray] = []
 
@@ -282,6 +282,112 @@ def test_2d_lbs_grid_uses_sequential_frozen_bond_stretches() -> None:
         assert np.linalg.norm(coords[1] - coords[0]) == pytest.approx(r1)
         assert np.linalg.norm(coords[2] - coords[0]) == pytest.approx(r2)
     np.testing.assert_allclose(mol.coords[1], [0.96, 0.0, 0.0])
+
+
+def test_two_bond_stretch_is_orientation_independent_for_shared_atom() -> None:
+    coords = np.array(
+        [
+            [-1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ]
+    )
+
+    canonical = scans.stretch_two_bonds(coords, Bond(1, 0), Bond(1, 2), 1.2, 0.8)
+    reversed_bonds = scans.stretch_two_bonds(coords, Bond(0, 1), Bond(2, 1), 1.2, 0.8)
+
+    np.testing.assert_allclose(reversed_bonds, canonical)
+    assert np.linalg.norm(reversed_bonds[0] - reversed_bonds[1]) == pytest.approx(1.2)
+    assert np.linalg.norm(reversed_bonds[2] - reversed_bonds[1]) == pytest.approx(0.8)
+
+
+def test_2d_lbs_grid_preserves_reversed_shared_bond_coordinates() -> None:
+    mol = _LegacyMolecule(
+        ["H", "O", "H"],
+        np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+    )
+    seen: list[np.ndarray] = []
+
+    def energy(molecule: object, cfg: object) -> tuple[float, np.ndarray]:
+        del cfg
+        coords = np.asarray(getattr(molecule, "coords"), dtype=float)
+        seen.append(coords.copy())
+        return float(np.sum(coords * coords)), np.zeros(3)
+
+    scans.grid_2d_pes_dms(
+        mol,
+        _cfg(),
+        Bond(0, 1),
+        Bond(2, 1),
+        [1.2],
+        [0.8],
+        energy_dipole_fn=energy,
+    )
+
+    assert len(seen) == 1
+    assert np.linalg.norm(seen[0][0] - seen[0][1]) == pytest.approx(1.2)
+    assert np.linalg.norm(seen[0][2] - seen[0][1]) == pytest.approx(0.8)
+
+
+def test_two_bond_stretch_uses_explicit_anchors_for_disjoint_bonds() -> None:
+    coords = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [3.0, 1.0, 0.0],
+        ]
+    )
+
+    stretched = scans.stretch_two_bonds(coords, Bond(0, 1), Bond(2, 3), 1.4, 0.7)
+
+    np.testing.assert_allclose(stretched[[0, 2]], coords[[0, 2]])
+    assert np.linalg.norm(stretched[1] - stretched[0]) == pytest.approx(1.4)
+    assert np.linalg.norm(stretched[3] - stretched[2]) == pytest.approx(0.7)
+
+
+def test_2d_lbs_grid_rejects_invalid_coordinates_before_electronic_work() -> None:
+    mol = _water()
+    calls = 0
+
+    def energy(molecule: object, cfg: object) -> tuple[float, np.ndarray]:
+        nonlocal calls
+        del molecule, cfg
+        calls += 1
+        return 0.0, np.zeros(3)
+
+    with pytest.raises(ValueError, match="two distinct bonds"):
+        scans.grid_2d_pes_dms(
+            mol,
+            _cfg(),
+            Bond(0, 1),
+            Bond(1, 0),
+            [0.9],
+            [1.0],
+            energy_dipole_fn=energy,
+        )
+    with pytest.raises(ValueError, match="positive and finite"):
+        scans.grid_2d_pes_dms(
+            mol,
+            _cfg(),
+            Bond(0, 1),
+            Bond(0, 2),
+            [0.9],
+            [0.0],
+            energy_dipole_fn=energy,
+        )
+    with pytest.raises(ValueError, match="two distinct atoms"):
+        scans.grid_2d_pes_dms(
+            mol,
+            _cfg(),
+            Bond(0, 0),
+            Bond(0, 2),
+            [0.9],
+            [1.0],
+            energy_dipole_fn=energy,
+        )
+
+    assert calls == 0
 
 
 def test_normal_relaxed_grid_is_represented_by_injected_point_optimizer() -> None:
@@ -417,8 +523,20 @@ def test_2d_lbs_cache_validation_checks_metadata_and_requested_arrays() -> None:
     R1 = np.linspace(*r1)
     R2 = np.linspace(*r2)
     meta = scans.lbs_frozen_2d_cache_metadata(mol, cfg, Bond(0, 1), Bond(0, 2), r1, r2)
-    assert meta["scientific"]["scan"]["bond1_zero_based"] == [0, 1]
-    assert meta["scientific"]["scan"]["bond2_zero_based"] == [0, 2]
+    scan_meta = meta["scientific"]["scan"]
+    assert scan_meta["bond1_zero_based"] == [0, 1]
+    assert scan_meta["bond2_zero_based"] == [0, 2]
+    assert scan_meta["keo"] == "gmatrix"
+    assert scan_meta["reduced_masses_amu"] == pytest.approx(
+        [
+            scans.local_bond_reduced_mass_amu(mol, Bond(0, 1)),
+            scans.local_bond_reduced_mass_amu(mol, Bond(0, 2)),
+        ]
+    )
+    assert scan_meta["g12_inv_amu"] == pytest.approx(
+        scans.bond_bond_g12_inv_amu(mol, Bond(0, 1), Bond(0, 2))
+    )
+    assert scan_meta["gmatrix_reference_geometry"] == "scientific.molecule.coordinates_A"
     arrays = {
         "R1_A": R1,
         "R2_A": R2,

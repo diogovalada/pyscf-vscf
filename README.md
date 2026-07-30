@@ -20,13 +20,13 @@ Until the first PyPI publication, install the current alpha from its immutable
 GitHub tag:
 
 ```bash
-pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a2"
+pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
 ```
 
 Install the PySCF-backed workflows as well:
 
 ```bash
-pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a2"
+pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
 ```
 
 The source project uses `uv` for development:
@@ -149,7 +149,7 @@ does not require PySCF.
 
 ## Release Status
 
-The current version is `0.1.0a2`. API changes remain possible during alpha.
+The current version is `0.1.0a3`. API changes remain possible during alpha.
 The repository includes an MIT license, citation metadata, changelog, CI,
 GitHub release automation, an opt-in trusted-publishing workflow, and a release
 checklist.

@@ -87,6 +87,28 @@ def test_mass_weighted_freqs_modes_from_coords_rtproj_none() -> None:
     assert modes.shape == (6, 6)
 
 
+@pytest.mark.parametrize("strict", [False, True])
+def test_mass_weighted_freqs_modes_rtproj_none_preserves_imaginary_sign(strict: bool) -> None:
+    H = np.diag([-1.0, 2.0, 3.0, 4.0, 5.0, 6.0]) * AMU
+    masses = np.array([1.0, 1.0])
+    coords_bohr = np.array([[0.0, 0.0, 0.0], [1.4, 0.0, 0.0]])
+
+    freqs, modes = mass_weighted_freqs_modes_from_coords(
+        H,
+        masses,
+        coords_bohr,
+        rtproj="none",
+        strict=strict,
+    )
+
+    np.testing.assert_allclose(
+        freqs,
+        np.array([-1.0, np.sqrt(2.0), np.sqrt(3.0), 2.0, np.sqrt(5.0), np.sqrt(6.0)])
+        * HARTREE_TO_CM,
+    )
+    np.testing.assert_allclose(modes, np.eye(6))
+
+
 def test_imaginary_mode_handling_strict_non_strict_and_rtproj_none() -> None:
     bad_vib = _evals_from_signed_cm([0.0, 0.0, 0.0, 0.0, 0.0, -11.0])
 

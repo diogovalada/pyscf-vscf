@@ -5,6 +5,23 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-07-30
+
+### Fixed
+
+- Two-bond scans now realize both requested coordinates for any shared-atom
+  bond orientation and reject dependent or invalid coordinates before running
+  electronic-structure calculations.
+- Unprojected harmonic analyses preserve imaginary modes as negative
+  frequencies instead of silently clipping them to zero.
+- Installation and KEO benchmark documentation now match the public release
+  channel and current implementation.
+
+### Changed
+
+- Two-dimensional cache provenance now records reduced masses, the numerical
+  constant G-matrix cross term, and its reference geometry.
+
 ## [0.1.0a2] - 2026-07-30
 
 ### Added
@@ -48,6 +65,7 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...HEAD
+[0.1.0a3]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...v0.1.0a3
 [0.1.0a2]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a1...v0.1.0a2
 [0.1.0a1]: https://github.com/diogovalada/pyscf-vscf/releases/tag/v0.1.0a1

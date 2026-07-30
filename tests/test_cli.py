@@ -69,7 +69,7 @@ sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a2")):
+    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a3")):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],
