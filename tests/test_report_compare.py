@@ -24,6 +24,19 @@ def test_report_comparison_accepts_tight_cross_platform_roundoff() -> None:
     assert_reports_close(expected, actual)
 
 
+def test_report_comparison_uses_unit_aware_absolute_tolerances() -> None:
+    assert_reports_close(
+        {"vscf_minus_exact_centroid_cm": 0.009976373608424183},
+        {"vscf_minus_exact_centroid_cm": 0.00997637371347082},
+    )
+
+    with pytest.raises(ReportComparisonError, match="intensity_m2_per_s"):
+        assert_reports_close(
+            {"intensity_m2_per_s": 1e-18},
+            {"intensity_m2_per_s": 1.1e-18},
+        )
+
+
 @pytest.mark.parametrize(
     ("actual", "path"),
     [

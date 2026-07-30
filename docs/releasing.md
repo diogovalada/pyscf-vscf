@@ -18,7 +18,9 @@ committed.
    validation reports, and compare them with the committed reports using
    `scripts/compare_validation_reports.py`. The comparison requires identical
    structure and discrete values and uses only tight floating-point tolerances
-   (`rtol=1e-9`, `atol=1e-15`) for cross-platform eigensolver roundoff.
+   for cross-platform eigensolver roundoff. The defaults use `rtol=1e-9`, a
+   general `atol=1e-15`, `1e-9 cm^-1` for wavenumber-valued fields, and
+   `1e-24 m^2 s^-1` for intensity-valued fields.
 4. Build and inspect both distributions with `uv build` and
    `uvx twine check dist/*`.
 5. Confirm that the sdist contains the scripts, geometries, and archived data

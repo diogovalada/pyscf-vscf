@@ -17,10 +17,18 @@ def assert_reports_close(
     *,
     relative_tolerance: float = 1e-9,
     absolute_tolerance: float = 1e-15,
+    wavenumber_absolute_tolerance: float = 1e-9,
+    intensity_absolute_tolerance: float = 1e-24,
 ) -> None:
     """Require identical JSON structure and tightly matching floating-point values."""
 
-    if relative_tolerance < 0.0 or absolute_tolerance < 0.0:
+    tolerances = (
+        relative_tolerance,
+        absolute_tolerance,
+        wavenumber_absolute_tolerance,
+        intensity_absolute_tolerance,
+    )
+    if any(tolerance < 0.0 for tolerance in tolerances):
         raise ValueError("Report comparison tolerances must be non-negative")
     _compare(
         expected,
@@ -28,6 +36,8 @@ def assert_reports_close(
         path="$",
         relative_tolerance=relative_tolerance,
         absolute_tolerance=absolute_tolerance,
+        wavenumber_absolute_tolerance=wavenumber_absolute_tolerance,
+        intensity_absolute_tolerance=intensity_absolute_tolerance,
     )
 
 
@@ -38,6 +48,8 @@ def _compare(
     path: str,
     relative_tolerance: float,
     absolute_tolerance: float,
+    wavenumber_absolute_tolerance: float,
+    intensity_absolute_tolerance: float,
 ) -> None:
     if isinstance(expected, bool) or isinstance(actual, bool):
         _require_exact(expected, actual, path)
@@ -53,11 +65,17 @@ def _compare(
         if not math.isfinite(expected_float) or not math.isfinite(actual_float):
             _require_exact(expected_float, actual_float, path)
             return
+        effective_absolute_tolerance = _absolute_tolerance_for_path(
+            path,
+            default=absolute_tolerance,
+            wavenumber=wavenumber_absolute_tolerance,
+            intensity=intensity_absolute_tolerance,
+        )
         if not math.isclose(
             expected_float,
             actual_float,
             rel_tol=relative_tolerance,
-            abs_tol=absolute_tolerance,
+            abs_tol=effective_absolute_tolerance,
         ):
             difference = abs(expected_float - actual_float)
             raise ReportComparisonError(
@@ -82,6 +100,8 @@ def _compare(
                 path=f"{path}.{key}",
                 relative_tolerance=relative_tolerance,
                 absolute_tolerance=absolute_tolerance,
+                wavenumber_absolute_tolerance=wavenumber_absolute_tolerance,
+                intensity_absolute_tolerance=intensity_absolute_tolerance,
             )
         return
 
@@ -97,6 +117,8 @@ def _compare(
                 path=f"{path}[{index}]",
                 relative_tolerance=relative_tolerance,
                 absolute_tolerance=absolute_tolerance,
+                wavenumber_absolute_tolerance=wavenumber_absolute_tolerance,
+                intensity_absolute_tolerance=intensity_absolute_tolerance,
             )
         return
 
@@ -105,6 +127,21 @@ def _compare(
 
 def _is_json_sequence(value: object) -> bool:
     return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
+
+
+def _absolute_tolerance_for_path(
+    path: str,
+    *,
+    default: float,
+    wavenumber: float,
+    intensity: float,
+) -> float:
+    key = path.rsplit(".", maxsplit=1)[-1].split("[", maxsplit=1)[0].lower()
+    if "intens" in key or "cross_section" in key:
+        return intensity
+    if key.endswith("_cm"):
+        return wavenumber
+    return default
 
 
 def _require_exact(expected: object, actual: object, path: str) -> None:

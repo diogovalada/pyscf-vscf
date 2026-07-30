@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("actual", type=Path)
     parser.add_argument("--relative-tolerance", type=float, default=1e-9)
     parser.add_argument("--absolute-tolerance", type=float, default=1e-15)
+    parser.add_argument("--wavenumber-absolute-tolerance", type=float, default=1e-9)
+    parser.add_argument("--intensity-absolute-tolerance", type=float, default=1e-24)
     args = parser.parse_args()
 
     expected = json.loads(args.expected.read_text(encoding="utf-8"))
@@ -25,10 +27,14 @@ def main() -> None:
         actual,
         relative_tolerance=args.relative_tolerance,
         absolute_tolerance=args.absolute_tolerance,
+        wavenumber_absolute_tolerance=args.wavenumber_absolute_tolerance,
+        intensity_absolute_tolerance=args.intensity_absolute_tolerance,
     )
     print(
         "Validation reports match "
-        f"(rtol={args.relative_tolerance:g}, atol={args.absolute_tolerance:g})."
+        f"(rtol={args.relative_tolerance:g}, atol={args.absolute_tolerance:g}, "
+        f"wavenumber_atol={args.wavenumber_absolute_tolerance:g}, "
+        f"intensity_atol={args.intensity_absolute_tolerance:g})."
     )
 
 
