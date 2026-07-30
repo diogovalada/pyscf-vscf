@@ -16,7 +16,7 @@ from .spectra import (
     integrated_cross_section_omega_to_km_per_mol,
 )
 from .surfaces import grid_1d_pes_dms, grid_2d_pes_dms
-from .validation import ConvergenceReport, convergence_report
+from .validation import ConvergenceReport, ExactProductDVR, convergence_report, exact_nmode_dvr
 from .variational import variational_1d, variational_2d
 from .vscf import (
     NModePotential,
@@ -26,6 +26,7 @@ from .vscf import (
     VSCFTransition,
     dump_nmode_model,
     load_nmode_model,
+    nmode_model_from_pair_surfaces,
     solve_vscf_state,
     vscf_spectrum,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "ConvergenceReport",
     "DEBYE_TO_CM",
     "ESSettings",
+    "ExactProductDVR",
     "HARTREE_TO_CM",
     "HarmonicResult",
     "Molecule",
@@ -58,10 +60,12 @@ __all__ = [
     "integrated_cross_section_omega",
     "integrated_cross_section_omega_to_km_per_mol",
     "load_nmode_model",
+    "nmode_model_from_pair_surfaces",
+    "exact_nmode_dvr",
     "solve_vscf_state",
     "variational_1d",
     "variational_2d",
     "vscf_spectrum",
 ]
 
-__version__ = "0.1.0a1"
+__version__ = "0.1.0a2"
