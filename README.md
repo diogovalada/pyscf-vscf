@@ -16,17 +16,16 @@ The package does not claim full-dimensional or general curvilinear VSCF/VCI.
 
 ## Install
 
-Until the first PyPI publication, install the current alpha from its immutable
-GitHub tag:
+Install the current alpha from PyPI:
 
 ```bash
-pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
+pip install "pyscf-vscf==0.1.0a4"
 ```
 
 Install the PySCF-backed workflows as well:
 
 ```bash
-pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
+pip install "pyscf-vscf[pyscf]==0.1.0a4"
 ```
 
 The source project uses `uv` for development:
@@ -149,7 +148,7 @@ does not require PySCF.
 
 ## Release Status
 
-The current version is `0.1.0a3`. API changes remain possible during alpha.
+The current version is `0.1.0a4`. API changes remain possible during alpha.
 The repository includes an MIT license, citation metadata, changelog, CI,
 GitHub release automation, an opt-in trusted-publishing workflow, and a release
 checklist.

@@ -5,6 +5,14 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-07-30
+
+### Changed
+
+- Enabled the first PyPI publication through GitHub Actions trusted publishing.
+- Updated release and validation provenance to `0.1.0a4`; numerical methods and
+  archived scientific results are unchanged from `0.1.0a3`.
+
 ## [0.1.0a3] - 2026-07-30
 
 ### Fixed
@@ -65,7 +73,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...HEAD
+[0.1.0a4]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...v0.1.0a4
 [0.1.0a3]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...v0.1.0a3
 [0.1.0a2]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a1...v0.1.0a2
 [0.1.0a1]: https://github.com/diogovalada/pyscf-vscf/releases/tag/v0.1.0a1
