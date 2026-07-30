@@ -309,7 +309,12 @@ def mass_weighted_freqs_modes_from_coords(
     thermo_mod: Any | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return harmonic frequencies and modes from pure coordinate arrays."""
+    """Return harmonic frequencies and modes from pure coordinate arrays.
+
+    With ``rtproj="none"``, negative Hessian eigenvalues are returned as
+    negative frequencies. Projected modes retain the legacy clipping policy
+    after imaginary-mode validation.
+    """
 
     coords_bohr = np.asarray(coords_bohr, dtype=float)
     natm = int(coords_bohr.shape[0])
@@ -386,6 +391,8 @@ def mass_weighted_freqs_modes_from_coords(
     )
     if debug:
         print_low_mode_summary("Final projected Hessian used for modes", w2)
+    if rtproj_lc == "none":
+        return signed_freqs_from_evals(w2), vec
     return np.sqrt(np.clip(w2, 0.0, None)) * HARTREE_TO_CM, vec
 
 

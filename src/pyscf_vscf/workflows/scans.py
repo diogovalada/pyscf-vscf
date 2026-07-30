@@ -24,6 +24,7 @@ from pyscf_vscf.cache import (
 from pyscf_vscf.constants import atomic_mass_amu
 from pyscf_vscf.coordinates import Bond, parse_bond
 from pyscf_vscf.coordinates import stretch_along_bond as _stretch_along_bond
+from pyscf_vscf.coordinates import stretch_two_bonds as _stretch_two_bonds
 from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.surfaces import energy_dipole
 
@@ -109,6 +110,24 @@ def stretch_along_bond(coords: np.ndarray, bond: Bond | str | Any, new_len_A: fl
     """Return coordinates with the second bond atom moved to a new bond length."""
 
     return _stretch_along_bond(coords, normalize_bond(bond), new_len_A)
+
+
+def stretch_two_bonds(
+    coords: np.ndarray,
+    bond1: Bond | str | Any,
+    bond2: Bond | str | Any,
+    new_len1_A: float,
+    new_len2_A: float,
+) -> np.ndarray:
+    """Return coordinates realizing two independent bond lengths exactly."""
+
+    return _stretch_two_bonds(
+        coords,
+        normalize_bond(bond1),
+        normalize_bond(bond2),
+        new_len1_A,
+        new_len2_A,
+    )
 
 
 def molecule_with_coords(molecule: Any, coords: np.ndarray) -> Molecule:
@@ -460,6 +479,16 @@ def grid_2d_pes_dms(
     bond2 = normalize_bond(b2)
     R1_arr = np.asarray(R1, dtype=float)
     R2_arr = np.asarray(R2, dtype=float)
+    _validate_scan_grid(R1_arr, "R1")
+    _validate_scan_grid(R2_arr, "R2")
+    # Validate topology and source geometry before scheduling any electronic point.
+    stretch_two_bonds(
+        _molecule_coords(molecule),
+        bond1,
+        bond2,
+        float(R1_arr[0]),
+        float(R2_arr[0]),
+    )
     energies = np.zeros((R1_arr.size, R2_arr.size), dtype=float)
     dipoles = np.zeros((R1_arr.size, R2_arr.size, 3), dtype=float)
     tasks = [
@@ -611,12 +640,25 @@ def lbs_frozen_2d_cache_metadata(
 
     bond1 = normalize_bond(b1)
     bond2 = normalize_bond(b2)
+    keo_lc = (keo or "gmatrix").lower()
+    if keo_lc not in {"reduced", "gmatrix"}:
+        raise ValueError(f"Unknown KEO {keo!r}; expected 'reduced' or 'gmatrix'")
     r1_min, r1_max, r1_npts = _grid_spec(r1, "r1")
     r2_min, r2_max, r2_npts = _grid_spec(r2, "r2")
+    reduced_masses = [
+        local_bond_reduced_mass_amu(molecule, bond1),
+        local_bond_reduced_mass_amu(molecule, bond2),
+    ]
+    g12_inv_amu = 0.0
+    if keo_lc == "gmatrix":
+        g12_inv_amu = bond_bond_g12_inv_amu(molecule, bond1, bond2)
     scan_meta = {
         "kind": "2d",
         "coordinate": "lbs-frozen",
-        "keo": keo or "gmatrix",
+        "keo": keo_lc,
+        "reduced_masses_amu": reduced_masses,
+        "g12_inv_amu": g12_inv_amu,
+        "gmatrix_reference_geometry": "scientific.molecule.coordinates_A",
         "bond1_zero_based": [bond1.i, bond1.j],
         "bond2_zero_based": [bond2.i, bond2.j],
         "grid1_A": np.linspace(r1_min, r1_max, r1_npts).tolist(),
@@ -714,9 +756,8 @@ def _grid_1d_normal_relaxed_worker(task: tuple[Any, ...]) -> tuple[Any, ...]:
 
 def _grid_2d_lbs_worker(task: tuple[Any, ...]) -> tuple[int, int, float, np.ndarray]:
     i, j, molecule, cfg, b1, b2, r1, r2, energy_fn, molecule_factory = task
-    coords1 = stretch_along_bond(_molecule_coords(molecule), b1, r1)
-    coords2 = stretch_along_bond(coords1, b2, r2)
-    energy, dipole = _point_energy_dipole(molecule, cfg, coords2, energy_fn, molecule_factory)
+    coords = stretch_two_bonds(_molecule_coords(molecule), b1, b2, r1, r2)
+    energy, dipole = _point_energy_dipole(molecule, cfg, coords, energy_fn, molecule_factory)
     return int(i), int(j), energy, dipole
 
 
@@ -904,6 +945,13 @@ def _grid_spec(spec: Sequence[float], name: str) -> tuple[float, float, int]:
     return float(values[0]), float(values[1]), int(values[2])
 
 
+def _validate_scan_grid(values: np.ndarray, name: str) -> None:
+    if values.ndim != 1 or values.size == 0:
+        raise ValueError(f"{name} must be a non-empty one-dimensional grid")
+    if not np.all(np.isfinite(values)) or np.any(values <= 0.0):
+        raise ValueError(f"{name} bond lengths must be positive and finite")
+
+
 __all__ = [
     "Bond",
     "EnergyDipoleFn",
@@ -937,6 +985,7 @@ __all__ = [
     "normalize_bond",
     "parse_bond",
     "stretch_along_bond",
+    "stretch_two_bonds",
     "validate_lbs_frozen_1d_cache_metadata",
     "validate_lbs_frozen_2d_cache",
 ]

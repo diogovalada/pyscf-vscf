@@ -1,11 +1,15 @@
 # Installation
 
-For a consumer installation with Python 3.10 or newer:
+For a consumer installation with Python 3.10 or newer, install the current
+alpha from its immutable GitHub release tag:
 
 ```bash
-pip install pyscf-vscf
-pip install "pyscf-vscf[pyscf]"  # include PySCF-backed workflows
+pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
+pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a3"
 ```
+
+After the project is published on PyPI, the shorter `pip install pyscf-vscf`
+form will become available.
 
 For a source checkout, use `uv`:
 

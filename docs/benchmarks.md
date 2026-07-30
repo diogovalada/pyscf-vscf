@@ -65,9 +65,9 @@ Primary contributors:
 1. **Reduced dimensionality (2D stretches only):** we scan only two bond lengths (R₁, R₂) while **freezing all other
    coordinates** (e.g., bend angle θ and other intermolecular coordinates). At high excitation, stretch–bend coupling
    and relaxation along other coordinates shifts levels.
-2. **Simplified kinetic-energy operator (KEO):** the current 2D Hamiltonian uses **diatomic reduced masses** for each
-   stretch and a separable product sinc-DVR kinetic energy. This omits the full polyatomic **G-matrix** and
-   **kinetic couplings** between the two stretches (e.g., through the shared O atom in monomers).
+2. **Simplified kinetic-energy operator (KEO):** the archived MARVEL comparisons in this section used **diatomic
+   reduced masses** and a separable product sinc-DVR kinetic energy. The current CLI instead defaults to the constant
+   `gmatrix` cross term described below. Neither model is a full coordinate-dependent polyatomic **G-matrix**.
 3. **Electronic-structure/model mismatch:** high overtones probe the PES/DMS far from equilibrium; DFT method, grid,
    and other settings can introduce additional systematic bias in the overtone regime even if fundamentals look
    reasonable.
@@ -97,7 +97,9 @@ including bond–bond kinetic coupling through the shared atom).
 
 **Implementation note (current code):** `pyscf_pme_pipeline.py --task 2d` supports `--keo {gmatrix,reduced}`.
 `gmatrix` adds a simple constant G-matrix cross term for monomer stretches that share the same O atom; `reduced`
-reproduces the historical separable reduced-mass KEO.
+reproduces the historical separable reduced-mass KEO. Cache provenance records the bond definitions, reference
+geometry, isotope masses, reduced masses, selected KEO, and numerical `g12_inv_amu`; published results should retain
+those fields so that `gmatrix` is not mistaken for a full or coordinate-dependent polyatomic KEO.
 
 **Expected accuracy gain:** often the largest single improvement for triatomic stretch overtones; may reduce
 systematic upward shifts substantially (still limited by missing bend coupling).
