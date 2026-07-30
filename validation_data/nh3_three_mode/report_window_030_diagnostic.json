@@ -1,0 +1,1386 @@
+{
+  "acceptance": {
+    "accepted_variants": [
+      "full_25x25",
+      "dense_31x31",
+      "wide_31x31"
+    ],
+    "criteria": {
+      "maximum_equivalent_vscf_state_spread_cm": 5.0,
+      "maximum_grid_centroid_spread_cm": 25.0,
+      "maximum_vscf_exact_centroid_error_cm": 75.0,
+      "minimum_exact_manifold_weight": 0.7
+    },
+    "excluded_diagnostic_variants": {
+      "coarse_13x13_from_25": "Retained to document the failed coarse-grid test; excluded from the converged plateau because it violates the predefined 25 cm^-1 criterion.",
+      "narrow_21x21_from_25": "Retained to document artificial confinement in the narrowed domain; excluded because it violates the predefined 25 cm^-1 criterion.",
+      "repeated_25x25_from_wide31": "Independent same-coordinate electronic points retained as a reproducibility diagnostic; the primary 25-point archive is used in the plateau."
+    },
+    "grid_spreads_by_manifold": {
+      "binary_combination": {
+        "exact_centroid_spread_cm": 451.2755854328698,
+        "vscf_centroid_spread_cm": 450.16001775827317
+      },
+      "first_overtone": {
+        "exact_centroid_spread_cm": 906.911463584911,
+        "vscf_centroid_spread_cm": 907.9977476966887
+      },
+      "fundamental": {
+        "exact_centroid_spread_cm": 224.6775962311076,
+        "vscf_centroid_spread_cm": 224.6711825253219
+      },
+      "triple_combination": {
+        "exact_centroid_spread_cm": 680.5718795185385,
+        "vscf_centroid_spread_cm": 676.4672379384592
+      }
+    },
+    "observed": {
+      "all_vscf_states_converged": true,
+      "maximum_equivalent_vscf_state_spread_cm": 0.06533791590936744,
+      "maximum_grid_centroid_spread_cm": 907.9977476966887,
+      "maximum_vscf_exact_centroid_error_cm": 4.857329932745415,
+      "minimum_exact_manifold_weight": 0.9600244587037704
+    },
+    "passed": false
+  },
+  "coordinate_model": "three frozen local N-H bond lengths",
+  "electronic_structure_provenance": {
+    "electronic_structure": {
+      "allow_fd_hessian": false,
+      "auxbasis": "aug-cc-pVTZ-jkfit",
+      "backend": "pyscf",
+      "basis": "aug-cc-pVTZ",
+      "dft_grid_level": 3,
+      "dispersion": null,
+      "effective_auxbasis": "aug-cc-pVTZ-jkfit",
+      "method": "wb97x",
+      "rtproj": "pyscf",
+      "scf_conv_tol": 1e-10,
+      "scf_max_cycle": 100,
+      "software_versions": {
+        "dftd4": "4.2.0",
+        "numpy": "2.4.4",
+        "pyscf": "2.13.0",
+        "pyscf-dispersion": "1.5.0",
+        "pyscf-vscf": "0.1.0a1",
+        "scipy": "1.17.1"
+      },
+      "strict": true,
+      "use_density_fit": true
+    },
+    "molecule": {
+      "charge": 0,
+      "coordinates_A": [
+        [
+          1.85187e-05,
+          -5.1e-09,
+          -0.0100976738
+        ],
+        [
+          0.9415030887,
+          -3.5e-09,
+          -0.3775962069
+        ],
+        [
+          -0.4698058106,
+          0.8147804796,
+          -0.3800274175
+        ],
+        [
+          -0.4698058088,
+          -0.8147804897,
+          -0.380027421
+        ]
+      ],
+      "label": "NH3",
+      "masses_amu": [
+        14.00307400443,
+        1.00782503223,
+        1.00782503223,
+        1.00782503223
+      ],
+      "spin": 0,
+      "symbols": [
+        "N",
+        "H",
+        "H",
+        "H"
+      ]
+    }
+  },
+  "exact_reference": "iterative exact 3D sinc-DVR diagonalization of the identical model",
+  "kinetic_model": "separable constant local N-H reduced masses",
+  "package_version": "0.1.0a1",
+  "potential_model": "one-mode representation plus all three two-mode corrections",
+  "schema_version": 1,
+  "scope": "This validates the state-specific VSCF implementation on a non-water, three-mode molecular Hamiltonian. It does not establish full-dimensional NH3 spectroscopic accuracy or validate omitted bend, inversion, and kinetic-coupling terms.",
+  "system": "NH3",
+  "variants": {
+    "coarse_13x13_from_25": {
+      "exact_ground_energy_Eh": 0.02472702776338984,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.7706672881709078,
+          1.2506672881709078
+        ],
+        [
+          0.7706681720149842,
+          1.2506681720149841
+        ],
+        [
+          0.7706681723786961,
+          1.250668172378696
+        ]
+      ],
+      "grid_shape": [
+        13,
+        13,
+        13
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 7296.16951437214,
+          "exact_frequencies_cm": [
+            7283.189119470952,
+            7302.65675267537,
+            7302.662670970099
+          ],
+          "exact_manifold_weights": [
+            0.9981315751246085,
+            0.9994844615919135,
+            0.9994830270584963
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9981315751246085,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 7296.577853143225,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03757463412330253,
+          "vscf_frequencies_cm": [
+            7296.5903785018445,
+            7296.590377060109,
+            7296.552803867721
+          ],
+          "vscf_iterations": [
+            12,
+            12,
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 0.40833877108525485
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 7698.809612513748,
+          "exact_frequencies_cm": [
+            7698.6682350422,
+            7698.696994575806,
+            7699.063607923241
+          ],
+          "exact_manifold_weights": [
+            0.9994851134545908,
+            0.9994819386184823,
+            0.9981553277885917
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.9981553277885917,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 7698.435394510766,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.04538250730456639,
+          "vscf_frequencies_cm": [
+            7698.465647832396,
+            7698.4202703748115,
+            7698.420265325091
+          ],
+          "vscf_iterations": [
+            12,
+            12,
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": -0.3742180029821611
+        },
+        "fundamental": {
+          "exact_centroid_cm": 3648.505649822322,
+          "exact_frequencies_cm": [
+            3635.903275076193,
+            3654.7848605055597,
+            3654.8288138852126
+          ],
+          "exact_manifold_weights": [
+            0.9999884467730816,
+            0.9999952446832603,
+            0.9999952476031244
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999884467730816,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 3648.5156261959305,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03811695442527707,
+          "vscf_frequencies_cm": [
+            3648.541037014807,
+            3648.5029215126024,
+            3648.5029200603817
+          ],
+          "vscf_iterations": [
+            12,
+            12,
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 0.009976373608424183
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 10942.920387082859,
+          "exact_frequencies_cm": [
+            10942.920387082859
+          ],
+          "exact_manifold_weights": [
+            0.9967559810273393
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.9967559810273393,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 10944.187921380266,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            10944.187921380266
+          ],
+          "vscf_iterations": [
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 1.26753429740711
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "coarse_13x13_from_25",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.024727102749655692,
+      "vscf_ground_iterations": 11,
+      "vscf_ground_minus_exact_cm": 0.016457583055920395
+    },
+    "dense_31x31": {
+      "exact_ground_energy_Eh": 0.024906274549181984,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.7706672881709078,
+          1.2506672881709078
+        ],
+        [
+          0.7706681720149842,
+          1.2506681720149841
+        ],
+        [
+          0.7706681723786961,
+          1.250668172378696
+        ]
+      ],
+      "grid_shape": [
+        31,
+        31,
+        31
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 7523.27932260915,
+          "exact_frequencies_cm": [
+            7510.88960283046,
+            7529.472908102664,
+            7529.475456894325
+          ],
+          "exact_manifold_weights": [
+            0.9992086219683285,
+            0.9997885096317893,
+            0.9997879478915819
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9992086219683285,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 7523.5284821656,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03170262415187608,
+          "vscf_frequencies_cm": [
+            7523.539050354855,
+            7523.539048411242,
+            7523.507347730703
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.2491595564497402
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 8112.882362144374,
+          "exact_frequencies_cm": [
+            8112.815001995319,
+            8112.83697968597,
+            8112.995104751835
+          ],
+          "exact_manifold_weights": [
+            0.9997890538795755,
+            0.9997829018330843,
+            0.9992271276932867
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.9992271276932867,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 8112.657301354232,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03589692972491321,
+          "vscf_frequencies_cm": [
+            8112.681230753228,
+            8112.6453394859645,
+            8112.645333823503
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": -0.22506079014237912
+        },
+        "fundamental": {
+          "exact_centroid_cm": 3761.866999337503,
+          "exact_frequencies_cm": [
+            3749.706885283308,
+            3767.927286894335,
+            3767.966825834867
+          ],
+          "exact_manifold_weights": [
+            0.9999918152600333,
+            0.9999966598093488,
+            0.9999966611684707
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999918152600333,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 3761.8746303151743,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03196261450784732,
+          "vscf_frequencies_cm": [
+            3761.895938075915,
+            3761.8639774081994,
+            3761.8639754614073
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.007630977671396977
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 11284.209584722148,
+          "exact_frequencies_cm": [
+            11284.209584722148
+          ],
+          "exact_manifold_weights": [
+            0.9987007668354835
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.9987007668354835,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 11284.962273074814,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            11284.962273074814
+          ],
+          "vscf_iterations": [
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.752688352666155
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "dense_31x31",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.024906342191226182,
+      "vscf_ground_iterations": 11,
+      "vscf_ground_minus_exact_cm": 0.01484571271560953
+    },
+    "full_25x25": {
+      "exact_ground_energy_Eh": 0.024866662061250665,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.7706672881709078,
+          1.2506672881709078
+        ],
+        [
+          0.7706681720149842,
+          1.2506681720149841
+        ],
+        [
+          0.7706681723786961,
+          1.250668172378696
+        ]
+      ],
+      "grid_shape": [
+        25,
+        25,
+        25
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 7477.712950056467,
+          "exact_frequencies_cm": [
+            7465.215081332614,
+            7483.960315422964,
+            7483.963453413822
+          ],
+          "exact_manifold_weights": [
+            0.9990883507172843,
+            0.9997553215983358,
+            0.9997546680145519
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9990883507172843,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 7477.98371043518,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.032734714483012795,
+          "vscf_frequencies_cm": [
+            7477.99462264114,
+            7477.994620737745,
+            7477.961887926657
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.27076037871302105
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 8032.502065478027,
+          "exact_frequencies_cm": [
+            8032.424780611992,
+            8032.447893057346,
+            8032.633522764743
+          ],
+          "exact_manifold_weights": [
+            0.9997559285598139,
+            0.9997505168468321,
+            0.999107328848655
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.999107328848655,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 8032.257068118172,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.037401982722258253,
+          "vscf_frequencies_cm": [
+            8032.282000890074,
+            8032.2446045570905,
+            8032.244598907352
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": -0.24499735985500593
+        },
+        "fundamental": {
+          "exact_centroid_cm": 3739.110004803127,
+          "exact_frequencies_cm": [
+            3726.861941712916,
+            3745.2138764553047,
+            3745.25419624116
+          ],
+          "exact_manifold_weights": [
+            0.9999912641222165,
+            0.9999964305905986,
+            0.9999964321976855
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999912641222165,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 3739.11803459701,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03303148998793404,
+          "vscf_frequencies_cm": [
+            3739.1400549555956,
+            3739.107025369827,
+            3739.1070234656077
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.008029793882997183
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 11215.776776784467,
+          "exact_frequencies_cm": [
+            11215.776776784467
+          ],
+          "exact_manifold_weights": [
+            0.998491595745907
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.998491595745907,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 11216.597851864995,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            11216.597851864995
+          ],
+          "vscf_iterations": [
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 0.8210750805283169
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "full_25x25",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.02486673111287594,
+      "vscf_ground_iterations": 11,
+      "vscf_ground_minus_exact_cm": 0.015155080002840446
+    },
+    "narrow_21x21_from_25": {
+      "exact_ground_energy_Eh": 0.025746046695947947,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.8106672881709078,
+          1.2106672881709077
+        ],
+        [
+          0.8106681720149842,
+          1.2106681720149841
+        ],
+        [
+          0.8106681723786962,
+          1.210668172378696
+        ]
+      ],
+      "grid_shape": [
+        21,
+        21,
+        21
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 8276.048070205796,
+          "exact_frequencies_cm": [
+            8265.130978298044,
+            8281.50509934516,
+            8281.50813297418
+          ],
+          "exact_manifold_weights": [
+            0.9998324101707792,
+            0.9999565215959382,
+            0.9999566352914804
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9998324101707792,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 8276.142916365323,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.02110057819118083,
+          "vscf_frequencies_cm": [
+            8276.149950764055,
+            8276.14994814605,
+            8276.128850185863
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.09484615952715103
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 9373.187244006413,
+          "exact_frequencies_cm": [
+            9373.1714276017,
+            9373.185306477146,
+            9373.204997940395
+          ],
+          "exact_manifold_weights": [
+            0.9998513741781139,
+            0.999956605554257,
+            0.9999415966901631
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.9998513741781139,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 9373.10104207578,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.02322640689999389,
+          "vscf_frequencies_cm": [
+            9373.116524549432,
+            9373.093303535372,
+            9373.093298142532
+          ],
+          "vscf_iterations": [
+            10,
+            10,
+            10
+          ],
+          "vscf_minus_exact_centroid_cm": -0.08620193063325132
+        },
+        "fundamental": {
+          "exact_centroid_cm": 4138.10175022653,
+          "exact_frequencies_cm": [
+            4127.270648741207,
+            4143.501750056293,
+            4143.532851882092
+          ],
+          "exact_manifold_weights": [
+            0.9999965409541073,
+            0.9999986142279066,
+            0.9999986138776236
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999965409541073,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 4138.1053492074,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.021221039162810484,
+          "vscf_frequencies_cm": [
+            4138.119495694297,
+            4138.0982772727675,
+            4138.098274655134
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.003598980869355728
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 12413.834177249462,
+          "exact_frequencies_cm": [
+            12413.834177249462
+          ],
+          "exact_manifold_weights": [
+            0.9997412542942962
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.9997412542942962,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 12414.112713540919,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            12414.112713540919
+          ],
+          "vscf_iterations": [
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.27853629145647574
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "narrow_21x21_from_25",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.02574609544819652,
+      "vscf_ground_iterations": 10,
+      "vscf_ground_minus_exact_cm": 0.010699881784470447
+    },
+    "repeated_25x25_from_wide31": {
+      "exact_ground_energy_Eh": 0.024866662061268613,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.7706672881709078,
+          1.250667288170908
+        ],
+        [
+          0.7706681720149842,
+          1.2506681720149841
+        ],
+        [
+          0.7706681723786961,
+          1.2506681723786963
+        ]
+      ],
+      "grid_shape": [
+        25,
+        25,
+        25
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 7477.712950062,
+          "exact_frequencies_cm": [
+            7465.215081336361,
+            7483.9603154308925,
+            7483.963453418748
+          ],
+          "exact_manifold_weights": [
+            0.9990883507170226,
+            0.9997553215982974,
+            0.999754668014458
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9990883507170226,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 7477.9837104408,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03273470887415897,
+          "vscf_frequencies_cm": [
+            7477.99462264397,
+            7477.994620743334,
+            7477.961887935096
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.27076037879942305
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 8032.502065477682,
+          "exact_frequencies_cm": [
+            8032.424780612532,
+            8032.447893055505,
+            8032.633522765007
+          ],
+          "exact_manifold_weights": [
+            0.9997559285597202,
+            0.9997505168492729,
+            0.9991073288459089
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.9991073288459089,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 8032.257068117848,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.03740197504794196,
+          "vscf_frequencies_cm": [
+            8032.282000885517,
+            8032.244604557558,
+            8032.244598910469
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": -0.24499735983408755
+        },
+        "fundamental": {
+          "exact_centroid_cm": 3739.11000480546,
+          "exact_frequencies_cm": [
+            3726.8619417136174,
+            3745.2138764592437,
+            3745.2541962435184
+          ],
+          "exact_manifold_weights": [
+            0.9999912641222258,
+            0.9999964305906044,
+            0.9999964321976953
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999912641222258,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 3739.118034599373,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.033031486570507695,
+          "vscf_frequencies_cm": [
+            3739.1400549563814,
+            3739.107025371927,
+            3739.107023469811
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.008029793913010508
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 11215.776776793955,
+          "exact_frequencies_cm": [
+            11215.776776793955
+          ],
+          "exact_manifold_weights": [
+            0.9984915957454317
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.9984915957454317,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 11216.597851874785,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            11216.597851874785
+          ],
+          "vscf_iterations": [
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 0.8210750808302691
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "repeated_25x25_from_wide31",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.02486673111289392,
+      "vscf_ground_iterations": 11,
+      "vscf_ground_minus_exact_cm": 0.015155080009693546
+    },
+    "wide_31x31": {
+      "exact_ground_energy_Eh": 0.024604667605371933,
+      "exact_states_computed": 30,
+      "grid_ranges_A": [
+        [
+          0.7106672881709077,
+          1.3106672881709078
+        ],
+        [
+          0.7106681720149841,
+          1.3106681720149842
+        ],
+        [
+          0.7106681723786961,
+          1.3106681723786962
+        ]
+      ],
+      "grid_shape": [
+        31,
+        31,
+        31
+      ],
+      "manifolds": {
+        "binary_combination": {
+          "exact_centroid_cm": 7072.00373717628,
+          "exact_frequencies_cm": [
+            7057.771598040564,
+            7079.115056632094,
+            7079.1245568561835
+          ],
+          "exact_manifold_weights": [
+            0.9830174202025336,
+            0.9941476369316091,
+            0.9941268895629322
+          ],
+          "exact_state_indices": [
+            4,
+            5,
+            6
+          ],
+          "minimum_exact_manifold_weight": 0.9830174202025336,
+          "product_states": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 7073.368464407326,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.04589655131621839,
+          "vscf_frequencies_cm": [
+            7073.3837634626625,
+            7073.3837628479705,
+            7073.337866911346
+          ],
+          "vscf_iterations": [
+            12,
+            12,
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 1.364727231046345
+        },
+        "first_overtone": {
+          "exact_centroid_cm": 7205.970898559463,
+          "exact_frequencies_cm": [
+            7205.415205596426,
+            7205.456307702276,
+            7207.04118237969
+          ],
+          "exact_manifold_weights": [
+            0.994130523514087,
+            0.9941472223249516,
+            0.9830557164579519
+          ],
+          "exact_state_indices": [
+            7,
+            8,
+            9
+          ],
+          "minimum_exact_manifold_weight": 0.9830557164579519,
+          "product_states": [
+            [
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              2,
+              0
+            ],
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "vscf_centroid_cm": 7204.659553657543,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.06533791590936744,
+          "vscf_frequencies_cm": [
+            7204.703111281425,
+            7204.637776325691,
+            7204.637773365515
+          ],
+          "vscf_iterations": [
+            12,
+            12,
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": -1.3113449019201653
+        },
+        "fundamental": {
+          "exact_centroid_cm": 3537.1894031063953,
+          "exact_frequencies_cm": [
+            3524.157197943962,
+            3543.6804179097326,
+            3543.730593465493
+          ],
+          "exact_manifold_weights": [
+            0.9999826988765581,
+            0.9999926669367075,
+            0.9999926723990142
+          ],
+          "exact_state_indices": [
+            1,
+            2,
+            3
+          ],
+          "minimum_exact_manifold_weight": 0.9999826988765581,
+          "product_states": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 3537.2034477898524,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0471713276256196,
+          "vscf_frequencies_cm": [
+            3537.2348951336553,
+            3537.187724429872,
+            3537.1877238060297
+          ],
+          "vscf_iterations": [
+            11,
+            11,
+            11
+          ],
+          "vscf_minus_exact_centroid_cm": 0.014044683457086649
+        },
+        "triple_combination": {
+          "exact_centroid_cm": 10603.63770520361,
+          "exact_frequencies_cm": [
+            10603.63770520361
+          ],
+          "exact_manifold_weights": [
+            0.9600244587037704
+          ],
+          "exact_state_indices": [
+            10
+          ],
+          "minimum_exact_manifold_weight": 0.9600244587037704,
+          "product_states": [
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "vscf_centroid_cm": 10608.495035136355,
+          "vscf_converged": true,
+          "vscf_equivalent_state_spread_cm": 0.0,
+          "vscf_frequencies_cm": [
+            10608.495035136355
+          ],
+          "vscf_iterations": [
+            12
+          ],
+          "vscf_minus_exact_centroid_cm": 4.857329932745415
+        }
+      },
+      "maximum_shared_cut_disagreement_Eh": 0.0,
+      "name": "wide_31x31",
+      "vscf_ground_converged": true,
+      "vscf_ground_energy_Eh": 0.02460475052009094,
+      "vscf_ground_iterations": 11,
+      "vscf_ground_minus_exact_cm": 0.018197677389325227
+    }
+  }
+}

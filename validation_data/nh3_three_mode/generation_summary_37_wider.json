@@ -1,0 +1,119 @@
+{
+  "artifact_tag": "wider",
+  "electronic_structure": {
+    "allow_fd_hessian": false,
+    "auxbasis": "aug-cc-pVTZ-jkfit",
+    "basis": "aug-cc-pVTZ",
+    "dft_grid_level": 3,
+    "dispersion": null,
+    "method": "wb97x",
+    "rtproj": "pyscf",
+    "scf_conv_tol": 1e-10,
+    "scf_max_cycle": 100,
+    "strict": true,
+    "use_density_fit": true
+  },
+  "grid": {
+    "coordinate": "frozen local N-H bond lengths",
+    "equilibrium_bond_lengths_A": [
+      1.0106672881709078,
+      1.0106681720149842,
+      1.010668172378696
+    ],
+    "half_width_A": 0.36,
+    "npts_per_mode": 37
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 6800HS with Radeon Graphics",
+    "logical_cpu_count": 16,
+    "threads_per_worker": 1,
+    "workers": 8
+  },
+  "optimized_geometry": {
+    "coordinates_A": [
+      [
+        1.85187e-05,
+        -5.1e-09,
+        -0.0100976738
+      ],
+      [
+        0.9415030887,
+        -3.5e-09,
+        -0.3775962069
+      ],
+      [
+        -0.4698058106,
+        0.8147804796,
+        -0.3800274175
+      ],
+      [
+        -0.4698058088,
+        -0.8147804897,
+        -0.380027421
+      ]
+    ],
+    "path": "nh3_optimized.xyz",
+    "symbols": [
+      "N",
+      "H",
+      "H",
+      "H"
+    ]
+  },
+  "package_version": "0.1.0a1",
+  "pairs": [
+    {
+      "elapsed_seconds": 313.7373166039979,
+      "energy_range_Eh": 0.5176504673172246,
+      "new_points": 408,
+      "pair_zero_based": [
+        0,
+        1
+      ],
+      "path": "nh3_pair_12_37x37_wider.npz",
+      "reused_points": 961,
+      "source_path": "nh3_pair_12_31x31_wide.npz"
+    },
+    {
+      "elapsed_seconds": 327.0005211139978,
+      "energy_range_Eh": 0.5176504665332047,
+      "new_points": 408,
+      "pair_zero_based": [
+        0,
+        2
+      ],
+      "path": "nh3_pair_13_37x37_wider.npz",
+      "reused_points": 961,
+      "source_path": "nh3_pair_13_31x31_wide.npz"
+    },
+    {
+      "elapsed_seconds": 323.9903857190002,
+      "energy_range_Eh": 0.5176510665938352,
+      "new_points": 408,
+      "pair_zero_based": [
+        1,
+        2
+      ],
+      "path": "nh3_pair_23_37x37_wider.npz",
+      "reused_points": 961,
+      "source_path": "nh3_pair_23_31x31_wide.npz"
+    }
+  ],
+  "purpose": "nested expansion of non-water three-local-mode VSCF validation grids",
+  "runtime": {
+    "byteorder": "little",
+    "distributions": {
+      "dftd4": "4.2.0",
+      "numpy": "2.4.4",
+      "pyscf": "2.13.0",
+      "pyscf-dispersion": "1.5.0",
+      "pyscf-vscf": "0.1.0a1",
+      "scipy": "1.17.1"
+    },
+    "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.11.13",
+    "python_implementation": "CPython"
+  },
+  "source_summary": "generation_summary_31_wide.json",
+  "total_elapsed_seconds": 964.7343814010019
+}

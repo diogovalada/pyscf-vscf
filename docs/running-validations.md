@@ -87,6 +87,31 @@ an experimental or like-for-like rovibrational benchmark. The archived grids
 use legacy schema 1 and are isolated from production cache reuse; their known
 provenance gaps are explicit in `validation_data/manifest.json`.
 
+### Non-water three-mode validation
+
+The checked-in NH3 archive tests the state-specific VSCF solver on a
+three-local-mode molecular Hamiltonian with all three pair corrections. Exact
+3D DVR and VSCF use the identical potential expansion, coordinate grids, and
+separable local reduced masses:
+
+```bash
+uv run python scripts/validate_nh3_three_mode.py
+```
+
+The report preserves failed coarse and narrow-window trials, verifies an
+independently repeated central 25x25 electronic grid, and defines the accepted
+window sequence from 37, 43, and 49 points. The fundamental,
+binary-combination, and triple-combination manifolds pass the 25 cm^-1
+centroid-spread criterion. The first overtone does not and cannot be cited as
+converged from this archive. Reanalysis takes about 17 minutes on the recorded
+Ryzen 7 6800HS and requires neither PySCF nor an external program.
+
+Regeneration is opt-in. The exact commands and source-cache chain are stored
+in `validation_data/nh3_three_mode/manifest.json`. The complete archive
+represents 11,961 independently evaluated electronic points and about 2.9
+hours of measured surface-generation time with eight one-thread workers on
+that CPU.
+
 ## Heavy or external work
 
 Installing and running external quantum-chemistry programs is only needed if

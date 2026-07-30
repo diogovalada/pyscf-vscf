@@ -1,0 +1,190 @@
+Command: scripts/expand_nh3_three_mode.py --source-npts 43 --source-tag widest --target-npts 49 --target-half-width 0.48 --target-tag converged --workers 8 --threads-per-worker 1
+Working directory: /home/user/Code/heavy-water/pyscf-vscf
+Expanding nested pair grid: 552 new points, 1849 reused points
+Outer-ring points: 1/552
+Outer-ring points: 27/552
+Outer-ring points: 54/552
+Outer-ring points: 81/552
+Outer-ring points: 108/552
+Outer-ring points: 135/552
+Outer-ring points: 162/552
+Outer-ring points: 189/552
+Outer-ring points: 216/552
+Outer-ring points: 243/552
+Outer-ring points: 270/552
+Outer-ring points: 297/552
+Outer-ring points: 324/552
+Outer-ring points: 351/552
+Outer-ring points: 378/552
+Outer-ring points: 405/552
+Outer-ring points: 432/552
+Outer-ring points: 459/552
+Outer-ring points: 486/552
+Outer-ring points: 513/552
+Outer-ring points: 540/552
+Outer-ring points: 552/552
+Expanding nested pair grid: 552 new points, 1849 reused points
+Outer-ring points: 1/552
+Outer-ring points: 27/552
+Outer-ring points: 54/552
+Outer-ring points: 81/552
+Outer-ring points: 108/552
+Outer-ring points: 135/552
+Outer-ring points: 162/552
+Outer-ring points: 189/552
+Outer-ring points: 216/552
+Outer-ring points: 243/552
+Outer-ring points: 270/552
+Outer-ring points: 297/552
+Outer-ring points: 324/552
+Outer-ring points: 351/552
+Outer-ring points: 378/552
+Outer-ring points: 405/552
+Outer-ring points: 432/552
+Outer-ring points: 459/552
+Outer-ring points: 486/552
+Outer-ring points: 513/552
+Outer-ring points: 540/552
+Outer-ring points: 552/552
+Expanding nested pair grid: 552 new points, 1849 reused points
+Outer-ring points: 1/552
+Outer-ring points: 27/552
+Outer-ring points: 54/552
+Outer-ring points: 81/552
+Outer-ring points: 108/552
+Outer-ring points: 135/552
+Outer-ring points: 162/552
+Outer-ring points: 189/552
+Outer-ring points: 216/552
+Outer-ring points: 243/552
+Outer-ring points: 270/552
+Outer-ring points: 297/552
+Outer-ring points: 324/552
+Outer-ring points: 351/552
+Outer-ring points: 378/552
+Outer-ring points: 405/552
+Outer-ring points: 432/552
+Outer-ring points: 459/552
+Outer-ring points: 486/552
+Outer-ring points: 513/552
+Outer-ring points: 540/552
+Outer-ring points: 552/552
+{
+  "artifact_tag": "converged",
+  "electronic_structure": {
+    "allow_fd_hessian": false,
+    "auxbasis": "aug-cc-pVTZ-jkfit",
+    "basis": "aug-cc-pVTZ",
+    "dft_grid_level": 3,
+    "dispersion": null,
+    "method": "wb97x",
+    "rtproj": "pyscf",
+    "scf_conv_tol": 1e-10,
+    "scf_max_cycle": 100,
+    "strict": true,
+    "use_density_fit": true
+  },
+  "grid": {
+    "coordinate": "frozen local N-H bond lengths",
+    "equilibrium_bond_lengths_A": [
+      1.0106672881709078,
+      1.0106681720149842,
+      1.010668172378696
+    ],
+    "half_width_A": 0.48,
+    "npts_per_mode": 49
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 6800HS with Radeon Graphics",
+    "logical_cpu_count": 16,
+    "threads_per_worker": 1,
+    "workers": 8
+  },
+  "optimized_geometry": {
+    "coordinates_A": [
+      [
+        1.85187e-05,
+        -5.1e-09,
+        -0.0100976738
+      ],
+      [
+        0.9415030887,
+        -3.5e-09,
+        -0.3775962069
+      ],
+      [
+        -0.4698058106,
+        0.8147804796,
+        -0.3800274175
+      ],
+      [
+        -0.4698058088,
+        -0.8147804897,
+        -0.380027421
+      ]
+    ],
+    "path": "nh3_optimized.xyz",
+    "symbols": [
+      "N",
+      "H",
+      "H",
+      "H"
+    ]
+  },
+  "package_version": "0.1.0a1",
+  "pairs": [
+    {
+      "elapsed_seconds": 581.2125179850009,
+      "energy_range_Eh": 1.329977470625657,
+      "new_points": 552,
+      "pair_zero_based": [
+        0,
+        1
+      ],
+      "path": "nh3_pair_12_49x49_converged.npz",
+      "reused_points": 1849,
+      "source_path": "nh3_pair_12_43x43_widest.npz"
+    },
+    {
+      "elapsed_seconds": 578.1856252200014,
+      "energy_range_Eh": 1.3299774688328228,
+      "new_points": 552,
+      "pair_zero_based": [
+        0,
+        2
+      ],
+      "path": "nh3_pair_13_49x49_converged.npz",
+      "reused_points": 1849,
+      "source_path": "nh3_pair_13_43x43_widest.npz"
+    },
+    {
+      "elapsed_seconds": 539.643268894004,
+      "energy_range_Eh": 1.329982956790701,
+      "new_points": 552,
+      "pair_zero_based": [
+        1,
+        2
+      ],
+      "path": "nh3_pair_23_49x49_converged.npz",
+      "reused_points": 1849,
+      "source_path": "nh3_pair_23_43x43_widest.npz"
+    }
+  ],
+  "purpose": "nested expansion of non-water three-local-mode VSCF validation grids",
+  "runtime": {
+    "byteorder": "little",
+    "distributions": {
+      "dftd4": "4.2.0",
+      "numpy": "2.4.4",
+      "pyscf": "2.13.0",
+      "pyscf-dispersion": "1.5.0",
+      "pyscf-vscf": "0.1.0a1",
+      "scipy": "1.17.1"
+    },
+    "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.11.13",
+    "python_implementation": "CPython"
+  },
+  "source_summary": "generation_summary_43_widest.json",
+  "total_elapsed_seconds": 1699.0505195499973
+}

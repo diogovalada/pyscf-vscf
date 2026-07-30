@@ -1,0 +1,187 @@
+Command: scripts/generate_nh3_three_mode.py --npts 31 --workers 8 --threads-per-worker 1
+Working directory: /home/user/Code/heavy-water/pyscf-vscf
+Python: 3.11.13 (main, Aug 28 2025, 17:07:15) [Clang 20.1.4 ]
+Reusing optimized geometry: validation_data/nh3_three_mode/nh3_optimized.xyz
+Generating pair surface (0, 1) -> nh3_pair_12_31x31.npz
+Evaluating 2D grid: 31x31 = 961 points
+2D grid points: 1/961
+2D grid points: 48/961
+2D grid points: 96/961
+2D grid points: 144/961
+2D grid points: 192/961
+2D grid points: 240/961
+2D grid points: 288/961
+2D grid points: 336/961
+2D grid points: 384/961
+2D grid points: 432/961
+2D grid points: 480/961
+2D grid points: 528/961
+2D grid points: 576/961
+2D grid points: 624/961
+2D grid points: 672/961
+2D grid points: 720/961
+2D grid points: 768/961
+2D grid points: 816/961
+2D grid points: 864/961
+2D grid points: 912/961
+2D grid points: 960/961
+2D grid points: 961/961
+Generating pair surface (0, 2) -> nh3_pair_13_31x31.npz
+Evaluating 2D grid: 31x31 = 961 points
+2D grid points: 1/961
+2D grid points: 48/961
+2D grid points: 96/961
+2D grid points: 144/961
+2D grid points: 192/961
+2D grid points: 240/961
+2D grid points: 288/961
+2D grid points: 336/961
+2D grid points: 384/961
+2D grid points: 432/961
+2D grid points: 480/961
+2D grid points: 528/961
+2D grid points: 576/961
+2D grid points: 624/961
+2D grid points: 672/961
+2D grid points: 720/961
+2D grid points: 768/961
+2D grid points: 816/961
+2D grid points: 864/961
+2D grid points: 912/961
+2D grid points: 960/961
+2D grid points: 961/961
+Generating pair surface (1, 2) -> nh3_pair_23_31x31.npz
+Evaluating 2D grid: 31x31 = 961 points
+2D grid points: 1/961
+2D grid points: 48/961
+2D grid points: 96/961
+2D grid points: 144/961
+2D grid points: 192/961
+2D grid points: 240/961
+2D grid points: 288/961
+2D grid points: 336/961
+2D grid points: 384/961
+2D grid points: 432/961
+2D grid points: 480/961
+2D grid points: 528/961
+2D grid points: 576/961
+2D grid points: 624/961
+2D grid points: 672/961
+2D grid points: 720/961
+2D grid points: 768/961
+2D grid points: 816/961
+2D grid points: 864/961
+2D grid points: 912/961
+2D grid points: 960/961
+2D grid points: 961/961
+{
+  "electronic_structure": {
+    "allow_fd_hessian": false,
+    "auxbasis": "aug-cc-pVTZ-jkfit",
+    "basis": "aug-cc-pVTZ",
+    "dft_grid_level": 3,
+    "dispersion": null,
+    "method": "wb97x",
+    "rtproj": "pyscf",
+    "scf_conv_tol": 1e-10,
+    "scf_max_cycle": 100,
+    "strict": true,
+    "use_density_fit": true
+  },
+  "grid": {
+    "coordinate": "frozen local N-H bond lengths",
+    "equilibrium_bond_lengths_A": [
+      1.0106672881709078,
+      1.0106681720149842,
+      1.010668172378696
+    ],
+    "half_width_A": 0.24,
+    "npts_per_mode": 31
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 6800HS with Radeon Graphics",
+    "logical_cpu_count": 16,
+    "threads_per_worker": 1,
+    "workers": 8
+  },
+  "optimized_geometry": {
+    "coordinates_A": [
+      [
+        1.85187e-05,
+        -5.1e-09,
+        -0.0100976738
+      ],
+      [
+        0.9415030887,
+        -3.5e-09,
+        -0.3775962069
+      ],
+      [
+        -0.4698058106,
+        0.8147804796,
+        -0.3800274175
+      ],
+      [
+        -0.4698058088,
+        -0.8147804897,
+        -0.380027421
+      ]
+    ],
+    "path": "nh3_optimized.xyz",
+    "symbols": [
+      "N",
+      "H",
+      "H",
+      "H"
+    ]
+  },
+  "package_version": "0.1.0a1",
+  "pairs": [
+    {
+      "elapsed_seconds": 753.8706916020019,
+      "energy_range_Eh": 0.1664029544809793,
+      "pair_zero_based": [
+        0,
+        1
+      ],
+      "path": "nh3_pair_12_31x31.npz",
+      "reused": false
+    },
+    {
+      "elapsed_seconds": 742.2583708089987,
+      "energy_range_Eh": 0.16640295415763262,
+      "pair_zero_based": [
+        0,
+        2
+      ],
+      "path": "nh3_pair_13_31x31.npz",
+      "reused": false
+    },
+    {
+      "elapsed_seconds": 752.8753761320004,
+      "energy_range_Eh": 0.166403798623584,
+      "pair_zero_based": [
+        1,
+        2
+      ],
+      "path": "nh3_pair_23_31x31.npz",
+      "reused": false
+    }
+  ],
+  "purpose": "non-water three-local-mode VSCF validation",
+  "runtime": {
+    "byteorder": "little",
+    "distributions": {
+      "dftd4": "4.2.0",
+      "numpy": "2.4.4",
+      "pyscf": "2.13.0",
+      "pyscf-dispersion": "1.5.0",
+      "pyscf-vscf": "0.1.0a1",
+      "scipy": "1.17.1"
+    },
+    "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.11.13",
+    "python_implementation": "CPython"
+  },
+  "total_elapsed_seconds": 2249.0150315879982
+}
