@@ -16,17 +16,17 @@ The package does not claim full-dimensional or general curvilinear VSCF/VCI.
 
 ## Install
 
-Until the first PyPI publication, install the numerical package from the
-GitHub alpha tag:
+Until the first PyPI publication, install the current alpha from its immutable
+GitHub tag:
 
 ```bash
-pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a1"
+pip install "pyscf-vscf @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a2"
 ```
 
 Install the PySCF-backed workflows as well:
 
 ```bash
-pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a1"
+pip install "pyscf-vscf[pyscf] @ git+https://github.com/diogovalada/pyscf-vscf.git@v0.1.0a2"
 ```
 
 The source project uses `uv` for development:
@@ -66,9 +66,12 @@ H = sum_i [T_i + V_i(q_i)] + sum_{i<j} V_ij(q_i, q_j)
 where each `V_ij` is a coupling correction rather than a complete two-mode
 potential. Coordinates supplied to `NModePotential` must be in Angstrom.
 
-The current VSCF implementation consumes a preassembled one-mode/two-mode PES
-through the Python API. It does not yet construct an n-mode PES or DMS, compute
-VSCF transition intensities, or expose VSCF through the command-line driver.
+The current VSCF implementation consumes a one-mode/two-mode PES through the
+Python API. `nmode_model_from_pair_surfaces` assembles that representation from
+overlapping complete pair surfaces, rejects inconsistent shared one-mode cuts,
+and removes independent pair-energy offsets. PySCF does not yet generate an
+arbitrary molecular n-mode PES or DMS automatically. VSCF transition
+intensities and a VSCF command-line workflow are also not implemented.
 
 ## Command Line
 
@@ -109,11 +112,17 @@ and [validation guide](https://github.com/diogovalada/pyscf-vscf/blob/main/docs/
 ## Validation
 
 ```bash
-uv run ruff check src tests scripts/validate_archived_grids.py
-uv run ruff format --check src tests scripts/validate_archived_grids.py
+uv run ruff check src tests scripts/validate_archived_grids.py \
+  scripts/generate_nh3_three_mode.py scripts/expand_nh3_three_mode.py \
+  scripts/validate_nh3_three_mode.py
+uv run ruff format --check src tests scripts/validate_archived_grids.py \
+  scripts/generate_nh3_three_mode.py scripts/expand_nh3_three_mode.py \
+  scripts/validate_nh3_three_mode.py
 uv run pytest -q
 uv run --extra pyscf pytest -m pyscf -q
-uv run python scripts/validate_archived_grids.py --output validation_data/report.json
+uv run python scripts/validate_archived_grids.py \
+  --nmax 12 --output validation_data/convergence_report.json
+uv run python scripts/validate_nh3_three_mode.py
 ```
 
 The archived-grid analysis performs no electronic-structure recomputation. It
@@ -129,9 +138,18 @@ state-specific VSCF is also compared with exact 2D DVR for both fundamentals
 and their combination state. This is a molecular solver benchmark, not an
 independent validation of the underlying PES or omitted kinetic couplings.
 
+The separate NH3 archive exercises three local N-H coordinates and all three
+pair surfaces. State-specific VSCF is compared with exact 3D DVR on the
+identical 1MR/2MR Hamiltonian across a documented window-convergence sequence.
+The fundamental, binary-combination, and triple-combination manifolds pass the
+`25 cm^-1` centroid-spread criterion; the first-overtone manifold is retained
+as nonconverged. Across the final three variants, the maximum VSCF/exact
+centroid error is `4.43 cm^-1`. Reanalysis uses only the checked-in caches and
+does not require PySCF.
+
 ## Release Status
 
-The current version is `0.1.0a1`. API changes remain possible during alpha.
+The current version is `0.1.0a2`. API changes remain possible during alpha.
 The repository includes an MIT license, citation metadata, changelog, CI,
 GitHub release automation, an opt-in trusted-publishing workflow, and a release
 checklist.

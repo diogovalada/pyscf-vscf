@@ -5,7 +5,18 @@ once a public release is tagged.
 
 ## [Unreleased]
 
-## [0.1.0a1] - 2026-07-19
+## [0.1.0a2] - 2026-07-30
+
+### Added
+
+- Offset-invariant 1MR/2MR model assembly from overlapping complete pair
+  surfaces, including fail-closed shared-cut consistency checks.
+- A matrix-free exact n-dimensional sinc-DVR reference solver for small
+  validation Hamiltonians.
+- Reproducible NH3 validation drivers for a non-water, three-local-mode VSCF
+  comparison against exact 3D DVR on the identical Hamiltonian.
+
+## [0.1.0a1] - 2026-07-22
 
 ### Added
 
@@ -37,5 +48,6 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a1...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...HEAD
+[0.1.0a2]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a1...v0.1.0a2
 [0.1.0a1]: https://github.com/diogovalada/pyscf-vscf/releases/tag/v0.1.0a1

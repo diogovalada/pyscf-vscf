@@ -15,11 +15,25 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --extra dev --extra pyscf
-      - run: uv run ruff check src tests scripts/validate_archived_grids.py
-      - run: uv run ruff format --check src tests scripts/validate_archived_grids.py
+      - run: >-
+          uv run ruff check src tests
+          scripts/validate_archived_grids.py
+          scripts/generate_nh3_three_mode.py
+          scripts/expand_nh3_three_mode.py
+          scripts/validate_nh3_three_mode.py
+      - run: >-
+          uv run ruff format --check src tests
+          scripts/validate_archived_grids.py
+          scripts/generate_nh3_three_mode.py
+          scripts/expand_nh3_three_mode.py
+          scripts/validate_nh3_three_mode.py
       - run: uv run pytest -q
       - run: uv run python scripts/validate_archived_grids.py --nmax 12 --output regenerated-report.json
       - run: cmp validation_data/convergence_report.json regenerated-report.json
+      - run: >-
+          uv run python scripts/validate_nh3_three_mode.py
+          --output regenerated-nh3-report.json
+      - run: cmp validation_data/nh3_three_mode/report.json regenerated-nh3-report.json
       - name: Verify tag matches package version
         shell: bash
         run: |
