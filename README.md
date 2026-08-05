@@ -1,5 +1,7 @@
 # pyscf-vscf
 
+![pyscf-vscf: an H2O symmetric-stretch mode over a coupled two-coordinate potential-energy surface](docs/assets/pyscf-vscf-banner.png)
+
 `pyscf-vscf` is a public-alpha package for PySCF-backed construction and
 reduced-dimensional variational analysis of vibrational potential-energy and
 dipole-moment surfaces.
