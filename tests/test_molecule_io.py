@@ -100,13 +100,11 @@ def test_write_xyz_uses_xyz_deuterium_symbol_and_comment(tmp_path):
 def test_bond_parse_and_stretch_behavior():
     from pyscf_vscf.coordinates import Bond, parse_bond, stretch_along_bond
 
-    assert parse_bond("O0-H1") == Bond(0, 1)
     assert parse_bond("2-3") == Bond(2, 3)
-    assert parse_bond(" o4 - h5 ").O == 4
-    assert parse_bond(" o4 - h5 ").H == 5
+    assert parse_bond(" 4 - 5 ") == Bond(4, 5)
 
     coords = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.0, 0.0]])
-    stretched = stretch_along_bond(coords, parse_bond("O0-H1"), 2.5)
+    stretched = stretch_along_bond(coords, parse_bond("0-1"), 2.5)
 
     np.testing.assert_allclose(stretched[0], coords[0])
     np.testing.assert_allclose(stretched[1], [2.5, 0.0, 0.0])
@@ -117,6 +115,8 @@ def test_bond_parse_and_stretch_behavior():
         stretch_along_bond(np.zeros((2, 3)), Bond(0, 1), 1.0)
     with pytest.raises(ValueError, match="Bond specification"):
         parse_bond("O0/O1")
+    with pytest.raises(ValueError, match="expected 0-1"):
+        parse_bond("O0-H1")
 
 
 def test_molecule_default_masses_include_non_water_alpha_example():
@@ -129,6 +129,13 @@ def test_molecule_default_masses_include_non_water_alpha_example():
     )
 
     np.testing.assert_allclose(mol.masses, [1.00782503223, 18.99840316273])
+
+
+def test_molecule_rejects_nonfinite_coordinates():
+    from pyscf_vscf.molecule import Molecule
+
+    with pytest.raises(ValueError, match="coordinates must be finite"):
+        Molecule.from_arrays(["H"], [[np.nan, 0.0, 0.0]])
 
 
 def test_default_masses_cover_general_elements_and_deuterium_override():
@@ -223,13 +230,14 @@ def test_npz_cache_roundtrip_preserves_metadata_and_arrays(tmp_path):
         load_grid_npz(path)
 
 
-def test_schema_v2_cache_requires_array_checksum_manifest(tmp_path):
+@pytest.mark.parametrize("schema_version", [2, 3])
+def test_scientific_cache_requires_array_checksum_manifest(tmp_path, schema_version):
     from pyscf_vscf.cache import load_grid_npz
 
-    path = tmp_path / "unchecked-v2.npz"
+    path = tmp_path / f"unchecked-v{schema_version}.npz"
     np.savez_compressed(
         path,
-        meta_json=np.array(json.dumps({"grid_cache_version": 2})),
+        meta_json=np.array(json.dumps({"grid_cache_version": schema_version})),
         E_Eh=np.array([0.0, 0.1]),
     )
 

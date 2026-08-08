@@ -1,6 +1,8 @@
 {
   "source": {
-    "file": "reference/all_gvpt2.json",
+    "public_summary": "validation_data/orca_stretch_intensity_benchmarks.json",
+    "original_private_archive_path": "reference/all_gvpt2.json",
+    "availability": "Original ORCA output is archived privately and is not distributed; this hash records that source artifact.",
     "sha256": "dcf15fed05932b9cc853ad6a8f87eebe73d8e9180c733a65b3e2336449d7162f",
     "program": "ORCA 6.1.0-f.0 RELEASE",
     "keywords": "wB97X-D4 VeryTightSCF DefGrid3 NoFrozenCore VPT2 aug-cc-pVTZ",

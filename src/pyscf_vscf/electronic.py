@@ -2,11 +2,26 @@
 
 from __future__ import annotations
 
+from typing import Protocol
+
 import numpy as np
 
 from .molecule import Molecule
 
 AU_DIPOLE_TO_DEBYE = 2.541746
+
+
+class EnergyDipoleEvaluator(Protocol):
+    """Callable boundary used by PES/DMS scan workflows.
+
+    The returned energy must be in Hartree. The dipole must be a finite
+    three-component Cartesian vector in Debye, expressed in the same fixed
+    frame as the input geometry. When persisting a grid from a custom
+    evaluator, pass a stable, non-``pyscf`` ``backend_identity`` to the cache
+    helper and use the same identifier when loading it.
+    """
+
+    def __call__(self, molecule: Molecule, settings: object) -> tuple[float, np.ndarray]: ...
 
 
 def energy_dipole(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
@@ -27,4 +42,4 @@ def energy_dipole(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
     return energy, np.asarray(mu_au, dtype=float) * AU_DIPOLE_TO_DEBYE
 
 
-__all__ = ["AU_DIPOLE_TO_DEBYE", "energy_dipole"]
+__all__ = ["AU_DIPOLE_TO_DEBYE", "EnergyDipoleEvaluator", "energy_dipole"]

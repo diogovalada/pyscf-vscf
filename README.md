@@ -1,52 +1,48 @@
 # pyscf-vscf
 
-![pyscf-vscf: an H2O symmetric-stretch mode over a coupled two-coordinate potential-energy surface](https://raw.githubusercontent.com/diogovalada/pyscf-vscf/main/docs/assets/pyscf-vscf-banner.png)
+![A coupled two-coordinate potential-energy surface](https://raw.githubusercontent.com/diogovalada/pyscf-vscf/main/docs/assets/pyscf-vscf-banner.png)
 
-`pyscf-vscf` is a public-alpha package for PySCF-backed construction and
-reduced-dimensional variational analysis of vibrational potential-energy and
-dipole-moment surfaces.
+`pyscf-vscf` provides reduced-dimensional vibrational calculations with a
+PySCF electronic-structure backend. It includes:
 
-The package now contains an actual state-specific VSCF solver for n-mode
-Hamiltonians with one-mode terms and explicit two-mode coupling corrections.
-It also provides 1D/2D sinc-DVR solvers, overlap-based 2D state assignment,
-harmonic and scan workflows, exact constrained normal-coordinate relaxation,
-and provenance-checked PES/DMS caches.
+- state-specific VSCF for n-mode Hamiltonians with one-mode potentials and
+  explicit two-mode coupling corrections;
+- 1D and 2D sinc-DVR solvers;
+- frozen local-bond, normal-coordinate, and constrained relaxed scans;
+- harmonic analysis and geometry optimization;
+- assigned transition frequencies and axis-projected and isotropic
+  intensities; and
+- provenance-checked PES/DMS caches.
 
-VCI is **not implemented**. The present VSCF is reduced-dimensional and uses
-rectilinear uniform DVR coordinates with diagonal one-mode kinetic operators.
-The package does not claim full-dimensional or general curvilinear VSCF/VCI.
+The package does not implement VCI, a full-dimensional PES generator, or
+general curvilinear kinetic-energy operators.
 
 ## Install
-
-Install from PyPI:
 
 ```bash
 pip install pyscf-vscf
 ```
 
-The source project uses `uv` for development:
+PySCF and geomeTRIC are installed with the package. PySCF does not support
+native Windows, so Windows users should install it under WSL.
+
+For development:
 
 ```bash
+git clone https://github.com/diogovalada/pyscf-vscf.git
+cd pyscf-vscf
 uv sync --extra dev
 ```
 
-PySCF is the supported electronic-structure backend and is included in the
-standard installation. Electronic methods are specified using PySCF's native
-method syntax. Pure numerical modules and the VSCF solver avoid importing
-PySCF until an electronic-structure workflow is requested.
-On Windows, install and run the package under WSL because PySCF does not support
-native Windows installations.
+## VSCF Example
 
-## Runnable VSCF Example
-
-The wheel includes a deterministic coupled two-mode example that performs no
-electronic-structure calculations:
+Run the PySCF-free example included in the wheel:
 
 ```bash
 python -m pyscf_vscf.examples.vscf_two_mode
 ```
 
-The main API is:
+The corresponding API is:
 
 ```python
 from pyscf_vscf import NModePotential, VSCFSettings, vscf_spectrum
@@ -58,85 +54,61 @@ from pyscf_vscf import NModePotential, VSCFSettings, vscf_spectrum
 H = sum_i [T_i + V_i(q_i)] + sum_{i<j} V_ij(q_i, q_j)
 ```
 
-where each `V_ij` is a coupling correction rather than a complete two-mode
-potential. Coordinates supplied to `NModePotential` must be in Angstrom.
+Each `V_ij` is a coupling correction, not a complete pair potential.
+Coordinates are uniform grids in Angstrom.
 
-The current VSCF implementation consumes a one-mode/two-mode PES through the
-Python API. `nmode_model_from_pair_surfaces` assembles that representation from
-overlapping complete pair surfaces, rejects inconsistent shared one-mode cuts,
-and removes independent pair-energy offsets. PySCF does not yet generate an
-arbitrary molecular n-mode PES or DMS automatically. VSCF transition
-intensities and a VSCF command-line workflow are also not implemented.
+## PySCF Workflows
 
-## Command Line
-
-The geometry commands below are source-checkout examples; `geom/` is repository
-validation material and is not installed into the wheel:
+The command-line interface accepts XYZ and Midas MMOL geometries:
 
 ```bash
+pyscf-vscf --xyz molecule.xyz --task harmonic
+pyscf-vscf --xyz molecule.xyz --task 1d --bond 0-1 --npts 41
 pyscf-vscf --help
-pyscf-vscf --version
-pyscf-vscf --mmol geom/HDO.mmol --task harmonic
-pyscf-vscf --mmol geom/H2O.mmol --task 1d --bond 0-1 --npts 41
 ```
 
-The legacy `pyscf_pme_pipeline.py` remains in the source repository for
-historical compatibility, but release support and API guarantees apply to the
-package code under `src/pyscf_vscf`.
+The built-in backend supports Hartree-Fock (`--method hf`) and PySCF DFT
+exchange-correlation specifications. Scan functions also accept an injected
+energy/dipole evaluator through the Python API; there is not yet a packaged
+adapter for another electronic-structure program. Custom evaluators return
+Hartree energies and Cartesian Debye dipoles in the geometry frame. Use a
+stable custom `backend_identity` when writing and loading their caches.
 
-XYZ and MMOL files do not reliably preserve molecular charge and spin. Supply
-`--charge` and `--spin` whenever a non-neutral or open-shell geometry is reused.
+Charge and spin are not reliably encoded in XYZ or MMOL files. Pass
+`--charge` and `--spin` for ions and open-shell systems.
 
-## Scientific Conventions
+## Results And Caches
 
-- Transition dipoles are reported in Debye, never arbitrary units.
-- Integrated cross sections are `integral sigma(omega) d omega` in `m^2/s`.
-- Axis-projected values are for polarized light; vector-norm values use the
-  isotropic `1/3` orientation average.
-- 2D state labels use phase-canonical wavefunction overlaps and expose unique
-  labels, mixed-state signatures, participation ratios, dominant-manifold
-  weights, and leading signed components.
-- Schema-v2 caches fingerprint geometry, isotope masses, charge/spin, every
-  electronic-structure setting, scan coordinates, runtime versions, and array
-  checksums. Legacy caches fail closed in production loaders.
+`variational_1d` and `variational_2d` return immutable `TransitionRecord`
+objects. Every record contains both the polarized-axis and isotropically
+averaged intensity conventions. Use `record.as_dict()` for JSON output.
 
-See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/main/docs/intensity-conventions.md)
-and [validation guide](https://github.com/diogovalada/pyscf-vscf/blob/main/docs/running-validations.md).
+Schema-v3 grid caches separate the causal cache identity from recorded
+provenance. Electronic method, basis, geometry, charge, spin, and scan grid
+control reuse; isotope masses, labels, runtime versions, and vibrational
+analysis policy do not invalidate the same Born-Oppenheimer surface. Array
+checksums are always verified.
+
+See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/intensity-conventions.md),
+[installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/installation.md), and
+[validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/running-validations.md)
+for details.
 
 ## Validation
 
 ```bash
-uv run ruff check src tests scripts/validate_archived_grids.py \
-  scripts/generate_nh3_three_mode.py scripts/expand_nh3_three_mode.py \
-  scripts/validate_nh3_three_mode.py
-uv run ruff format --check src tests scripts/validate_archived_grids.py \
-  scripts/generate_nh3_three_mode.py scripts/expand_nh3_three_mode.py \
-  scripts/validate_nh3_three_mode.py
-uv run pytest -m "not pyscf" -q
-uv run pytest -m pyscf -q
-uv run python scripts/validate_archived_grids.py \
-  --nmax 12 --output validation_data/convergence_report.json
-uv run python scripts/validate_nh3_three_mode.py
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
+uv run pytest -q
+uv run python scripts/validate_archived_grids.py --output /tmp/water-report.json
+uv run python scripts/validate_nh3_three_mode.py --output /tmp/nh3-report.json
 ```
 
-The archived-grid analysis performs no electronic-structure recomputation. It
-reports state-matched spreads across grid density and coordinate-window
-variants for H2O, HDO, and D2O. It also compares the two assigned stretch
-fundamentals of each isotopologue against independent ORCA harmonic IR
-intensities. The six calculated intensities reproduce the independent scale
-and isotope/mode trend within 35.4% relative error. This is a computational
-cross-check, not an experimental or rovibrational validation.
+The test suite includes analytic numerical checks, tiny PySCF smoke tests, and
+archived H2O/HDO/D2O and NH3 molecular validations. The archives test solver
+correctness and convergence on stated reduced-dimensional Hamiltonians; they
+do not establish general spectroscopic accuracy.
 
-On the same archived molecular surfaces and a matched separable kinetic model,
-state-specific VSCF is also compared with exact 2D DVR for both fundamentals
-and their combination state. This is a molecular solver benchmark, not an
-independent validation of the underlying PES or omitted kinetic couplings.
+## License
 
-The separate NH3 archive exercises three local N-H coordinates and all three
-pair surfaces. State-specific VSCF is compared with exact 3D DVR on the
-identical 1MR/2MR Hamiltonian across a documented window-convergence sequence.
-The fundamental, binary-combination, and triple-combination manifolds pass the
-`25 cm^-1` centroid-spread criterion; the first-overtone manifold is retained
-as nonconverged. Across the final three variants, the maximum VSCF/exact
-centroid error is `4.43 cm^-1`. Reanalysis uses only the checked-in caches and
-does not require PySCF.
+MIT

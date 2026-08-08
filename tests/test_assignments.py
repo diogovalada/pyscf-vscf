@@ -18,7 +18,7 @@ def test_separable_product_states_have_unique_unit_weight_assignments() -> None:
         1.0,
         1.4,
         v1[:, None] + v2[None, :],
-        k_eigs=7,
+        nmax=6,
     )
 
     assignments = assign_product_states_2d(dvr, 1.0, 1.4, v1, v2)
@@ -38,7 +38,7 @@ def test_assignment_weights_expose_strongly_mixed_near_degenerate_states() -> No
         1.0,
         1.0,
         one_mode[:, None] + one_mode[None, :] + coupling,
-        k_eigs=4,
+        nmax=3,
     )
 
     assignments = assign_product_states_2d(dvr, 1.0, 1.0, one_mode, one_mode)

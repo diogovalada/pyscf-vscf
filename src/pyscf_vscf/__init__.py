@@ -7,9 +7,10 @@ PySCF only when explicitly used.
 from .assignments import ProductStateAssignment, assign_product_states_2d
 from .constants import AMU, ANG_TO_BOHR, DEBYE_TO_CM, HARTREE_TO_CM, atomic_mass_amu
 from .coordinates import Bond
+from .electronic import EnergyDipoleEvaluator
 from .harmonic import HarmonicResult, mass_weighted_freqs_modes
 from .molecule import Molecule
-from .settings import ESSettings, RuntimeSettings
+from .settings import ESSettings, HarmonicSettings, RuntimeSettings
 from .spectra import (
     einstein_a_from_debye,
     integrated_cross_section_omega,
@@ -17,7 +18,7 @@ from .spectra import (
 )
 from .surfaces import grid_1d_pes_dms, grid_2d_pes_dms
 from .validation import ConvergenceReport, ExactProductDVR, convergence_report, exact_nmode_dvr
-from .variational import variational_1d, variational_2d
+from .variational import TransitionRecord, variational_1d, variational_2d
 from .vscf import (
     NModePotential,
     VSCFSettings,
@@ -38,12 +39,15 @@ __all__ = [
     "ConvergenceReport",
     "DEBYE_TO_CM",
     "ESSettings",
+    "EnergyDipoleEvaluator",
     "ExactProductDVR",
     "HARTREE_TO_CM",
     "HarmonicResult",
+    "HarmonicSettings",
     "Molecule",
     "ProductStateAssignment",
     "RuntimeSettings",
+    "TransitionRecord",
     "NModePotential",
     "VSCFSettings",
     "VSCFSpectrum",
@@ -68,4 +72,4 @@ __all__ = [
     "vscf_spectrum",
 ]
 
-__version__ = "0.1.0a6"
+__version__ = "0.1.0a7"

@@ -10,7 +10,21 @@ import numpy as np
 import pytest
 
 from pyscf_vscf import cli
+from pyscf_vscf.variational import TransitionRecord
 from pyscf_vscf.workflows import harmonic, optimization, scans
+
+
+def _transition(frequency_cm: float, quanta: tuple[int, ...] = (1,)) -> TransitionRecord:
+    return TransitionRecord(
+        state_index=1,
+        quanta=quanta,
+        frequency_cm=frequency_cm,
+        transition_dipole_axis_D=0.1,
+        integrated_cross_section_axis_omega_m2_per_s=0.2,
+        transition_dipole_norm_D=0.3,
+        integrated_cross_section_isotropic_omega_m2_per_s=0.4,
+        assignment_weight=0.99 if len(quanta) > 1 else None,
+    )
 
 
 def _write_xyz(path: Path) -> Path:
@@ -49,7 +63,7 @@ def _write_mmol(path: Path) -> Path:
     return path
 
 
-def test_help_and_version_do_not_import_pyscf_or_legacy_pipeline() -> None:
+def test_help_and_version_do_not_import_pyscf() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
     env["PYTHONPATH"] = str(repo_root / "src") + os.pathsep + env.get("PYTHONPATH", "")
@@ -61,15 +75,13 @@ class BlockExpensiveImports(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
         if fullname == "pyscf" or fullname.startswith("pyscf."):
             raise RuntimeError(f"unexpected PySCF import: {fullname}")
-        if fullname == "pyscf_pme_pipeline":
-            raise RuntimeError("unexpected legacy pipeline import")
         return None
 
 sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a6")):
+    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a7")):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],
@@ -80,7 +92,6 @@ raise SystemExit(main(ARGV))
         )
         assert proc.returncode == 0, proc.stderr
         assert expected in proc.stdout
-        assert "pyscf_pme_pipeline" not in proc.stdout
 
 
 def test_normal_relaxed_scan_is_exposed_in_package_cli() -> None:
@@ -100,19 +111,6 @@ def test_cli_has_no_package_level_dispersion_option() -> None:
     assert "--dispersion" not in parser.format_help()
     with pytest.raises(SystemExit):
         parser.parse_args(["--dispersion", "none"])
-
-
-def test_development_fast_materializes_all_backend_settings() -> None:
-    args = cli._build_parser().parse_args(["--dev-fast"])
-    cfg, npts, tight_width = cli._build_es_settings(args)
-
-    assert cfg.method == "hf"
-    assert cfg.basis == "sto-3g"
-    assert cfg.scf_conv_tol == pytest.approx(1e-7)
-    assert cfg.scf_max_cycle == 50
-    assert cfg.dft_grid_level == 1
-    assert npts == 21
-    assert tight_width == pytest.approx(0.2)
 
 
 def test_executor_factory_uses_sequential_executor_for_single_worker() -> None:
@@ -155,10 +153,20 @@ def test_harmonic_task_dispatches_to_package_workflow(
     input_path = _write_mmol(tmp_path / "oh.mmol")
     captured: dict[str, object] = {}
 
-    def fake_harmonic_analysis(molecule, cfg, *, rtproj: str, debug: bool):
+    def fake_harmonic_analysis(
+        molecule,
+        cfg,
+        *,
+        rtproj: str,
+        strict: bool,
+        allow_fd_hessian: bool,
+        debug: bool,
+    ):
         captured["molecule"] = molecule
         captured["cfg"] = cfg
         captured["rtproj"] = rtproj
+        captured["strict"] = strict
+        captured["allow_fd_hessian"] = allow_fd_hessian
         captured["debug"] = debug
         return SimpleNamespace(
             zpe_cm=123.45,
@@ -194,6 +202,8 @@ def test_harmonic_task_dispatches_to_package_workflow(
     assert cfg.basis == "sto-3g"
     assert cfg.use_density_fit is False
     assert captured["rtproj"] == "none"
+    assert captured["strict"] is True
+    assert captured["allow_fd_hessian"] is False
     assert captured["debug"] is True
     out = capsys.readouterr().out
     assert "ZPE (harmonic): 123.45 cm^-1" in out
@@ -238,15 +248,13 @@ def test_opt_task_reads_xyz_and_dispatches_to_package_workflow(
     )
 
     molecule = captured["molecule"]
-    cfg = captured["cfg"]
     kwargs = captured["kwargs"]
     assert molecule.label == "water"
     assert molecule.symbols == ["O", "H", "H"]
     np.testing.assert_allclose(molecule.coords[1], [1.0, 0.0, 0.0])
     assert molecule.charge == -1
     assert molecule.spin == 1
-    assert cfg.strict is False
-    assert cfg.allow_fd_hessian is True
+    assert kwargs["strict"] is False
     assert kwargs["opt_out"] == output_path
     assert kwargs["opt_maxsteps"] == 7
     assert "opt_conv" not in kwargs
@@ -270,17 +278,9 @@ def test_1d_task_dispatches_grid_and_variational_helpers(
             np.zeros((3, 3)),
         )
 
-    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax, intensity):
-        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax, intensity)
-        return [
-            {
-                "v": 1,
-                "freq_cm": 345.6,
-                "transition_dipole_D": 0.1,
-                "integrated_cross_section_omega_m2_per_s": 0.2,
-                "orientation": "polarized-axis",
-            }
-        ]
+    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax):
+        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax)
+        return [_transition(345.6)]
 
     monkeypatch.setattr(scans, "grid_1d_pes_dms", fake_grid)
     monkeypatch.setattr(variational, "variational_1d", fake_variational)
@@ -293,7 +293,7 @@ def test_1d_task_dispatches_grid_and_variational_helpers(
                 "--task",
                 "1d",
                 "--bond",
-                "O0-H1",
+                "0-1",
                 "--rmin",
                 "0.8",
                 "--rmax",
@@ -314,11 +314,11 @@ def test_1d_task_dispatches_grid_and_variational_helpers(
     )
 
     _molecule, _cfg, bond, rmin, rmax, npts, kwargs = captured["grid"]
-    assert (bond.O, bond.H) == (0, 1)
+    assert (bond.i, bond.j) == (0, 1)
     assert (rmin, rmax, npts) == (0.8, 1.0, 3)
     assert kwargs["log_fn"] is not None
     assert kwargs["executor_factory"] is not cli._SequentialExecutor
-    assert captured["variational"][5:] == (1, "axis")
+    assert captured["variational"][5:] == (1,)
     assert "345.6" in capsys.readouterr().out
 
 
@@ -351,17 +351,9 @@ def test_1d_task_supports_non_water_numeric_bond(
             np.zeros((3, 3)),
         )
 
-    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax, intensity):
-        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax, intensity)
-        return [
-            {
-                "v": 1,
-                "freq_cm": 123.4,
-                "transition_dipole_D": 0.1,
-                "integrated_cross_section_omega_m2_per_s": 0.2,
-                "orientation": "polarized-axis",
-            }
-        ]
+    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax):
+        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax)
+        return [_transition(123.4)]
 
     monkeypatch.setattr(scans, "grid_1d_pes_dms", fake_grid)
     monkeypatch.setattr(variational, "variational_1d", fake_variational)
@@ -408,7 +400,7 @@ def test_1d_normal_task_dispatches_executor_to_normal_grid(
         captured["normal_mode"] = (molecule, cfg, bond, kwargs)
         u_dir = np.zeros_like(molecule.coords)
         u_dir[1, 0] = 1.0
-        return u_dir, 3, 1234.5, np.eye(9), np.arange(9, dtype=float)
+        return scans.NormalModeDirection(u_dir, 3, 1234.5, np.eye(9), np.arange(9, dtype=float))
 
     def fake_grid(molecule, cfg, u_dir, smin, smax, npts, **kwargs):
         captured["grid"] = (molecule, cfg, u_dir, smin, smax, npts, kwargs)
@@ -418,17 +410,9 @@ def test_1d_normal_task_dispatches_executor_to_normal_grid(
             np.zeros((3, 3)),
         )
 
-    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax, intensity):
-        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax, intensity)
-        return [
-            {
-                "v": 1,
-                "freq_cm": 2345.6,
-                "transition_dipole_D": 0.1,
-                "integrated_cross_section_omega_m2_per_s": 0.2,
-                "orientation": "polarized-axis",
-            }
-        ]
+    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax):
+        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax)
+        return [_transition(2345.6)]
 
     monkeypatch.setattr(scans, "calc_normal_mode_direction", fake_normal_mode_direction)
     monkeypatch.setattr(scans, "grid_1d_pes_dms_normal", fake_grid)
@@ -444,7 +428,7 @@ def test_1d_normal_task_dispatches_executor_to_normal_grid(
                 "--scan",
                 "normal",
                 "--bond",
-                "O0-H1",
+                "0-1",
                 "--smin",
                 "-0.1",
                 "--smax",
@@ -479,7 +463,7 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
         captured["normal_mode"] = (molecule, cfg, bond, kwargs)
         u_dir = np.zeros_like(molecule.coords)
         u_dir[1, 0] = 1.0
-        return u_dir, 2, 4321.0, np.eye(9), np.arange(9, dtype=float)
+        return scans.NormalModeDirection(u_dir, 2, 4321.0, np.eye(9), np.arange(9, dtype=float))
 
     def fake_grid(molecule, cfg, u_dir, smin, smax, npts, **kwargs):
         captured["grid"] = (molecule, cfg, u_dir, smin, smax, npts, kwargs)
@@ -494,17 +478,9 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
             messages=("ok", "ok", "ok"),
         )
 
-    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax, intensity):
-        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax, intensity)
-        return [
-            {
-                "v": 1,
-                "freq_cm": 3210.0,
-                "transition_dipole_D": 0.1,
-                "integrated_cross_section_omega_m2_per_s": 0.2,
-                "orientation": "polarized-axis",
-            }
-        ]
+    def fake_variational(R, E, MU, redmass_amu, *, axis, vmax):
+        captured["variational"] = (R, E, MU, redmass_amu, axis, vmax)
+        return [_transition(3210.0)]
 
     monkeypatch.setattr(scans, "calc_normal_mode_direction", fake_normal_mode_direction)
     monkeypatch.setattr(scans, "grid_1d_pes_dms_normal_relaxed", fake_grid)
@@ -520,7 +496,7 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
                 "--scan",
                 "normal-relaxed",
                 "--bond",
-                "O0-H1",
+                "0-1",
                 "--smin",
                 "-0.1",
                 "--smax",
@@ -536,7 +512,8 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
 
     _molecule, _cfg, _u_dir, smin, smax, npts, kwargs = captured["grid"]
     assert (smin, smax, npts) == (-0.1, 0.1, 3)
-    assert kwargs["relaxed_point_fn"] is pyscf_backend.normal_relaxed_point
+    assert kwargs["relaxed_point_fn"].func is pyscf_backend.normal_relaxed_point
+    assert kwargs["relaxed_point_fn"].keywords == {"strict": True}
     assert kwargs["executor_factory"] is cli._SequentialExecutor
     assert "3210.0" in capsys.readouterr().out
 
@@ -553,7 +530,9 @@ def test_1d_normal_relaxed_refuses_spectrum_when_any_point_failed(
     monkeypatch.setattr(
         scans,
         "calc_normal_mode_direction",
-        lambda *args, **kwargs: (u_dir, 2, 4321.0, np.eye(9), np.arange(9, dtype=float)),
+        lambda *args, **kwargs: scans.NormalModeDirection(
+            u_dir, 2, 4321.0, np.eye(9), np.arange(9, dtype=float)
+        ),
     )
     monkeypatch.setattr(
         scans,
@@ -605,7 +584,7 @@ def test_2d_task_dispatches_grid_and_variational_helpers(
         captured["grid"] = (molecule, cfg, b1, b2, R1, R2, kwargs)
         return R1, R2, np.zeros((3, 3)), np.zeros((3, 3, 3))
 
-    def fake_variational(R1, R2, E, MU, mu1, mu2, *, axis, nmax, g12_inv_amu, intensity):
+    def fake_variational(R1, R2, E, MU, mu1, mu2, *, axis, nmax, g12_inv_amu):
         captured["variational"] = (
             R1,
             R2,
@@ -616,19 +595,8 @@ def test_2d_task_dispatches_grid_and_variational_helpers(
             axis,
             nmax,
             g12_inv_amu,
-            intensity,
         )
-        return [
-            {
-                "n": 1,
-                "assignment": (1, 0),
-                "assignment_weight": 0.99,
-                "freq_cm": 456.7,
-                "transition_dipole_D": 0.3,
-                "integrated_cross_section_omega_m2_per_s": 0.4,
-                "orientation": "isotropic",
-            }
-        ]
+        return [_transition(456.7, (1, 0))]
 
     monkeypatch.setattr(scans, "grid_2d_pes_dms", fake_grid)
     monkeypatch.setattr(variational, "variational_2d", fake_variational)
@@ -641,9 +609,9 @@ def test_2d_task_dispatches_grid_and_variational_helpers(
                 "--task",
                 "2d",
                 "--bond",
-                "O0-H1",
+                "0-1",
                 "--bond2",
-                "O0-H2",
+                "0-2",
                 "--rmin",
                 "0.8",
                 "--rmax",
@@ -666,11 +634,11 @@ def test_2d_task_dispatches_grid_and_variational_helpers(
     )
 
     _molecule, _cfg, b1, b2, R1, R2, kwargs = captured["grid"]
-    assert (b1.O, b1.H) == (0, 1)
-    assert (b2.O, b2.H) == (0, 2)
+    assert (b1.i, b1.j) == (0, 1)
+    assert (b2.i, b2.j) == (0, 2)
     np.testing.assert_allclose(R1, [0.8, 0.9, 1.0])
     np.testing.assert_allclose(R2, [0.8, 0.9, 1.0])
     assert kwargs["log_fn"] is not None
     assert kwargs["executor_factory"] is not cli._SequentialExecutor
-    assert captured["variational"][7:] == (2, 0.0, "vector")
+    assert captured["variational"][7:] == (2, 0.0)
     assert "456.7" in capsys.readouterr().out

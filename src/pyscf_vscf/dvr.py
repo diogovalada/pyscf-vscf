@@ -139,7 +139,6 @@ def product_dvr_2d(
     V_Eh: np.ndarray,
     *,
     nmax: int = 12,
-    k_eigs: int | None = None,
     g12_inv_amu: float = 0.0,
 ) -> DVR2D:
     """Solve a 2D product sinc DVR.
@@ -171,21 +170,13 @@ def product_dvr_2d(
             sparse.csr_matrix(D1_2),
         )
     dim = n1 * n2
-    if k_eigs is None:
-        try:
-            nmax_int = operator.index(nmax)
-        except TypeError as exc:
-            raise ValueError("nmax must be an integer") from exc
-        if nmax_int < 1:
-            raise ValueError("nmax must be at least 1")
-        k = nmax_int + 1
-    else:
-        try:
-            k = operator.index(k_eigs)
-        except TypeError as exc:
-            raise ValueError("k_eigs must be an integer") from exc
-        if k < 2:
-            raise ValueError("Need at least 2 eigenpairs")
+    try:
+        nmax_int = operator.index(nmax)
+    except TypeError as exc:
+        raise ValueError("nmax must be an integer") from exc
+    if nmax_int < 1:
+        raise ValueError("nmax must be at least 1")
+    k = nmax_int + 1
     if k >= dim:
         raise ValueError(f"Requested {k} eigenpairs for 2D DVR dimension {dim}")
     indices = np.arange(1, dim + 1, dtype=float)

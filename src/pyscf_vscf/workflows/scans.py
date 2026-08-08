@@ -1,8 +1,7 @@
-"""Legacy-compatible scan workflow helpers.
+"""Scan workflow helpers.
 
 This module sits above the pure coordinate/surface helpers and below the CLI.
-It preserves the legacy frozen local-bond and normal-mode grid semantics while
-keeping all expensive electronic-structure work injectable.
+All expensive electronic-structure work is injectable.
 """
 
 from __future__ import annotations
@@ -22,15 +21,14 @@ from pyscf_vscf.cache import (
     scientific_cache_metadata,
     validate_scientific_cache_metadata,
 )
-from pyscf_vscf.constants import atomic_mass_amu
 from pyscf_vscf.coordinates import Bond, parse_bond
 from pyscf_vscf.coordinates import stretch_along_bond as _stretch_along_bond
 from pyscf_vscf.coordinates import stretch_two_bonds as _stretch_two_bonds
 from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.electronic import energy_dipole
+from pyscf_vscf.electronic import EnergyDipoleEvaluator, energy_dipole
 
 
-EnergyDipoleFn = Callable[[Any, Any], tuple[float, np.ndarray]]
+EnergyDipoleFn = EnergyDipoleEvaluator
 ExecutorFactory = Callable[[], AbstractContextManager[Any]]
 MoleculeFactory = Callable[[Any, np.ndarray], Any]
 ProgressFn = Callable[[int, int, str], None]
@@ -44,18 +42,13 @@ RelaxedNormalPointFn = Callable[
 
 @dataclass(frozen=True)
 class NormalModeDirection:
-    """Selected normal-mode scan direction and legacy diagnostics."""
+    """Selected normal-mode scan direction and diagnostics."""
 
     u_dir: np.ndarray
     mode_index: int
     frequency_cm: float
     modes: np.ndarray
     freqs_cm: np.ndarray
-
-    def as_legacy_tuple(self) -> tuple[np.ndarray, int, float, np.ndarray, np.ndarray]:
-        """Return the tuple shape used by ``pyscf_pme_pipeline.py``."""
-
-        return self.u_dir, self.mode_index, self.frequency_cm, self.modes, self.freqs_cm
 
 
 @dataclass(frozen=True)
@@ -90,35 +83,24 @@ class NormalRelaxedGrid:
         )
 
 
-def normalize_bond(bond: Bond | str | Any) -> Bond:
-    """Return a package ``Bond`` from package, legacy, or string bond specs."""
+def normalize_bond(bond: Bond | str) -> Bond:
+    """Return a package ``Bond`` from a bond object or index string."""
 
     if isinstance(bond, str):
         return parse_bond(bond)
     if isinstance(bond, Bond):
         return bond
-    if hasattr(bond, "i") and hasattr(bond, "j"):
-        return Bond(int(getattr(bond, "i")), int(getattr(bond, "j")))
-    if hasattr(bond, "O") and hasattr(bond, "H"):
-        return Bond(int(getattr(bond, "O")), int(getattr(bond, "H")))
-    raise TypeError("bond must be a Bond, legacy O/H bond, or bond specification string")
+    raise TypeError("bond must be a Bond or an index specification such as '0-1'")
 
 
-def bond_label(bond: Bond | str | Any) -> str:
+def bond_label(bond: Bond | str) -> str:
     """Return the canonical cache label for a bond."""
 
     b = normalize_bond(bond)
     return f"{b.i}-{b.j}"
 
 
-def legacy_bond_label(bond: Bond | str | Any) -> str:
-    """Return the historical O/H-style cache label for compatibility."""
-
-    b = normalize_bond(bond)
-    return f"O{b.i}-H{b.j}"
-
-
-def stretch_along_bond(coords: np.ndarray, bond: Bond | str | Any, new_len_A: float) -> np.ndarray:
+def stretch_along_bond(coords: np.ndarray, bond: Bond | str, new_len_A: float) -> np.ndarray:
     """Return coordinates with the second bond atom moved to a new bond length."""
 
     return _stretch_along_bond(coords, normalize_bond(bond), new_len_A)
@@ -126,8 +108,8 @@ def stretch_along_bond(coords: np.ndarray, bond: Bond | str | Any, new_len_A: fl
 
 def stretch_two_bonds(
     coords: np.ndarray,
-    bond1: Bond | str | Any,
-    bond2: Bond | str | Any,
+    bond1: Bond | str,
+    bond2: Bond | str,
     new_len1_A: float,
     new_len2_A: float,
 ) -> np.ndarray:
@@ -142,18 +124,16 @@ def stretch_two_bonds(
     )
 
 
-def molecule_with_coords(molecule: Any, coords: np.ndarray) -> Molecule:
-    """Build a package molecule from a duck-typed molecule and new coordinates."""
+def molecule_with_coords(molecule: Molecule, coords: np.ndarray) -> Molecule:
+    """Copy a package molecule with new coordinates."""
 
-    masses_fn = getattr(molecule, "analysis_masses", None)
-    masses = masses_fn() if callable(masses_fn) else getattr(molecule, "masses", None)
     return Molecule.from_arrays(
-        _molecule_symbols(molecule),
+        molecule.symbols,
         np.asarray(coords, dtype=float),
-        charge=int(getattr(molecule, "charge", 0)),
-        spin=int(getattr(molecule, "spin", 0)),
-        label=str(getattr(molecule, "label", "mol")),
-        masses_amu=masses,
+        charge=molecule.charge,
+        spin=molecule.spin,
+        label=molecule.label,
+        masses_amu=molecule.masses,
     )
 
 
@@ -174,7 +154,7 @@ def normal_mode_displaced_coords(
 
 
 def normal_mode_effective_mass_amu(molecule: Any, u_dir: np.ndarray) -> float:
-    """Return legacy effective mass for a unit-normalized Cartesian path."""
+    """Return the effective mass for a unit-normalized Cartesian path."""
 
     direction = _normal_mode_direction_for_molecule(molecule, u_dir)
     masses = molecule_analysis_masses(molecule)
@@ -235,7 +215,7 @@ def normal_mode_direction_from_modes(
     modes_arr = np.asarray(modes, dtype=float)
     freqs_arr = np.asarray(freqs_cm, dtype=float)
     masses = molecule_analysis_masses(molecule)
-    natm = len(_molecule_symbols(molecule))
+    natm = len(molecule.symbols)
 
     if coords.shape != (natm, 3):
         raise ValueError("molecule coordinates must have shape (n_atoms, 3)")
@@ -246,7 +226,7 @@ def normal_mode_direction_from_modes(
     if freqs_arr.ndim != 1 or freqs_arr.shape[0] != modes_arr.shape[1]:
         raise ValueError("freqs_cm must have one entry per mode column")
 
-    axis_vec = coords[b.H] - coords[b.O]
+    axis_vec = coords[b.j] - coords[b.i]
     axis_norm = float(np.linalg.norm(axis_vec))
     if axis_norm < 1e-12:
         raise ValueError("Zero target-bond axis length")
@@ -256,7 +236,7 @@ def normal_mode_direction_from_modes(
     scores = []
     for k in range(modes_arr.shape[1]):
         u_cart = (modes_arr[:, k] / np.sqrt(mass_rep)).reshape(natm, 3)
-        rel = u_cart[b.H] - u_cart[b.O]
+        rel = u_cart[b.j] - u_cart[b.i]
         scores.append(abs(float(np.dot(rel, axis_unit))))
     mode_index = int(np.argmax(scores))
 
@@ -276,11 +256,14 @@ def normal_mode_direction_from_modes(
 def calc_normal_mode_direction(
     molecule: Any,
     cfg: Any,
-    bond: Bond | str | Any,
+    bond: Bond | str,
     *,
+    rtproj: str = "pyscf",
+    strict: bool = True,
+    allow_fd_hessian: bool = False,
     harmonic_fn: HarmonicFn | None = None,
     log_fn: LogFn | None = None,
-) -> tuple[np.ndarray, int, float, np.ndarray, np.ndarray]:
+) -> NormalModeDirection:
     """Run/select the normal-mode scan direction with strongest target-bond projection."""
 
     if harmonic_fn is None:
@@ -291,7 +274,9 @@ def calc_normal_mode_direction(
     result = harmonic_fn(
         molecule,
         cfg,
-        rtproj=_cfg_get(cfg, "rtproj", "pyscf"),
+        rtproj=rtproj,
+        strict=strict,
+        allow_fd_hessian=allow_fd_hessian,
         debug=False,
     )
     selected = normal_mode_direction_from_modes(
@@ -306,7 +291,7 @@ def calc_normal_mode_direction(
             f"{selected.mode_index} with freq {selected.frequency_cm:.1f} cm^-1 "
             f"for {bond_label(bond)} scan"
         )
-    return selected.as_legacy_tuple()
+    return selected
 
 
 def grid_1d_pes_dms(
@@ -410,6 +395,7 @@ def grid_1d_pes_dms_normal_relaxed(
     log_fn: LogFn | None = None,
     gtol: float = 1e-4,
     maxiter: int = 100,
+    strict: bool = True,
 ) -> NormalRelaxedGrid:
     """Orchestrate an exactly constrained relaxed normal-coordinate scan."""
 
@@ -468,7 +454,7 @@ def grid_1d_pes_dms_normal_relaxed(
     )
     if result.failed_indices:
         summary = result.failure_summary()
-        if bool(_cfg_get(cfg, "strict", True)):
+        if bool(strict):
             raise RuntimeError(summary)
         warnings.warn(summary, RuntimeWarning, stacklevel=2)
     return result
@@ -548,8 +534,9 @@ def lbs_frozen_1d_cache_metadata(
     npts: int,
     *,
     scan: str = "lbs-frozen",
+    backend_identity: str = "pyscf",
 ) -> dict[str, Any]:
-    """Return complete schema-v2 metadata for a frozen 1D bond grid."""
+    """Return schema-v3 identity and provenance for a frozen 1D bond grid."""
 
     b = normalize_bond(bond)
     grid = np.linspace(float(rmin), float(rmax), _npts(npts))
@@ -561,7 +548,7 @@ def lbs_frozen_1d_cache_metadata(
         "energy_reference": "minimum-grid-energy",
         "dipole_units": "Debye",
     }
-    return scientific_cache_metadata(molecule, cfg, scan_meta)
+    return scientific_cache_metadata(molecule, cfg, scan_meta, backend_identity=backend_identity)
 
 
 def validate_lbs_frozen_1d_cache_metadata(
@@ -574,6 +561,7 @@ def validate_lbs_frozen_1d_cache_metadata(
     npts: int,
     *,
     scan: str = "lbs-frozen",
+    backend_identity: str = "pyscf",
 ) -> None:
     """Validate the complete scientific fingerprint before reusing a 1D cache."""
 
@@ -585,6 +573,7 @@ def validate_lbs_frozen_1d_cache_metadata(
         rmax,
         npts,
         scan=scan,
+        backend_identity=backend_identity,
     )
     validate_scientific_cache_metadata(dict(meta), expected)
 
@@ -602,10 +591,20 @@ def dump_lbs_frozen_1d_grid_cache(
     MU: np.ndarray,
     *,
     scan: str = "lbs-frozen",
+    backend_identity: str = "pyscf",
 ) -> None:
-    """Write a frozen 1D local-bond grid cache with legacy array names."""
+    """Write a frozen 1D local-bond grid cache."""
 
-    meta = lbs_frozen_1d_cache_metadata(molecule, cfg, bond, rmin, rmax, npts, scan=scan)
+    meta = lbs_frozen_1d_cache_metadata(
+        molecule,
+        cfg,
+        bond,
+        rmin,
+        rmax,
+        npts,
+        scan=scan,
+        backend_identity=backend_identity,
+    )
     dump_grid_npz(path, meta=meta, arrays={"R_A": R, "E_Eh": E, "MU_Debye": MU})
 
 
@@ -619,6 +618,7 @@ def load_lbs_frozen_1d_grid_cache(
     npts: int,
     *,
     scan: str = "lbs-frozen",
+    backend_identity: str = "pyscf",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load and validate a frozen 1D local-bond grid cache."""
 
@@ -632,6 +632,7 @@ def load_lbs_frozen_1d_grid_cache(
         rmax,
         npts,
         scan=scan,
+        backend_identity=backend_identity,
     )
     R = np.asarray(arrays["R_A"], dtype=float)
     E = np.asarray(arrays["E_Eh"], dtype=float)
@@ -650,8 +651,9 @@ def lbs_frozen_2d_cache_metadata(
     r2: Sequence[float],
     *,
     keo: str = "gmatrix",
+    backend_identity: str = "pyscf",
 ) -> dict[str, Any]:
-    """Return complete schema-v2 metadata for a frozen 2D bond grid."""
+    """Return schema-v3 identity and provenance for a frozen 2D bond grid."""
 
     bond1 = normalize_bond(b1)
     bond2 = normalize_bond(b2)
@@ -673,7 +675,7 @@ def lbs_frozen_2d_cache_metadata(
         "keo": keo_lc,
         "reduced_masses_amu": reduced_masses,
         "g12_inv_amu": g12_inv_amu,
-        "gmatrix_reference_geometry": "scientific.molecule.coordinates_A",
+        "gmatrix_reference_geometry": "identity.molecule.coordinates_A",
         "bond1_zero_based": [bond1.i, bond1.j],
         "bond2_zero_based": [bond2.i, bond2.j],
         "grid1_A": np.linspace(r1_min, r1_max, r1_npts).tolist(),
@@ -681,7 +683,7 @@ def lbs_frozen_2d_cache_metadata(
         "energy_reference": "minimum-grid-energy",
         "dipole_units": "Debye",
     }
-    return scientific_cache_metadata(molecule, cfg, scan_meta)
+    return scientific_cache_metadata(molecule, cfg, scan_meta, backend_identity=backend_identity)
 
 
 def validate_lbs_frozen_2d_cache(
@@ -695,6 +697,7 @@ def validate_lbs_frozen_2d_cache(
     r2: Sequence[float],
     *,
     keo: str = "gmatrix",
+    backend_identity: str = "pyscf",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Validate and return arrays from a frozen 2D local-bond grid cache."""
 
@@ -703,7 +706,16 @@ def validate_lbs_frozen_2d_cache(
     r2_min, r2_max, r2_npts = _grid_spec(r2, "r2")
     R2_req = np.linspace(float(r2_min), float(r2_max), int(r2_npts))
 
-    expected = lbs_frozen_2d_cache_metadata(molecule, cfg, b1, b2, r1, r2, keo=keo)
+    expected = lbs_frozen_2d_cache_metadata(
+        molecule,
+        cfg,
+        b1,
+        b2,
+        r1,
+        r2,
+        keo=keo,
+        backend_identity=backend_identity,
+    )
     validate_scientific_cache_metadata(dict(meta), expected)
 
     R1 = np.asarray(arrays["R1_A"], dtype=float)
@@ -724,6 +736,7 @@ def load_lbs_frozen_2d_grid_cache(
     r2: Sequence[float],
     *,
     keo: str = "gmatrix",
+    backend_identity: str = "pyscf",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load and validate a frozen 2D local-bond grid cache."""
 
@@ -738,6 +751,7 @@ def load_lbs_frozen_2d_grid_cache(
         r1,
         r2,
         keo=keo,
+        backend_identity=backend_identity,
     )
 
 
@@ -831,10 +845,15 @@ def _point_energy_dipole(
 
 def _coerce_energy_dipole(value: tuple[float, np.ndarray]) -> tuple[float, np.ndarray]:
     energy, dipole = value
+    energy_value = float(energy)
     dipole_arr = np.asarray(dipole, dtype=float)
     if dipole_arr.shape != (3,):
         raise ValueError(f"dipole must have shape (3,), got {dipole_arr.shape}")
-    return float(energy), dipole_arr
+    if not np.isfinite(energy_value):
+        raise ValueError("energy must be finite and expressed in Hartree")
+    if not np.all(np.isfinite(dipole_arr)):
+        raise ValueError("dipole must be finite and expressed in Debye")
+    return energy_value, dipole_arr
 
 
 def _validate_grid_arrays_1d(
@@ -915,29 +934,10 @@ def _molecule_coords(molecule: Any) -> np.ndarray:
     return coords
 
 
-def _molecule_symbols(molecule: Any) -> list[str]:
-    return [str(symbol) for symbol in getattr(molecule, "symbols")]
+def molecule_analysis_masses(molecule: Molecule) -> np.ndarray:
+    """Return isotope masses in amu from a package molecule."""
 
-
-def molecule_analysis_masses(molecule: Any) -> np.ndarray:
-    """Return isotope masses in amu from a duck-typed molecule."""
-
-    analysis_masses = getattr(molecule, "analysis_masses", None)
-    if callable(analysis_masses):
-        return np.asarray(analysis_masses(), dtype=float)
-
-    masses = getattr(molecule, "masses", None)
-    if masses is not None:
-        return np.asarray(masses, dtype=float)
-
-    values = []
-    for symbol in _molecule_symbols(molecule):
-        key = symbol.upper()
-        try:
-            values.append(atomic_mass_amu(key))
-        except ValueError as exc:
-            raise ValueError(f"No mass is defined for atom symbol {key!r}") from exc
-    return np.asarray(values, dtype=float)
+    return molecule.analysis_masses()
 
 
 def _cfg_get(cfg: Any, name: str, default: Any) -> Any:
@@ -990,7 +990,6 @@ __all__ = [
     "lbs_frozen_2d_cache_metadata",
     "load_lbs_frozen_1d_grid_cache",
     "load_lbs_frozen_2d_grid_cache",
-    "legacy_bond_label",
     "local_bond_reduced_mass_amu",
     "molecule_analysis_masses",
     "molecule_with_coords",

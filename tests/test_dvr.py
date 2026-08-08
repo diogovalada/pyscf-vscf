@@ -145,17 +145,15 @@ def test_product_dvr_2d_separable_spectrum_and_transition_factors() -> None:
         assert abs(got_mu2 - expected_mu2) < 2e-10
 
 
-def test_product_dvr_2d_accepts_legacy_k_eigs_and_cross_keo() -> None:
+def test_product_dvr_2d_accepts_cross_keo() -> None:
     R1 = np.linspace(0.8, 1.4, 9)
     R2 = np.linspace(0.82, 1.42, 9)
     V = 0.04 * (R1[:, None] - 1.0) ** 2 + 0.05 * (R2[None, :] - 1.05) ** 2
 
-    by_nmax = product_dvr_2d(R1, R2, 0.94, 1.2, V, nmax=4)
-    by_k = product_dvr_2d(R1, R2, 0.94, 1.2, V, k_eigs=5)
-    crossed = product_dvr_2d(R1, R2, 0.94, 1.2, V, k_eigs=5, g12_inv_amu=0.02)
+    uncoupled = product_dvr_2d(R1, R2, 0.94, 1.2, V, nmax=4)
+    crossed = product_dvr_2d(R1, R2, 0.94, 1.2, V, nmax=4, g12_inv_amu=0.02)
 
-    np.testing.assert_allclose(by_nmax.evals, by_k.evals, rtol=0.0, atol=1e-12)
-    assert np.max(np.abs(crossed.evals - by_k.evals)) > 1e-8
+    assert np.max(np.abs(crossed.evals - uncoupled.evals)) > 1e-8
 
 
 def test_shape_and_unit_validation_errors_are_explicit() -> None:
@@ -191,8 +189,6 @@ def test_shape_and_unit_validation_errors_are_explicit() -> None:
         )
     with pytest.raises(ValueError, match="nmax must be at least 1"):
         product_dvr_2d(R, R, 1.0, 1.0, V2, nmax=0)
-    with pytest.raises(ValueError, match="Need at least 2 eigenpairs"):
-        product_dvr_2d(R, R, 1.0, 1.0, V2, k_eigs=1)
 
     dvr2 = product_dvr_2d(R, R, 1.0, 1.0, V2, nmax=1)
     with pytest.raises(ValueError, match="shape"):

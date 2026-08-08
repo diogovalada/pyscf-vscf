@@ -1,8 +1,7 @@
 """Import-light harmonic-analysis helpers.
 
-The routines in this module are extracted from the legacy
-``pyscf_pme_pipeline.py`` driver. They only depend on NumPy at import time; the
-PySCF thermo helpers are imported lazily by call sites that request the
+The routines in this module depend only on NumPy at import time; the PySCF
+thermo helpers are imported lazily by call sites that request the
 ``rtproj="pyscf"`` path.
 """
 
@@ -34,7 +33,7 @@ class HarmonicResult:
 
 
 def warn_once(key: str, msg: str) -> None:
-    """Emit a warning once, matching the legacy pipeline's stderr behavior."""
+    """Emit a warning once to stderr."""
 
     if key in _WARNED_ONCE:
         return
@@ -58,7 +57,7 @@ def handle_imaginary_modes(
     rt_rank: int | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
 ) -> np.ndarray:
-    """Enforce the legacy imaginary-mode policy after RT projection.
+    """Enforce the imaginary-mode policy after RT projection.
 
     Imaginary vibrational modes are identified after excluding the rotational
     and translational subspace. Low-magnitude imaginary modes above
@@ -117,7 +116,7 @@ def handle_imaginary_modes(
 
 
 def format_low_mode_summary(tag: str, w2: np.ndarray, nshow: int = 10) -> str:
-    """Return the legacy low-mode diagnostic summary as a string."""
+    """Return the low-mode diagnostic summary as a string."""
 
     w2 = np.asarray(w2, dtype=float)
     order = np.argsort(w2)
@@ -135,7 +134,7 @@ def format_low_mode_summary(tag: str, w2: np.ndarray, nshow: int = 10) -> str:
 
 
 def print_low_mode_summary(tag: str, w2: np.ndarray, nshow: int = 10) -> None:
-    """Print the legacy low-mode diagnostic summary."""
+    """Print the low-mode diagnostic summary."""
 
     print(format_low_mode_summary(tag, w2, nshow=nshow))
 
@@ -146,6 +145,8 @@ def as_cart_hessian(H: np.ndarray, natm: int) -> np.ndarray:
     H = np.asarray(H, dtype=float)
     expected = (3 * int(natm), 3 * int(natm))
     if H.ndim == 2:
+        if H.shape != expected:
+            raise ValueError(f"Unexpected Hessian shape {H.shape}; expected {expected}")
         return H
     if H.ndim == 4 and H.shape == (int(natm), int(natm), 3, 3):
         return H.transpose(0, 2, 1, 3).reshape(expected)
@@ -407,7 +408,7 @@ def mass_weighted_freqs_modes(
     thermo_mod: Any | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Legacy-compatible adapter for PySCF-like molecule objects."""
+    """Analyze a Cartesian Hessian for a PySCF-like molecule object."""
 
     natm = int(getattr(pmol, "natm"))
     atom_coords = getattr(pmol, "atom_coords")
@@ -432,20 +433,10 @@ def mass_weighted_freqs_modes(
 
 
 def zpe_cm_from_freqs(freqs_cm: np.ndarray, cutoff_cm: float = 1e-5) -> float:
-    """Return the legacy harmonic zero-point energy in cm^-1."""
+    """Return the harmonic zero-point energy in cm^-1."""
 
     freqs_cm = np.asarray(freqs_cm, dtype=float)
     return float(0.5 * np.sum(freqs_cm[freqs_cm > float(cutoff_cm)]))
-
-
-_signed_freqs_from_evals = signed_freqs_from_evals
-_handle_imaginary_modes = handle_imaginary_modes
-_print_low_mode_summary = print_low_mode_summary
-_as_cart_hessian = as_cart_hessian
-_mass_weight = mass_weight
-_cart_to_hess4 = cart_to_hess4
-_mw_rt_projector_explicit = mw_rt_projector_explicit
-_mw_rt_projector_pyscf_like = mw_rt_projector_pyscf_like
 
 
 __all__ = [

@@ -1,8 +1,7 @@
 """PySCF-backed harmonic workflow.
 
-This module contains the package-level orchestration extracted from the legacy
-``pyscf_pme_pipeline.py`` script. It remains import-light: PySCF is only imported
-by backend calls or by the analytic Hessian fallback path.
+This module remains import-light: PySCF is imported only by backend calls or by
+the analytic Hessian fallback path.
 """
 
 from __future__ import annotations
@@ -17,12 +16,7 @@ from pyscf_vscf import harmonic as harmonic_helpers
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.constants import ANG_TO_BOHR, atomic_mass_amu
 from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.settings import (
-    DEFAULT_ALLOW_FD_HESSIAN,
-    DEFAULT_STRICT,
-    ESSettings,
-    coerce_es_settings,
-)
+from pyscf_vscf.settings import ESSettings, coerce_es_settings
 
 
 _DEFAULT_ES = ESSettings()
@@ -45,19 +39,20 @@ def harmonic_analysis(
     cfg: Any,
     *,
     rtproj: str = "pyscf",
+    strict: bool = True,
+    allow_fd_hessian: bool = False,
     debug: bool = False,
 ) -> harmonic_helpers.HarmonicResult:
-    """Run the legacy-compatible PySCF harmonic workflow.
+    """Run the PySCF harmonic workflow.
 
     Analytic Hessians are preferred. If no analytic Hessian is available, finite
-    differences of analytic gradients are only used when ``cfg.allow_fd_hessian``
-    is truthy. Analytic Hessian failures raise in strict mode and warn/fall back
-    in non-strict mode, matching the legacy driver policy.
+    differences of analytic gradients are opt-in. Analytic Hessian failures
+    raise in strict mode and warn/fall back in non-strict mode.
     """
 
-    strict = bool(_cfg_get(cfg, "strict", DEFAULT_STRICT))
+    strict = bool(strict)
     basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
-    allow_fd_hessian = bool(_cfg_get(cfg, "allow_fd_hessian", DEFAULT_ALLOW_FD_HESSIAN))
+    allow_fd_hessian = bool(allow_fd_hessian)
     pmol = pyscf_backend.molecule_to_pyscf(molecule, basis=basis)
     mf = pyscf_backend.make_mean_field(pmol, cfg)
     dispersion = pyscf_backend.mean_field_dispersion(mf)
@@ -224,7 +219,7 @@ def gradient_at(molecule: Any, cfg: Any, xflat_bohr: np.ndarray) -> np.ndarray:
         label=str(getattr(molecule, "label", "mol")),
         masses_amu=masses,
     )
-    fd_cfg = _legacy_fd_gradient_settings(cfg)
+    fd_cfg = coerce_es_settings(cfg)
     pmol = pyscf_backend.molecule_to_pyscf(displaced, basis=fd_cfg.basis)
     mf = pyscf_backend.make_mean_field(pmol, fd_cfg)
     return nuclear_gradient(mf).reshape(-1)
@@ -305,19 +300,10 @@ def _print_stationarity_diagnostic(mf: Any) -> None:
         print(f"Geometry stationarity check (gradient) failed: {exc}")
 
 
-def _legacy_fd_gradient_settings(cfg: Any) -> ESSettings:
-    return coerce_es_settings(cfg)
-
-
 def _cfg_get(cfg: Any, name: str, default: Any) -> Any:
     if isinstance(cfg, Mapping):
         return cfg.get(name, default)
     return getattr(cfg, name, default)
-
-
-_try_analytic_hessian = analytic_hessian
-_grad_at = gradient_at
-_num_hessian_from_gradients = finite_difference_hessian_from_gradients
 
 
 __all__ = [

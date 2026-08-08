@@ -20,20 +20,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: uv sync --extra dev
-      - run: >-
-          uv run ruff check src tests
-          scripts/validate_archived_grids.py
-          scripts/generate_nh3_three_mode.py
-          scripts/expand_nh3_three_mode.py
-          scripts/validate_nh3_three_mode.py
-          scripts/compare_validation_reports.py
-      - run: >-
-          uv run ruff format --check src tests
-          scripts/validate_archived_grids.py
-          scripts/generate_nh3_three_mode.py
-          scripts/expand_nh3_three_mode.py
-          scripts/validate_nh3_three_mode.py
-          scripts/compare_validation_reports.py
+      - run: uv run ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
       - run: uv run pytest -m "not pyscf and not slow and not cache" -q
 
   pyscf:

@@ -109,7 +109,7 @@ def test_harmonic_analysis_uses_analytic_hessian_and_existing_harmonic_helpers(
 def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(method="wb97x-d4", allow_fd_hessian=False)
+    cfg = ESSettings(method="wb97x-d4")
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -121,13 +121,13 @@ def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
     monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
 
     with pytest.raises(RuntimeError, match="semi-numerical.*--allow-fd-hessian"):
-        workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
+        workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none", allow_fd_hessian=False)
 
 
 def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(method="wb97x-d4", allow_fd_hessian=True)
+    cfg = ESSettings(method="wb97x-d4")
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -138,7 +138,7 @@ def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
     )
     monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
 
-    result = workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
+    result = workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none", allow_fd_hessian=True)
 
     assert result.hessian_provenance == "analytic-electronic+finite-difference-dispersion"
 
@@ -146,7 +146,7 @@ def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
 def test_harmonic_analysis_strict_analytic_failure_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(strict=True, allow_fd_hessian=True)
+    cfg = ESSettings()
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -158,13 +158,15 @@ def test_harmonic_analysis_strict_analytic_failure_raises(
     monkeypatch.setattr(workflow, "analytic_hessian", fail_hessian)
 
     with pytest.raises(RuntimeError, match="synthetic hessian failure"):
-        workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
+        workflow.harmonic_analysis(
+            _h2_molecule(), cfg, rtproj="none", strict=True, allow_fd_hessian=True
+        )
 
 
 def test_harmonic_analysis_non_strict_analytic_failure_still_blocks_fd_unless_allowed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(strict=False, allow_fd_hessian=False)
+    cfg = ESSettings()
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -176,14 +178,16 @@ def test_harmonic_analysis_non_strict_analytic_failure_still_blocks_fd_unless_al
     monkeypatch.setattr(workflow, "analytic_hessian", fail_hessian)
 
     with pytest.raises(RuntimeError, match="blocked; pass --allow-fd-hessian"):
-        workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
+        workflow.harmonic_analysis(
+            _h2_molecule(), cfg, rtproj="none", strict=False, allow_fd_hessian=False
+        )
 
 
 def test_harmonic_analysis_uses_fd_hessian_when_allowed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     molecule = _h2_molecule()
-    cfg = ESSettings(strict=True, allow_fd_hessian=True)
+    cfg = ESSettings()
     pmol = _FakePMol()
     hessian = np.eye(6)
     captured_x0: list[np.ndarray] = []
@@ -200,7 +204,9 @@ def test_harmonic_analysis_uses_fd_hessian_when_allowed(
 
     monkeypatch.setattr(workflow, "finite_difference_hessian_from_gradients", fake_fd)
 
-    result = workflow.harmonic_analysis(molecule, cfg, rtproj="none")
+    result = workflow.harmonic_analysis(
+        molecule, cfg, rtproj="none", strict=True, allow_fd_hessian=True
+    )
 
     np.testing.assert_allclose(captured_x0[0], pmol.atom_coords(unit="Bohr").reshape(-1))
     assert result.freqs_cm.shape == (6,)
@@ -231,20 +237,17 @@ def test_finite_difference_hessian_from_gradients_uses_central_columns() -> None
     assert progress[-1] == (6, 6, "Hessian columns")
 
 
-def test_finite_difference_fallback_preserves_all_es_settings() -> None:
+def test_es_settings_copy_preserves_all_electronic_inputs() -> None:
     cfg = ESSettings(
         method="pbe0",
         basis="def2-tzvp",
         use_density_fit=False,
         auxbasis="custom-jkfit",
-        rtproj="mw_explicit",
-        strict=False,
-        allow_fd_hessian=True,
         scf_conv_tol=2e-9,
         dft_grid_level=5,
     )
 
-    copied = workflow._legacy_fd_gradient_settings(cfg)
+    copied = workflow.coerce_es_settings(cfg)
 
     assert copied == cfg
     assert copied is not cfg
@@ -268,3 +271,22 @@ def test_stationarity_diagnostic_summarizes_gradient_components() -> None:
     assert diagnostic.max_atom == pytest.approx(4.0)
     assert diagnostic.rms_atom == pytest.approx(np.sqrt((9.0 + 16.0) / 2.0))
     assert "Geometry stationarity" in workflow.format_stationarity_diagnostic(diagnostic)
+
+
+@pytest.mark.pyscf
+def test_harmonic_workflow_real_pyscf_h2_hf_sto3g_smoke() -> None:
+    pytest.importorskip("pyscf")
+    molecule = Molecule.from_arrays(
+        ["H", "H"],
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 0.74]],
+        label="h2",
+    )
+    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
+
+    result = workflow.harmonic_analysis(molecule, cfg, rtproj="none")
+
+    assert result.freqs_cm.shape == (6,)
+    assert result.modes.shape == (6, 6)
+    assert np.all(np.isfinite(result.freqs_cm))
+    assert np.all(np.isfinite(result.modes))
+    assert result.zpe_cm > 0.0

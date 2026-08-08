@@ -54,7 +54,7 @@ import sys
 
 class BlockOptionalOptimizers(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        blocked = ("pyscf", "geometric", "berny")
+        blocked = ("pyscf", "geometric")
         if fullname in blocked or fullname.startswith(tuple(f"{name}." for name in blocked)):
             raise RuntimeError(f"unexpected optional optimizer import: {fullname}")
         return None
@@ -77,17 +77,11 @@ print("optimization-ok")
     assert proc.stdout.strip() == "optimization-ok"
 
 
-def test_optimizer_convergence_kwargs_are_backend_specific() -> None:
+def test_optimizer_convergence_kwargs() -> None:
     assert workflow.optimization_convergence_kwargs() == {
         "convergence_gmax": 4.5e-5,
         "convergence_grms": 3.0e-5,
     }
-    assert workflow.optimization_convergence_kwargs(backend="berny") == {
-        "gradientmax": 4.5e-5,
-        "gradientrms": 3.0e-5,
-    }
-    with pytest.raises(ValueError, match="Unknown optimizer backend"):
-        workflow.optimization_convergence_kwargs(backend="unknown")
 
 
 def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
@@ -121,11 +115,6 @@ def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
         lambda pmol, cfg_arg: mean_fields.pop(0),
     )
     monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
-    monkeypatch.setattr(
-        workflow,
-        "_load_berny_solver",
-        lambda: pytest.fail("Berny fallback should not be used"),
-    )
 
     output_path = tmp_path / "optimized.xyz"
     result = workflow.run_opt(
@@ -151,33 +140,24 @@ def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
     assert "Optimized-geometry gradient check" in capsys.readouterr().out
 
 
-def test_run_opt_falls_back_to_berny_and_writes_mmol(
+def test_run_opt_writes_mmol(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     molecule = _FakeMolecule()
     cfg = {"basis": "sto-3g", "strict": True}
     opt_pmol = _FakePySCFMol(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.71]]))
-    captured: dict[str, object] = {}
-    warnings: list[tuple[str, str]] = []
 
-    class BernySolver:
+    class GeometricSolver:
         @staticmethod
         def kernel(mf: object, **kwargs: object) -> tuple[bool, _FakePySCFMol]:
-            captured["mf"] = mf
-            captured["kwargs"] = kwargs
             return True, opt_pmol
 
     monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: opt_pmol)
     monkeypatch.setattr(
         workflow.pyscf_backend, "make_mean_field", lambda pmol, cfg_arg: _FakeMeanField()
     )
-    monkeypatch.setattr(
-        workflow,
-        "_load_geometric_solver",
-        lambda: (_ for _ in ()).throw(ImportError("no geometric")),
-    )
-    monkeypatch.setattr(workflow, "_load_berny_solver", lambda: BernySolver)
+    monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
 
     output_path = tmp_path / "optimized.mmol"
     result = workflow.run_opt(
@@ -185,17 +165,10 @@ def test_run_opt_falls_back_to_berny_and_writes_mmol(
         cfg,
         opt_out=output_path,
         opt_maxsteps=3,
-        warn_fn=lambda key, msg: warnings.append((key, msg)),
     )
 
-    assert result.backend == "berny"
+    assert result.backend == "geomeTRIC"
     assert result.output_path == output_path
-    assert captured["kwargs"] == {
-        "gradientmax": 4.5e-5,
-        "gradientrms": 3.0e-5,
-        "maxsteps": 3,
-    }
-    assert warnings[0][0] == "geometric_missing_fallback_berny"
     assert "#0 MidasMolecule" in output_path.read_text()
 
 
@@ -224,6 +197,7 @@ def test_run_opt_warns_when_non_strict_optimization_does_not_converge(
         cfg,
         opt_out=tmp_path / "optimized.xyz",
         opt_maxsteps=1,
+        strict=False,
         warn_fn=lambda key, msg: warnings.append((key, msg)),
     )
 

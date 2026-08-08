@@ -121,7 +121,7 @@ def exact_nmode_dvr(model: NModePotential, *, nstates: int = 12) -> ExactProduct
 
 
 def convergence_report(
-    runs: Mapping[str, Sequence[Mapping]],
+    runs: Mapping[str, Sequence[Mapping | object]],
     *,
     intensity_key: str = "integrated_cross_section_isotropic_omega_m2_per_s",
 ) -> ConvergenceReport:
@@ -140,7 +140,8 @@ def convergence_report(
         if not name:
             raise ValueError("Run names must be non-empty")
         by_state: dict[StateLabel, Mapping] = {}
-        for record in records:
+        for raw_record in records:
+            record = _record_mapping(raw_record)
             label = _state_label(record)
             if label in by_state:
                 raise ValueError(f"Run {name!r} contains duplicate assignment {label}")
@@ -199,6 +200,17 @@ def convergence_report(
             )
         )
     return ConvergenceReport(run_names=names, states=tuple(budgets), unmatched=unmatched)
+
+
+def _record_mapping(record: Mapping | object) -> Mapping:
+    if isinstance(record, Mapping):
+        return record
+    as_dict = getattr(record, "as_dict", None)
+    if callable(as_dict):
+        converted = as_dict()
+        if isinstance(converted, Mapping):
+            return converted
+    raise TypeError("Convergence records must be mappings or provide as_dict()")
 
 
 def _state_label(record: Mapping) -> StateLabel:

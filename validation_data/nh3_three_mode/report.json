@@ -25,11 +25,11 @@
     "grid_spreads_by_manifold": {
       "binary_combination": {
         "exact_centroid_spread_cm": 11.326206311467104,
-        "vscf_centroid_spread_cm": 9.878111601688943
+        "vscf_centroid_spread_cm": 9.878111601689852
       },
       "first_overtone": {
         "exact_centroid_spread_cm": 66.46784121891505,
-        "vscf_centroid_spread_cm": 67.90511851047995
+        "vscf_centroid_spread_cm": 67.90511851048086
       },
       "fundamental": {
         "exact_centroid_spread_cm": 4.892780404454697,
@@ -44,7 +44,7 @@
     "observed": {
       "all_vscf_states_converged": true,
       "maximum_converged_manifold_grid_spread_cm": 15.316561220870426,
-      "maximum_equivalent_vscf_state_spread_cm": 0.09325443046873261,
+      "maximum_equivalent_vscf_state_spread_cm": 0.09325443046600412,
       "maximum_vscf_exact_centroid_error_cm": 4.42861742601599,
       "minimum_exact_manifold_weight": 0.8193933721762967
     },
@@ -117,7 +117,7 @@
   },
   "exact_reference": "iterative exact 3D sinc-DVR diagonalization of the identical model",
   "kinetic_model": "separable constant local N-H reduced masses",
-  "package_version": "0.1.0a6",
+  "package_version": "0.1.0a7",
   "potential_model": "one-mode representation plus all three two-mode corrections",
   "schema_version": 1,
   "scope": "This validates the state-specific VSCF implementation on a non-water, three-mode molecular Hamiltonian. It does not establish full-dimensional NH3 spectroscopic accuracy or validate omitted bend, inversion, and kinetic-coupling terms.",
@@ -183,9 +183,9 @@
           ],
           "vscf_centroid_cm": 7296.577853143225,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.03757463412330253,
+          "vscf_equivalent_state_spread_cm": 0.03757463412148354,
           "vscf_frequencies_cm": [
-            7296.5903785018445,
+            7296.590378501843,
             7296.590377060109,
             7296.552803867721
           ],
@@ -231,11 +231,11 @@
               2
             ]
           ],
-          "vscf_centroid_cm": 7698.435394510766,
+          "vscf_centroid_cm": 7698.435394510765,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.04538250730456639,
+          "vscf_equivalent_state_spread_cm": 0.0453825073027474,
           "vscf_frequencies_cm": [
-            7698.465647832396,
+            7698.465647832394,
             7698.4202703748115,
             7698.420265325091
           ],
@@ -244,7 +244,7 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -0.3742180029821611
+          "vscf_minus_exact_centroid_cm": -0.3742180029830706
         },
         "fundamental": {
           "exact_centroid_cm": 3648.505649822322,
@@ -281,20 +281,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3648.5156261959305,
+          "vscf_centroid_cm": 3648.5156261959296,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.03811695442527707,
+          "vscf_equivalent_state_spread_cm": 0.03811695442573182,
           "vscf_frequencies_cm": [
-            3648.541037014807,
-            3648.5029215126024,
-            3648.5029200603817
+            3648.5410370148065,
+            3648.502921512603,
+            3648.502920060381
           ],
           "vscf_iterations": [
             12,
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.009976373608424183
+          "vscf_minus_exact_centroid_cm": 0.009976373607514688
         },
         "triple_combination": {
           "exact_centroid_cm": 10942.920387082859,
@@ -315,24 +315,24 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 10944.187921380266,
+          "vscf_centroid_cm": 10944.187921380264,
           "vscf_converged": true,
           "vscf_equivalent_state_spread_cm": 0.0,
           "vscf_frequencies_cm": [
-            10944.187921380266
+            10944.187921380264
           ],
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.26753429740711
+          "vscf_minus_exact_centroid_cm": 1.267534297405291
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
       "name": "coarse_13x13_from_25",
       "vscf_ground_converged": true,
-      "vscf_ground_energy_Eh": 0.024727102749655692,
+      "vscf_ground_energy_Eh": 0.024727102749655696,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.016457583055920395
+      "vscf_ground_minus_exact_cm": 0.016457583056681848
     },
     "converged_49x49": {
       "exact_ground_energy_Eh": 0.02457820928617209,
@@ -392,11 +392,11 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 6983.854972994069,
+          "vscf_centroid_cm": 6983.854972994068,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.0509646106756918,
+          "vscf_equivalent_state_spread_cm": 0.05096461067478231,
           "vscf_frequencies_cm": [
-            6983.871961235479,
+            6983.871961235478,
             6983.871961121923,
             6983.820996624803
           ],
@@ -405,7 +405,7 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -1.679989097692669
+          "vscf_minus_exact_centroid_cm": -1.6799890976935785
         },
         "first_overtone": {
           "exact_centroid_cm": 6858.007487719634,
@@ -442,12 +442,12 @@
               2
             ]
           ],
-          "vscf_centroid_cm": 6859.772095137724,
+          "vscf_centroid_cm": 6859.772095137723,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.09325443046873261,
+          "vscf_equivalent_state_spread_cm": 0.09325443046600412,
           "vscf_frequencies_cm": [
-            6859.83426467385,
-            6859.741010495943,
+            6859.834264673847,
+            6859.741010495941,
             6859.741010243381
           ],
           "vscf_iterations": [
@@ -455,7 +455,7 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.764607418090236
+          "vscf_minus_exact_centroid_cm": 1.7646074180893265
         },
         "fundamental": {
           "exact_centroid_cm": 3492.701378566256,
@@ -492,20 +492,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3492.7194668063435,
+          "vscf_centroid_cm": 3492.7194668063426,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.05288177561442353,
+          "vscf_equivalent_state_spread_cm": 0.052881775615787774,
           "vscf_frequencies_cm": [
-            3492.7547212803843,
-            3492.701839633875,
-            3492.70183950477
+            3492.754721280385,
+            3492.701839633874,
+            3492.7018395047694
           ],
           "vscf_iterations": [
             12,
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.018088240087308805
+          "vscf_minus_exact_centroid_cm": 0.01808824008639931
         },
         "triple_combination": {
           "exact_centroid_cm": 10477.47289697749,
@@ -541,9 +541,9 @@
       "maximum_shared_cut_disagreement_Eh": 2.0605739337042905e-13,
       "name": "converged_49x49",
       "vscf_ground_converged": true,
-      "vscf_ground_energy_Eh": 0.024578295464141184,
+      "vscf_ground_energy_Eh": 0.024578295464141187,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018913877999198858
+      "vscf_ground_minus_exact_cm": 0.018913877999960315
     },
     "dense_31x31": {
       "exact_ground_energy_Eh": 0.024906274549181984,
@@ -708,7 +708,7 @@
           "vscf_equivalent_state_spread_cm": 0.03196261450784732,
           "vscf_frequencies_cm": [
             3761.895938075915,
-            3761.8639774081994,
+            3761.8639774082008,
             3761.8639754614073
           ],
           "vscf_iterations": [
@@ -816,11 +816,11 @@
           ],
           "vscf_centroid_cm": 7477.98371043518,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.032734714483012795,
+          "vscf_equivalent_state_spread_cm": 0.032734714484831784,
           "vscf_frequencies_cm": [
             7477.99462264114,
-            7477.994620737745,
-            7477.961887926657
+            7477.994620737743,
+            7477.961887926655
           ],
           "vscf_iterations": [
             11,
@@ -914,20 +914,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3739.11803459701,
+          "vscf_centroid_cm": 3739.118034597011,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.03303148998793404,
+          "vscf_equivalent_state_spread_cm": 0.03303148998611505,
           "vscf_frequencies_cm": [
             3739.1400549555956,
-            3739.107025369827,
-            3739.1070234656077
+            3739.1070253698285,
+            3739.1070234656095
           ],
           "vscf_iterations": [
             11,
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.008029793882997183
+          "vscf_minus_exact_centroid_cm": 0.008029793883906677
         },
         "triple_combination": {
           "exact_centroid_cm": 11215.776776784467,
@@ -1236,20 +1236,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 7477.9837104408,
+          "vscf_centroid_cm": 7477.983710440801,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.03273470887415897,
+          "vscf_equivalent_state_spread_cm": 0.03273470887506846,
           "vscf_frequencies_cm": [
-            7477.99462264397,
-            7477.994620743334,
-            7477.961887935096
+            7477.9946226439715,
+            7477.994620743336,
+            7477.9618879350965
           ],
           "vscf_iterations": [
             11,
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.27076037879942305
+          "vscf_minus_exact_centroid_cm": 0.27076037880033255
         },
         "first_overtone": {
           "exact_centroid_cm": 8032.502065477682,
@@ -1286,20 +1286,20 @@
               2
             ]
           ],
-          "vscf_centroid_cm": 8032.257068117848,
+          "vscf_centroid_cm": 8032.25706811785,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.03740197504794196,
+          "vscf_equivalent_state_spread_cm": 0.037401975047032465,
           "vscf_frequencies_cm": [
-            8032.282000885517,
-            8032.244604557558,
-            8032.244598910469
+            8032.282000885518,
+            8032.24460455756,
+            8032.244598910471
           ],
           "vscf_iterations": [
             11,
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": -0.24499735983408755
+          "vscf_minus_exact_centroid_cm": -0.24499735983135906
         },
         "fundamental": {
           "exact_centroid_cm": 3739.11000480546,
@@ -1336,20 +1336,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3739.118034599373,
+          "vscf_centroid_cm": 3739.1180345993744,
           "vscf_converged": true,
           "vscf_equivalent_state_spread_cm": 0.033031486570507695,
           "vscf_frequencies_cm": [
-            3739.1400549563814,
-            3739.107025371927,
-            3739.107023469811
+            3739.1400549563823,
+            3739.1070253719276,
+            3739.107023469812
           ],
           "vscf_iterations": [
             11,
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.008029793913010508
+          "vscf_minus_exact_centroid_cm": 0.00802979391437475
         },
         "triple_combination": {
           "exact_centroid_cm": 11215.776776793955,
@@ -1385,9 +1385,9 @@
       "maximum_shared_cut_disagreement_Eh": 0.0,
       "name": "repeated_25x25_from_wide31",
       "vscf_ground_converged": true,
-      "vscf_ground_energy_Eh": 0.02486673111289392,
+      "vscf_ground_energy_Eh": 0.024866731112893916,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.015155080009693546
+      "vscf_ground_minus_exact_cm": 0.01515508000893209
     },
     "wide_31x31": {
       "exact_ground_energy_Eh": 0.024604667605371933,
@@ -1447,20 +1447,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 7073.368464407326,
+          "vscf_centroid_cm": 7073.3684644073255,
           "vscf_converged": true,
           "vscf_equivalent_state_spread_cm": 0.04589655131621839,
           "vscf_frequencies_cm": [
-            7073.3837634626625,
-            7073.3837628479705,
-            7073.337866911346
+            7073.383763462662,
+            7073.383762847969,
+            7073.337866911345
           ],
           "vscf_iterations": [
             12,
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.364727231046345
+          "vscf_minus_exact_centroid_cm": 1.3647272310454355
         },
         "first_overtone": {
           "exact_centroid_cm": 7205.970898559463,
@@ -1547,20 +1547,20 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3537.2034477898524,
+          "vscf_centroid_cm": 3537.203447789851,
           "vscf_converged": true,
           "vscf_equivalent_state_spread_cm": 0.0471713276256196,
           "vscf_frequencies_cm": [
-            3537.2348951336553,
-            3537.187724429872,
-            3537.1877238060297
+            3537.2348951336544,
+            3537.187724429871,
+            3537.1877238060288
           ],
           "vscf_iterations": [
             11,
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.014044683457086649
+          "vscf_minus_exact_centroid_cm": 0.014044683455722407
         },
         "triple_combination": {
           "exact_centroid_cm": 10603.63770520361,
@@ -1581,24 +1581,24 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 10608.495035136355,
+          "vscf_centroid_cm": 10608.495035136353,
           "vscf_converged": true,
           "vscf_equivalent_state_spread_cm": 0.0,
           "vscf_frequencies_cm": [
-            10608.495035136355
+            10608.495035136353
           ],
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 4.857329932745415
+          "vscf_minus_exact_centroid_cm": 4.857329932743596
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
       "name": "wide_31x31",
       "vscf_ground_converged": true,
-      "vscf_ground_energy_Eh": 0.02460475052009094,
+      "vscf_ground_energy_Eh": 0.024604750520090944,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018197677389325227
+      "vscf_ground_minus_exact_cm": 0.018197677390086684
     },
     "wider_37x37": {
       "exact_ground_energy_Eh": 0.024579825482051995,
@@ -1758,11 +1758,11 @@
               1
             ]
           ],
-          "vscf_centroid_cm": 3497.611369880256,
+          "vscf_centroid_cm": 3497.611369880255,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.05202712580239677,
+          "vscf_equivalent_state_spread_cm": 0.052027125801032525,
           "vscf_frequencies_cm": [
-            3497.64605456472,
+            3497.6460545647187,
             3497.594027637129,
             3497.5940274389177
           ],
@@ -1771,7 +1771,7 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.017210909545156028
+          "vscf_minus_exact_centroid_cm": 0.017210909544246533
         },
         "triple_combination": {
           "exact_centroid_cm": 10492.78945819836,
@@ -1871,11 +1871,11 @@
           ],
           "vscf_centroid_cm": 6984.500737694186,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.05090386306073924,
+          "vscf_equivalent_state_spread_cm": 0.05090386306255823,
           "vscf_frequencies_cm": [
             6984.517705688192,
             6984.517705569234,
-            6984.466801825131
+            6984.46680182513
           ],
           "vscf_iterations": [
             12,
@@ -1971,9 +1971,9 @@
           ],
           "vscf_centroid_cm": 3493.038261610309,
           "vscf_converged": true,
-          "vscf_equivalent_state_spread_cm": 0.05281274188291718,
+          "vscf_equivalent_state_spread_cm": 0.05281274188155294,
           "vscf_frequencies_cm": [
-            3493.073470060107,
+            3493.0734700601056,
             3493.0206574525964,
             3493.020657318224
           ],

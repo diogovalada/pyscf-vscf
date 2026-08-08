@@ -29,7 +29,7 @@ def _evals_from_signed_cm(freqs_cm: list[float]) -> np.ndarray:
     return np.sign(freqs) * (np.abs(freqs) / HARTREE_TO_CM) ** 2
 
 
-def test_harmonic_result_and_zpe_match_legacy_cutoff() -> None:
+def test_harmonic_result_and_zpe_apply_cutoff() -> None:
     freqs = np.array([0.0, 1e-6, 100.0, 200.0])
     result = HarmonicResult(freqs_cm=freqs, modes=np.eye(4), zpe_cm=zpe_cm_from_freqs(freqs))
 
@@ -53,8 +53,8 @@ def test_hessian_shape_conversion_round_trips_pyscf_layout() -> None:
         H4.transpose(0, 2, 1, 3).reshape(3 * natm, 3 * natm),
     )
     np.testing.assert_allclose(cart_to_hess4(Hc, natm), H4)
-    legacy_passthrough = np.zeros((5, 5))
-    assert as_cart_hessian(legacy_passthrough, natm).shape == (5, 5)
+    with pytest.raises(ValueError, match="Unexpected Hessian shape"):
+        as_cart_hessian(np.zeros((5, 5)), natm)
     with pytest.raises(ValueError, match="Hc shape mismatch"):
         cart_to_hess4(np.zeros((5, 5)), natm)
 

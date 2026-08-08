@@ -54,7 +54,7 @@ Before a quantitative molecular result set is published:
 - Test sensitivity to electronic-structure method, basis, DFT grid, SCF
   tolerance, density fitting, and dispersion when conclusions depend on small
   differences.
-- Archive schema-v2 source grids, commands, software versions, geometries,
+- Archive current-schema source grids, commands, software versions, geometries,
   hashes, and generated reports with the publication.
 
 The expensive boundary remains PES/DMS generation, not DVR/VSCF analysis.

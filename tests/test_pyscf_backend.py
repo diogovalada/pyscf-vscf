@@ -213,7 +213,6 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
         SimpleNamespace(
             method="pbe",
             use_density_fit=False,
-            dev_fast=False,
             scf_conv_tol=1e-9,
             scf_max_cycle=37,
         ),

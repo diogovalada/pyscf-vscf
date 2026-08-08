@@ -237,7 +237,7 @@ def test_coupled_vscf_converges_and_adds_pair_expectation_once() -> None:
         model.one_mode_potentials_Eh[0][:, None]
         + model.one_mode_potentials_Eh[1][None, :]
         + model.two_mode_couplings_Eh[(0, 1)],
-        k_eigs=2,
+        nmax=1,
     )
     assert result.energy_Eh >= exact.evals[0] - 1e-12
 

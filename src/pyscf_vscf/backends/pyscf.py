@@ -19,9 +19,6 @@ from ..molecule import Molecule
 from ..settings import ESSettings, default_auxbasis
 
 
-STRICT: bool = True
-DEV_FAST: bool = False
-
 _WARNED_ONCE: set[str] = set()
 
 
@@ -45,7 +42,7 @@ class NormalRelaxedPointResult:
 
 
 def warn_once(key: str, msg: str) -> None:
-    """Emit a backend warning once, matching the legacy helper's behavior."""
+    """Emit a backend warning once."""
 
     if key in _WARNED_ONCE:
         return
@@ -188,6 +185,8 @@ def normal_relaxed_point(
     s: float,
     gtol: float,
     maxiter: int,
+    *,
+    strict: bool = True,
 ) -> NormalRelaxedPointResult:
     """Minimize all coordinates at an exact mass-metric normal displacement.
 
@@ -246,7 +245,7 @@ def normal_relaxed_point(
     )
     if not result.success:
         message = f"normal-relaxed optimizer did not converge: {result.message}"
-        if bool(_cfg_get(cfg, "strict", STRICT)):
+        if bool(strict):
             raise RuntimeError(message)
         warn_once("normal_relaxed_optimizer", message)
 
@@ -360,10 +359,8 @@ def _default_pyscf_masses(symbols: list[str], gto: Any, elements: Any) -> list[f
 
 __all__ = [
     "BackendUnavailableError",
-    "DEV_FAST",
     "ESSettings",
     "NormalRelaxedPointResult",
-    "STRICT",
     "default_auxbasis",
     "electronic_symbol",
     "energy_gradient_at_coords_bohr",

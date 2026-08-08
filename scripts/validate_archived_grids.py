@@ -53,7 +53,7 @@ def _records_for_variant(
     E = np.asarray(arrays["E_Eh"])[np.ix_(indices, indices)]
     MU = np.asarray(arrays["MU_Debye"])[np.ix_(indices, indices, np.arange(3))]
     axis = molecule.coords[bond1.j] - molecule.coords[bond1.i]
-    return variational_2d(
+    records = variational_2d(
         R1,
         R2,
         E,
@@ -63,8 +63,8 @@ def _records_for_variant(
         axis=axis,
         nmax=nmax,
         g12_inv_amu=bond_bond_g12_inv_amu(molecule, bond1, bond2),
-        intensity="vector",
     )
+    return [record.as_dict() for record in records]
 
 
 def _molecular_vscf_benchmark(arrays: dict[str, np.ndarray], molecule) -> dict:
@@ -110,10 +110,9 @@ def _molecular_vscf_benchmark(arrays: dict[str, np.ndarray], molecule) -> dict:
         mu2,
         nmax=12,
         g12_inv_amu=0.0,
-        intensity="vector",
         reference_potentials_Eh=(one_mode_1, one_mode_2),
     )
-    exact_by_state = {tuple(record["assignment"]): record for record in exact_records}
+    exact_by_state = {record.quanta: record for record in exact_records}
     vscf_by_state = {transition.quanta: transition for transition in vscf.transitions}
     state_results = []
     for state in requested_states:
@@ -121,15 +120,15 @@ def _molecular_vscf_benchmark(arrays: dict[str, np.ndarray], molecule) -> dict:
             raise ValueError(f"Exact 2D DVR did not assign benchmark state {state}")
         exact = exact_by_state[state]
         approximate = vscf_by_state[state]
-        error_cm = float(approximate.frequency_cm - exact["freq_cm"])
+        error_cm = float(approximate.frequency_cm - exact.frequency_cm)
         state_results.append(
             {
                 "assignment": state,
-                "exact_dvr_frequency_cm": float(exact["freq_cm"]),
+                "exact_dvr_frequency_cm": float(exact.frequency_cm),
                 "vscf_frequency_cm": float(approximate.frequency_cm),
                 "signed_error_cm": error_cm,
                 "absolute_error_cm": abs(error_cm),
-                "exact_assignment_weight": float(exact["assignment_weight"]),
+                "exact_assignment_weight": float(exact.assignment_weight),
             }
         )
     return {

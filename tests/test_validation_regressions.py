@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -81,23 +78,22 @@ def test_frozen_1d_pes_dms_regression_records_are_stable() -> None:
         0.94,
         axis=[1.0, 0.0, 0.0],
         vmax=4,
-        intensity="both",
     )
 
     np.testing.assert_allclose(
-        [record["freq_cm"] for record in records],
+        [record.frequency_cm for record in records],
         [2196.7237731495443, 5696.625636449846, 10571.21481844496, 16837.81172853942],
         rtol=0.0,
         atol=1e-8,
     )
     np.testing.assert_allclose(
-        [abs(record["transition_dipole_axis_D"]) for record in records],
+        [abs(record.transition_dipole_axis_D) for record in records],
         [0.05557448820371811, 0.0001864638820441968, 0.004117818476811359, 0.00003468330284332917],
         rtol=0.0,
         atol=1e-12,
     )
     np.testing.assert_allclose(
-        [record["integrated_cross_section_isotropic_omega_m2_per_s"] for record in records],
+        [record.integrated_cross_section_isotropic_omega_m2_per_s for record in records],
         [
             5.759494034796283e-11,
             5.6736016026760215e-15,
@@ -136,17 +132,16 @@ def test_frozen_2d_pes_dms_regression_records_are_stable() -> None:
         axis=[1.0, 0.0, 0.0],
         nmax=4,
         g12_inv_amu=0.01,
-        intensity="both",
     )
 
     np.testing.assert_allclose(
-        [record["freq_cm"] for record in records],
+        [record.frequency_cm for record in records],
         [2017.4759611582933, 2531.4049474811245, 4547.579013681504, 5243.334272615995],
         rtol=0.0,
         atol=1e-8,
     )
     np.testing.assert_allclose(
-        [abs(record["transition_dipole_axis_D"]) for record in records],
+        [abs(record.transition_dipole_axis_D) for record in records],
         [
             0.003145742455344773,
             0.03319098393961768,
@@ -157,7 +152,7 @@ def test_frozen_2d_pes_dms_regression_records_are_stable() -> None:
         atol=1e-12,
     )
     np.testing.assert_allclose(
-        [record["integrated_cross_section_isotropic_omega_m2_per_s"] for record in records],
+        [record.integrated_cross_section_isotropic_omega_m2_per_s for record in records],
         [
             1.6867072076018246e-12,
             2.186685473084918e-11,
@@ -209,34 +204,9 @@ def test_linear_dipole_harmonic_oscillator_has_analytic_transition_moment() -> N
         mass_amu,
         axis=[1.0, 0.0, 0.0],
         vmax=1,
-        intensity="axis",
     )[0]
     zero_point_amplitude_A = np.sqrt(1.0 / (2.0 * mass_electron * omega_au)) / ANG_TO_BOHR
     expected_dipole_D = slope_D_per_A * zero_point_amplitude_A
 
-    assert record["freq_cm"] == pytest.approx(frequency_cm, abs=1e-6)
-    assert abs(record["transition_dipole_D"]) == pytest.approx(expected_dipole_D, rel=1e-10)
-
-
-def test_curated_marvel_iupac_targets_are_parseable_and_well_formed() -> None:
-    repo_root = Path(__file__).resolve().parents[1]
-    path = repo_root / "reference" / "marvel_iupac" / "vbo_stretch_targets.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
-
-    assert data["meta"]["units_frequency"] == "cm^-1"
-    assert data["meta"]["units_uncertainty"] == "cm^-1"
-    source_dois = {source["doi"] for source in data["meta"]["sources"]}
-    assert source_dois
-
-    targets = data["targets"]
-    species = {target["species"] for target in targets}
-    assert {"H2O", "HDO", "D2O"}.issubset(species)
-    assert len(targets) >= 10
-    for target in targets:
-        assert target["source"]["doi"] in source_dois
-        assert np.isfinite(target["band_origin_cm1"])
-        assert target["band_origin_cm1"] > 0.0
-        if target["unc_cm1"] is not None:
-            assert np.isfinite(target["unc_cm1"])
-            assert target["unc_cm1"] >= 0.0
-        assert set(target["quanta"]) == {"v1", "v2", "v3"}
+    assert record.frequency_cm == pytest.approx(frequency_cm, abs=1e-6)
+    assert abs(record.transition_dipole_axis_D) == pytest.approx(expected_dipole_D, rel=1e-10)

@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,27 +10,9 @@ import numpy as np
 import pytest
 
 from pyscf_vscf.coordinates import Bond
+from pyscf_vscf.cache import scientific_fingerprint
+from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.workflows import scans
-
-
-@dataclass
-class _LegacyMolecule:
-    symbols: list[str]
-    coords: np.ndarray
-    charge: int = 0
-    spin: int = 0
-    label: str = "legacy"
-
-    def analysis_masses(self) -> np.ndarray:
-        masses = {
-            "C": 12.0,
-            "CL": 34.968852682,
-            "F": 18.99840316273,
-            "O": 15.99491461957,
-            "H": 1.00782503223,
-            "D": 2.01410177812,
-        }
-        return np.array([masses[s.upper()] for s in self.symbols], dtype=float)
 
 
 class _RecordingExecutor:
@@ -50,8 +31,8 @@ class _RecordingExecutor:
         return [func(task) for task in tasks]
 
 
-def _water() -> _LegacyMolecule:
-    return _LegacyMolecule(
+def _water() -> Molecule:
+    return Molecule.from_arrays(
         ["O", "H", "H"],
         np.array([[0.0, 0.0, 0.0], [0.96, 0.0, 0.0], [-0.24, 0.93, 0.0]]),
     )
@@ -112,7 +93,7 @@ def test_1d_lbs_grid_uses_executor_progress_and_preserves_geometry() -> None:
     R, E, MU = scans.grid_1d_pes_dms(
         mol,
         _cfg(),
-        "O0-H1",
+        "0-1",
         Rmin=0.8,
         Rmax=1.2,
         npts=5,
@@ -134,7 +115,7 @@ def test_1d_lbs_grid_uses_executor_progress_and_preserves_geometry() -> None:
 
 
 def test_local_bond_reduced_mass_uses_selected_atom_masses_for_non_water() -> None:
-    mol = _LegacyMolecule(
+    mol = Molecule.from_arrays(
         ["H", "F"],
         np.array([[0.0, 0.0, 0.0], [0.92, 0.0, 0.0]]),
         label="HF",
@@ -148,7 +129,7 @@ def test_local_bond_reduced_mass_uses_selected_atom_masses_for_non_water() -> No
 
 
 def test_bond_bond_g12_uses_actual_shared_atom_mass_and_orientation() -> None:
-    mol = _LegacyMolecule(
+    mol = Molecule.from_arrays(
         ["C", "H", "H"],
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
         label="methylenelike",
@@ -159,7 +140,7 @@ def test_bond_bond_g12_uses_actual_shared_atom_mass_and_orientation() -> None:
         1.0 / np.sqrt(2.0) / 1.00782503223
     )
 
-    bent_carbon = _LegacyMolecule(
+    bent_carbon = Molecule.from_arrays(
         ["C", "H", "H"],
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, np.sqrt(3.0) / 2.0, 0.0]]),
         label="bent_ch2",
@@ -169,8 +150,8 @@ def test_bond_bond_g12_uses_actual_shared_atom_mass_and_orientation() -> None:
         scans.bond_bond_g12_inv_amu(mol, "0-1", "1-0")
 
 
-def test_normal_mode_selection_preserves_legacy_projection_scoring() -> None:
-    mol = _LegacyMolecule(
+def test_normal_mode_selection_uses_bond_projection_scoring() -> None:
+    mol = Molecule.from_arrays(
         ["O", "H"],
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
     )
@@ -191,7 +172,7 @@ def test_normal_mode_selection_preserves_legacy_projection_scoring() -> None:
 
 
 def test_calc_normal_mode_direction_uses_injected_harmonic_function() -> None:
-    mol = _LegacyMolecule(
+    mol = Molecule.from_arrays(
         ["O", "H"],
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
     )
@@ -208,15 +189,21 @@ def test_calc_normal_mode_direction_uses_injected_harmonic_function() -> None:
 
     result = scans.calc_normal_mode_direction(
         mol,
-        _cfg(rtproj="mw_explicit"),
-        "O0-H1",
+        _cfg(),
+        "0-1",
+        rtproj="mw_explicit",
         harmonic_fn=fake_harmonic,
         log_fn=logs.append,
     )
 
-    assert result[1] == 0
-    assert result[2] == pytest.approx(321.0)
-    assert kwargs_seen == {"rtproj": "mw_explicit", "debug": False}
+    assert result.mode_index == 0
+    assert result.frequency_cm == pytest.approx(321.0)
+    assert kwargs_seen == {
+        "rtproj": "mw_explicit",
+        "strict": True,
+        "allow_fd_hessian": False,
+        "debug": False,
+    }
     assert "Selected normal mode index 0" in logs[0]
 
 
@@ -244,6 +231,26 @@ def test_1d_normal_grid_and_displacement_validation() -> None:
             _cfg(),
             np.zeros((2, 3)),
             energy_dipole_fn=_fake_energy_dipole,
+        )
+
+
+@pytest.mark.parametrize(
+    ("result", "message"),
+    [
+        ((np.nan, np.zeros(3)), "energy must be finite"),
+        ((0.0, np.array([0.0, np.inf, 0.0])), "dipole must be finite"),
+    ],
+)
+def test_scan_rejects_nonfinite_evaluator_results(result, message) -> None:
+    with pytest.raises(ValueError, match=message):
+        scans.grid_1d_pes_dms(
+            _water(),
+            _cfg(),
+            Bond(0, 1),
+            0.9,
+            1.0,
+            2,
+            energy_dipole_fn=lambda molecule, cfg: result,
         )
 
 
@@ -301,7 +308,7 @@ def test_two_bond_stretch_is_orientation_independent_for_shared_atom() -> None:
 
 
 def test_2d_lbs_grid_preserves_reversed_shared_bond_coordinates() -> None:
-    mol = _LegacyMolecule(
+    mol = Molecule.from_arrays(
         ["H", "O", "H"],
         np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
     )
@@ -463,6 +470,7 @@ def test_normal_relaxed_grid_warns_once_and_retains_diagnostics_when_not_strict(
             smin=-0.1,
             smax=0.1,
             npts=3,
+            strict=False,
             relaxed_point_fn=relaxed_point,
         )
 
@@ -485,7 +493,7 @@ def test_1d_lbs_cache_metadata_validation_and_roundtrip(tmp_path: Path) -> None:
         path,
         mol,
         cfg,
-        "O0-H1",
+        "0-1",
         0.8,
         1.2,
         5,
@@ -495,17 +503,17 @@ def test_1d_lbs_cache_metadata_validation_and_roundtrip(tmp_path: Path) -> None:
     np.testing.assert_allclose(out_E, E)
     np.testing.assert_allclose(out_MU, MU)
     meta = scans.lbs_frozen_1d_cache_metadata(mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
-    assert meta["scientific"]["scan"]["bond_zero_based"] == [0, 1]
+    assert meta["identity"]["scan"]["bond_zero_based"] == [0, 1]
     legacy_meta = dict(meta, grid_cache_version=1)
-    with pytest.raises(ValueError, match="Legacy caches"):
+    with pytest.raises(ValueError, match="Unsupported grid cache schema"):
         scans.validate_lbs_frozen_1d_cache_metadata(legacy_meta, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
-    with pytest.raises(ValueError, match="scientific_fingerprint_sha256"):
+    with pytest.raises(ValueError, match="cache_identity_sha256"):
         scans.validate_lbs_frozen_1d_cache_metadata(
             meta, mol, _cfg(basis="6-31g"), Bond(0, 1), 0.8, 1.2, 5
         )
 
 
-def test_cache_fingerprint_covers_geometry_isotopes_and_all_es_settings() -> None:
+def test_cache_identity_covers_causal_inputs_but_not_policy_or_isotope() -> None:
     mol = _water()
     cfg = _cfg(
         rtproj="mw_explicit",
@@ -516,20 +524,28 @@ def test_cache_fingerprint_covers_geometry_isotopes_and_all_es_settings() -> Non
         dft_grid_level=4,
     )
     meta = scans.lbs_frozen_1d_cache_metadata(mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
-    es = meta["scientific"]["electronic_structure"]
-    assert es["rtproj"] == "mw_explicit"
-    assert es["strict"] is False
-    assert es["allow_fd_hessian"] is True
+    es = meta["identity"]["electronic_structure"]
+    assert "rtproj" not in es
+    assert "strict" not in es
+    assert "allow_fd_hessian" not in es
     assert es["scf_conv_tol"] == pytest.approx(3e-9)
     assert es["scf_max_cycle"] == 77
     assert es["dft_grid_level"] == 4
-    assert "software_versions" in es
+    assert "software_versions" not in es
+    assert "software_versions" in meta["provenance"]["electronic_structure"]
+
+    isotope = Molecule.from_arrays(
+        ["O", "D", "D"],
+        mol.coords,
+        label="different-label",
+    )
+    scans.validate_lbs_frozen_1d_cache_metadata(meta, isotope, cfg, Bond(0, 1), 0.8, 1.2, 5)
 
     moved = _water()
     moved.coords[1, 0] += 1e-4
-    with pytest.raises(ValueError, match="scientific_fingerprint_sha256"):
+    with pytest.raises(ValueError, match="cache_identity_sha256"):
         scans.validate_lbs_frozen_1d_cache_metadata(meta, moved, cfg, Bond(0, 1), 0.8, 1.2, 5)
-    with pytest.raises(ValueError, match="scientific_fingerprint_sha256"):
+    with pytest.raises(ValueError, match="cache_identity_sha256"):
         scans.validate_lbs_frozen_1d_cache_metadata(
             meta,
             mol,
@@ -548,6 +564,83 @@ def test_cache_fingerprint_covers_geometry_isotopes_and_all_es_settings() -> Non
         )
 
 
+def test_schema_v2_cache_metadata_is_migrated_and_runtime_drift_warns() -> None:
+    mol = _water()
+    cfg = _cfg()
+    current = scans.lbs_frozen_1d_cache_metadata(mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
+    electronic = dict(current["identity"]["electronic_structure"])
+    electronic["software_versions"] = {"pyscf": "old"}
+    electronic.update({"rtproj": "pyscf", "strict": True, "allow_fd_hessian": False})
+    scientific = {
+        "molecule": current["provenance"]["molecule"],
+        "electronic_structure": electronic,
+        "scan": current["provenance"]["scan"],
+    }
+    schema_v2 = {
+        "grid_cache_version": 2,
+        "scientific": scientific,
+        "scientific_fingerprint_sha256": scientific_fingerprint(scientific),
+        "runtime": {"distributions": {"pyscf": "old"}},
+    }
+
+    with pytest.warns(RuntimeWarning, match="runtime differs"):
+        scans.validate_lbs_frozen_1d_cache_metadata(schema_v2, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
+
+    drifted = dict(current)
+    drifted["provenance"] = dict(current["provenance"])
+    drifted["provenance"]["runtime"] = {"distributions": {"pyscf": "different"}}
+    drifted["provenance_sha256"] = scientific_fingerprint(drifted["provenance"])
+    with pytest.warns(RuntimeWarning, match="runtime differs"):
+        scans.validate_lbs_frozen_1d_cache_metadata(drifted, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
+
+
+def test_schema_v3_cache_requires_integral_consistent_provenance_and_backend_identity() -> None:
+    mol = _water()
+    cfg = _cfg()
+    custom = scans.lbs_frozen_1d_cache_metadata(
+        mol,
+        cfg,
+        Bond(0, 1),
+        0.8,
+        1.2,
+        5,
+        backend_identity="custom-qc/v1",
+    )
+    assert custom["identity"]["electronic_structure"]["backend"] == "custom-qc/v1"
+    with pytest.raises(ValueError, match="cache_identity_sha256"):
+        scans.validate_lbs_frozen_1d_cache_metadata(custom, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
+
+    missing = dict(custom)
+    missing.pop("provenance")
+    with pytest.raises(ValueError, match="provenance is missing"):
+        scans.validate_lbs_frozen_1d_cache_metadata(
+            missing,
+            mol,
+            cfg,
+            Bond(0, 1),
+            0.8,
+            1.2,
+            5,
+            backend_identity="custom-qc/v1",
+        )
+
+    corrupted = dict(custom)
+    corrupted["provenance"] = dict(custom["provenance"])
+    corrupted["provenance"]["molecule"] = dict(custom["provenance"]["molecule"])
+    corrupted["provenance"]["molecule"]["label"] = "tampered"
+    with pytest.raises(ValueError, match="provenance fingerprint is corrupt"):
+        scans.validate_lbs_frozen_1d_cache_metadata(
+            corrupted,
+            mol,
+            cfg,
+            Bond(0, 1),
+            0.8,
+            1.2,
+            5,
+            backend_identity="custom-qc/v1",
+        )
+
+
 def test_2d_lbs_cache_validation_checks_metadata_and_requested_arrays() -> None:
     mol = _water()
     cfg = _cfg()
@@ -556,20 +649,24 @@ def test_2d_lbs_cache_validation_checks_metadata_and_requested_arrays() -> None:
     R1 = np.linspace(*r1)
     R2 = np.linspace(*r2)
     meta = scans.lbs_frozen_2d_cache_metadata(mol, cfg, Bond(0, 1), Bond(0, 2), r1, r2)
-    scan_meta = meta["scientific"]["scan"]
+    scan_meta = meta["identity"]["scan"]
     assert scan_meta["bond1_zero_based"] == [0, 1]
     assert scan_meta["bond2_zero_based"] == [0, 2]
-    assert scan_meta["keo"] == "gmatrix"
-    assert scan_meta["reduced_masses_amu"] == pytest.approx(
+    assert "keo" not in scan_meta
+    assert "reduced_masses_amu" not in scan_meta
+    assert "g12_inv_amu" not in scan_meta
+    full_scan = meta["provenance"]["scan"]
+    assert full_scan["keo"] == "gmatrix"
+    assert full_scan["reduced_masses_amu"] == pytest.approx(
         [
             scans.local_bond_reduced_mass_amu(mol, Bond(0, 1)),
             scans.local_bond_reduced_mass_amu(mol, Bond(0, 2)),
         ]
     )
-    assert scan_meta["g12_inv_amu"] == pytest.approx(
+    assert full_scan["g12_inv_amu"] == pytest.approx(
         scans.bond_bond_g12_inv_amu(mol, Bond(0, 1), Bond(0, 2))
     )
-    assert scan_meta["gmatrix_reference_geometry"] == "scientific.molecule.coordinates_A"
+    assert full_scan["gmatrix_reference_geometry"] == "identity.molecule.coordinates_A"
     arrays = {
         "R1_A": R1,
         "R2_A": R2,
@@ -591,6 +688,19 @@ def test_2d_lbs_cache_validation_checks_metadata_and_requested_arrays() -> None:
     np.testing.assert_allclose(out_R2, R2)
     assert E.shape == (3, 3)
     assert MU.shape == (3, 3, 3)
+
+    isotope = Molecule.from_arrays(["O", "D", "D"], mol.coords)
+    scans.validate_lbs_frozen_2d_cache(
+        meta,
+        arrays,
+        isotope,
+        cfg,
+        Bond(0, 1),
+        Bond(0, 2),
+        r1,
+        r2,
+        keo="reduced",
+    )
 
     bad_arrays = dict(arrays)
     bad_arrays["R2_A"] = R2 + 0.01

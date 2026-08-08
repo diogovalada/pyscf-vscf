@@ -202,8 +202,11 @@ def load_grid_npz(path: Path) -> tuple[dict, dict[str, np.ndarray]]:
         meta = json.loads(str(data["meta_json"].tolist()))
         arrays = {k: data[k] for k in data.files if k != "meta_json"}
     expected_hashes = meta.get("array_sha256")
-    if meta.get("grid_cache_version") == 2 and expected_hashes is None:
-        raise ValueError(f"Schema-v2 grid cache '{path}' is missing its array checksum manifest")
+    if meta.get("grid_cache_version") in {2, 3} and expected_hashes is None:
+        raise ValueError(
+            f"Schema-v{meta['grid_cache_version']} grid cache '{path}' is missing its "
+            "array checksum manifest"
+        )
     if expected_hashes is not None:
         if not isinstance(expected_hashes, dict):
             raise ValueError(f"Grid cache '{path}' has an invalid array checksum manifest")

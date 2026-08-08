@@ -7,7 +7,7 @@
   },
   "independent_intensity_benchmark": {
     "path": "orca_stretch_intensity_benchmarks.json",
-    "sha256": "997db107014034c31378b8676ee975aa268d25e03972297a956bf79ca83c8a7c"
+    "sha256": "b197213df376c81da35ba14497968375dcfef4a8c35ec52f98ed1bc49ff80188"
   },
   "coordinate_definition": {
     "bond1_zero_based": [0, 1],
@@ -26,7 +26,7 @@
   "legacy_limitations": [
     "schema 1 omits exact software versions, SCF tolerance, and DFT grid level",
     "the archived log intensities use a superseded frequency-independent formula",
-    "these files are validation fixtures, not schema-v2 production caches"
+    "these files are validation fixtures, not schema-v3 production caches"
   ],
   "systems": {
     "H2O": {

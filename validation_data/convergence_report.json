@@ -5,16 +5,18 @@
     "the benchmark validates units, scale, and isotope/mode trends rather than exact agreement"
   ],
   "intensity_benchmark_source": {
-    "file": "reference/all_gvpt2.json",
+    "availability": "Original ORCA output is archived privately and is not distributed; this hash records that source artifact.",
     "intensity_source": "harmonic_IR_intensity",
     "keywords": "wB97X-D4 VeryTightSCF DefGrid3 NoFrozenCore VPT2 aug-cc-pVTZ",
+    "original_private_archive_path": "reference/all_gvpt2.json",
     "program": "ORCA 6.1.0-f.0 RELEASE",
+    "public_summary": "validation_data/orca_stretch_intensity_benchmarks.json",
     "sha256": "dcf15fed05932b9cc853ad6a8f87eebe73d8e9180c733a65b3e2336449d7162f"
   },
   "method": "assigned cached-grid convergence and VSCF-vs-exact-DVR molecular benchmark; no electronic-structure recomputation",
   "nmax": 12,
-  "package_version": "0.1.0a6",
-  "source_manifest_sha256": "9cc2cbf89da85187218f1f840467f4e315301794055e1c1565463820caa821af",
+  "package_version": "0.1.0a7",
+  "source_manifest_sha256": "0d9ec8557f02fc10495dd64680a9eb2d5bf71027ed1c1761572f98f1485fdb8d",
   "systems": {
     "D2O": {
       "error_budget": {
@@ -812,11 +814,15 @@
             ],
             "assignment_weight": 0.5001220055668989,
             "freq_cm": 2721.7167816359233,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0156517470574285e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.172009575454255e-12,
-            "integrated_cross_section_omega_m2_per_s": 9.172009575454255e-12,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.020731933791956814,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": 0.012595614091081522,
             "transition_dipole_norm_D": 0.020731933791956814
           },
           {
@@ -888,11 +894,15 @@
             ],
             "assignment_weight": 0.5001268172414206,
             "freq_cm": 2829.814620568318,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.8143271040933856e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.588574779090422e-11,
-            "integrated_cross_section_omega_m2_per_s": 9.588574779090422e-11,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.06573960129436317,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": -0.05220921975453731,
             "transition_dipole_norm_D": 0.06573960129436317
           },
           {
@@ -971,11 +981,15 @@
             ],
             "assignment_weight": 0.3361790785999618,
             "freq_cm": 5396.354125221411,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.178731815777329e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.8743412762091135e-13,
-            "integrated_cross_section_omega_m2_per_s": 2.8743412762091135e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0026064414524499258,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": 0.0015825051252846,
             "transition_dipole_norm_D": 0.0026064414524499258
           },
           {
@@ -1047,11 +1061,15 @@
             ],
             "assignment_weight": 0.5000996709713521,
             "freq_cm": 5473.385336353458,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.202892775801792e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.748846626635126e-12,
-            "integrated_cross_section_omega_m2_per_s": 2.748846626635126e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.008003432219730867,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.006357155393821644,
             "transition_dipole_norm_D": 0.008003432219730867
           },
           {
@@ -1130,11 +1148,15 @@
             ],
             "assignment_weight": 0.6716964955018075,
             "freq_cm": 5623.732251046215,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.686688614153093e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.3444145796648034e-14,
-            "integrated_cross_section_omega_m2_per_s": 3.3444145796648034e-14,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0008709169947944686,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": -0.0005279275335305662,
             "transition_dipole_norm_D": 0.0008709169947944686
           },
           {
@@ -1220,11 +1242,15 @@
             ],
             "assignment_weight": 0.31143795770895966,
             "freq_cm": 8018.011175659477,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.366645995706865e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.97383033318297e-15,
-            "integrated_cross_section_omega_m2_per_s": 3.97383033318297e-15,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00025142031182587136,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": -0.00015216300122931903,
             "transition_dipole_norm_D": 0.00025142031182587136
           },
           {
@@ -1296,11 +1322,15 @@
             ],
             "assignment_weight": 0.4558777895863277,
             "freq_cm": 8063.0169667910695,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.5440574091386633e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 8.155293958735637e-14,
-            "integrated_cross_section_omega_m2_per_s": 8.155293958735637e-14,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0011357952606135446,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -0.0009023007880986177,
             "transition_dipole_norm_D": 0.0011357952606135446
           },
           {
@@ -1386,11 +1416,15 @@
             ],
             "assignment_weight": 0.31082105411604977,
             "freq_cm": 8210.465358893269,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.8163352027356122e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.5482771600638774e-15,
-            "integrated_cross_section_omega_m2_per_s": 2.5482771600638774e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00019896123744051147,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.00012076099619193724,
             "transition_dipole_norm_D": 0.00019896123744051147
           },
           {
@@ -1462,11 +1496,15 @@
             ],
             "assignment_weight": 0.45534139480015473,
             "freq_cm": 8376.418034321325,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.702119246352789e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.9570379173264188e-14,
-            "integrated_cross_section_omega_m2_per_s": 1.9570379173264188e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0005458828842547514,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": 0.00043347537583352766,
             "transition_dipole_norm_D": 0.0005458828842547514
           },
           {
@@ -1559,11 +1597,15 @@
             ],
             "assignment_weight": 0.3606397199518853,
             "freq_cm": 10574.835258445297,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.114401211879826e-19,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.725203004723859e-19,
-            "integrated_cross_section_omega_m2_per_s": 3.725203004723859e-19,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 2.1196648407481403e-06,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": -6.693486385191127e-07,
             "transition_dipole_norm_D": 2.1196648407481403e-06
           },
           {
@@ -1649,11 +1691,15 @@
             ],
             "assignment_weight": 0.4367991742032835,
             "freq_cm": 10593.791260897857,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.784993579562811e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.117429812727749e-15,
-            "integrated_cross_section_omega_m2_per_s": 4.117429812727749e-15,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00022264678366822237,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": -0.0001767550478281928,
             "transition_dipole_norm_D": 0.00022264678366822237
           },
           {
@@ -1746,11 +1792,15 @@
             ],
             "assignment_weight": 0.37514027539209377,
             "freq_cm": 10761.00518542845,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.679412442288174e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.5061856194669585e-16,
-            "integrated_cross_section_omega_m2_per_s": 1.5061856194669585e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 4.2251473281463736e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": -2.575850566470181e-05,
             "transition_dipole_norm_D": 4.2251473281463736e-05
           }
         ],
@@ -1824,11 +1874,15 @@
             ],
             "assignment_weight": 0.5000795931484333,
             "freq_cm": 2721.7036162796267,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0160015613021021e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.17201422541962e-12,
-            "integrated_cross_section_omega_m2_per_s": 9.17201422541962e-12,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.020731989189172673,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.012597813485362139,
             "transition_dipole_norm_D": 0.020731989189172673
           },
           {
@@ -1900,11 +1954,15 @@
             ],
             "assignment_weight": 0.5000844027021725,
             "freq_cm": 2829.8015748393923,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.8142941231849288e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.588606360293601e-11,
-            "integrated_cross_section_omega_m2_per_s": 9.588606360293601e-11,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.06573986108903403,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": 0.05220886556595939,
             "transition_dipole_norm_D": 0.06573986108903403
           },
           {
@@ -1983,11 +2041,15 @@
             ],
             "assignment_weight": 0.3362482511550371,
             "freq_cm": 5396.289953198196,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.1776382026540416e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.873765792755253e-13,
-            "integrated_cross_section_omega_m2_per_s": 2.873765792755253e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.002606196012458056,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": -0.0015822422866124466,
             "transition_dipole_norm_D": 0.002606196012458056
           },
           {
@@ -2059,11 +2121,15 @@
             ],
             "assignment_weight": 0.5001104269550094,
             "freq_cm": 5473.302596718111,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.202339097342738e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.7485095294952004e-12,
-            "integrated_cross_section_omega_m2_per_s": 2.7485095294952004e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.008003001955189652,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.006356865176422033,
             "transition_dipole_norm_D": 0.008003001955189652
           },
           {
@@ -2142,11 +2208,15 @@
             ],
             "assignment_weight": 0.6718059427238859,
             "freq_cm": 5623.688270239779,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.6897098777345484e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.347468042078016e-14,
-            "integrated_cross_section_omega_m2_per_s": 3.347468042078016e-14,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0008713178863558667,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": 0.0005281458743362846,
             "transition_dipole_norm_D": 0.0008713178863558667
           },
           {
@@ -2232,11 +2302,15 @@
             ],
             "assignment_weight": 0.31180078086576546,
             "freq_cm": 8017.756308083902,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.3641848988515666e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.963944869627582e-15,
-            "integrated_cross_section_omega_m2_per_s": 3.963944869627582e-15,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0002511113864072647,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.0001521225324603026,
             "transition_dipole_norm_D": 0.0002511113864072647
           },
           {
@@ -2308,11 +2382,15 @@
             ],
             "assignment_weight": 0.4559935307315139,
             "freq_cm": 8062.68846130408,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.5430285876370744e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 8.147725089564831e-14,
-            "integrated_cross_section_omega_m2_per_s": 8.147725089564831e-14,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0011352912039916318,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -0.0009020185071314073,
             "transition_dipole_norm_D": 0.0011352912039916318
           },
           {
@@ -2398,11 +2476,15 @@
             ],
             "assignment_weight": 0.31115816533898866,
             "freq_cm": 8210.276484226617,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.8168114438478385e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.5550593551397533e-15,
-            "integrated_cross_section_omega_m2_per_s": 2.5550593551397533e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00019922811898186892,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": 0.00012077259522009359,
             "transition_dipole_norm_D": 0.00019922811898186892
           },
           {
@@ -2474,11 +2556,15 @@
             ],
             "assignment_weight": 0.4554356461351213,
             "freq_cm": 8376.303873260575,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.6970231383894605e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.9540830035575667e-14,
-            "integrated_cross_section_omega_m2_per_s": 1.9540830035575667e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000545474333883207,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": -0.00043317987730425236,
             "transition_dipole_norm_D": 0.000545474333883207
           },
           {
@@ -2571,11 +2657,15 @@
             ],
             "assignment_weight": 0.3617623707768585,
             "freq_cm": 10573.877500250795,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.4587901343433494e-19,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.794188398835008e-19,
-            "integrated_cross_section_omega_m2_per_s": 2.794188398835008e-19,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 1.8358607389515364e-06,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": 7.658569769058975e-07,
             "transition_dipole_norm_D": 1.8358607389515364e-06
           },
           {
@@ -2661,11 +2751,15 @@
             ],
             "assignment_weight": 0.4372963539475964,
             "freq_cm": 10592.694185130576,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.75939821672252e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.098840038690523e-15,
-            "integrated_cross_section_omega_m2_per_s": 4.098840038690523e-15,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0002221551046635937,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": 0.0001764733804452273,
             "transition_dipole_norm_D": 0.0002221551046635937
           },
           {
@@ -2758,11 +2852,15 @@
             ],
             "assignment_weight": 0.3753632663956107,
             "freq_cm": 10760.504523181322,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.6608032111471388e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.5096978718528737e-16,
-            "integrated_cross_section_omega_m2_per_s": 1.5096978718528737e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 4.2301691462043067e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": 2.5615991616314764e-05,
             "transition_dipole_norm_D": 4.2301691462043067e-05
           }
         ],
@@ -2836,11 +2934,15 @@
             ],
             "assignment_weight": 0.5001232027872176,
             "freq_cm": 2723.3430349619957,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0152361609675614e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.168369344760804e-12,
-            "integrated_cross_section_omega_m2_per_s": 9.168369344760804e-12,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.020721629522311543,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.012589276331779342,
             "transition_dipole_norm_D": 0.020721629522311543
           },
           {
@@ -2912,11 +3014,15 @@
             ],
             "assignment_weight": 0.5001281435812381,
             "freq_cm": 2831.432039800016,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.8133649752009462e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.583483865414702e-11,
-            "integrated_cross_section_omega_m2_per_s": 9.583483865414702e-11,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.06570337308865891,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": -0.05218046467164168,
             "transition_dipole_norm_D": 0.06570337308865891
           },
           {
@@ -2995,11 +3101,15 @@
             ],
             "assignment_weight": 0.33112829316697423,
             "freq_cm": 5403.024168762099,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.2331458656004e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.9234902440427305e-13,
-            "integrated_cross_section_omega_m2_per_s": 2.9234902440427305e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.002627008018442189,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": -0.0015950070090804736,
             "transition_dipole_norm_D": 0.002627008018442189
           },
           {
@@ -3071,11 +3181,15 @@
             ],
             "assignment_weight": 0.5000893388318679,
             "freq_cm": 5481.7782182875035,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.260870539446978e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.7794817892160137e-12,
-            "integrated_cross_section_omega_m2_per_s": 2.7794817892160137e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.008041743470139067,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": 0.0063875818562045775,
             "transition_dipole_norm_D": 0.008041743470139067
           },
           {
@@ -3154,11 +3268,15 @@
             ],
             "assignment_weight": 0.6616031979757261,
             "freq_cm": 5628.610809248515,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.3769537191477764e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.0648100492490775e-14,
-            "integrated_cross_section_omega_m2_per_s": 3.0648100492490775e-14,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0008333552972390408,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": -0.0005050453139402635,
             "transition_dipole_norm_D": 0.0008333552972390408
           },
           {
@@ -3244,11 +3362,15 @@
             ],
             "assignment_weight": 0.289980879770265,
             "freq_cm": 8038.166225363634,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.252527636688373e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.7742007764801405e-15,
-            "integrated_cross_section_omega_m2_per_s": 4.7742007764801405e-15,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00027523323652476315,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.00016667638911249802,
             "transition_dipole_norm_D": 0.00027523323652476315
           },
           {
@@ -3320,11 +3442,15 @@
             ],
             "assignment_weight": 0.4511587888198021,
             "freq_cm": 8088.416864493731,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.6883546872875856e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 8.917560897755712e-14,
-            "integrated_cross_section_omega_m2_per_s": 8.917560897755712e-14,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0011858241969232622,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -0.0009420381320359942,
             "transition_dipole_norm_D": 0.0011858241969232622
           },
           {
@@ -3410,11 +3536,15 @@
             ],
             "assignment_weight": 0.2894455274118614,
             "freq_cm": 8227.084290365026,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.256239935001391e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.0433086197861583e-15,
-            "integrated_cross_section_omega_m2_per_s": 2.0433086197861583e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00017798075271861874,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": 0.00010797869370454162,
             "transition_dipole_norm_D": 0.00017798075271861874
           },
           {
@@ -3486,11 +3616,15 @@
             ],
             "assignment_weight": 0.45072169027630016,
             "freq_cm": 8387.679371207023,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.1758037375072276e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.207369184928767e-14,
-            "integrated_cross_section_omega_m2_per_s": 2.207369184928767e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0005793561299590025,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": -0.00046006323687378635,
             "transition_dipole_norm_D": 0.0005793561299590025
           },
           {
@@ -3583,11 +3717,15 @@
             ],
             "assignment_weight": 0.31237845118325747,
             "freq_cm": 10626.772108087202,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.28613108892525e-17,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.2239898182720775e-17,
-            "integrated_cross_section_omega_m2_per_s": 3.2239898182720775e-17,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 1.967094283251692e-05,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": 1.1465953077401288e-05,
             "transition_dipole_norm_D": 1.967094283251692e-05
           },
           {
@@ -3673,11 +3811,15 @@
             ],
             "assignment_weight": 0.4212277454738841,
             "freq_cm": 10653.39064208801,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.1708287472977774e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.18995803724811e-15,
-            "integrated_cross_section_omega_m2_per_s": 6.18995803724811e-15,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0002722255948098943,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": 0.00021615792572569122,
             "transition_dipole_norm_D": 0.0002722255948098943
           },
           {
@@ -3770,11 +3912,15 @@
             ],
             "assignment_weight": 0.36301837222907823,
             "freq_cm": 10795.906413027014,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.1277847761079858e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.0106880293748933e-16,
-            "integrated_cross_section_omega_m2_per_s": 1.0106880293748933e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 3.455477221650002e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": -2.1074241863607533e-05,
             "transition_dipole_norm_D": 3.455477221650002e-05
           }
         ]
@@ -4612,11 +4758,15 @@
             ],
             "assignment_weight": 0.5001957778066087,
             "freq_cm": 3723.6594817583227,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.8801843403692185e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.6987460612742664e-11,
-            "integrated_cross_section_omega_m2_per_s": 1.6987460612742664e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.024121720496422843,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.014651552234897556,
             "transition_dipole_norm_D": 0.024121720496422843
           },
           {
@@ -4688,11 +4838,15 @@
             ],
             "assignment_weight": 0.5002068563772037,
             "freq_cm": 3820.0983568285033,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.323231323411277e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.756260609741855e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.756260609741855e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.07657486450696827,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": -0.060815098652668036,
             "transition_dipole_norm_D": 0.07657486450696827
           },
           {
@@ -4771,11 +4925,15 @@
             ],
             "assignment_weight": 0.4004457642362757,
             "freq_cm": 7348.495122272092,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.483068983227346e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.785997796843825e-13,
-            "integrated_cross_section_omega_m2_per_s": 6.785997796843825e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0034319162499405246,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": -0.002080698101871942,
             "transition_dipole_norm_D": 0.0034319162499405246
           },
           {
@@ -4847,11 +5005,15 @@
             ],
             "assignment_weight": 0.500489170984014,
             "freq_cm": 7398.703020798763,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.3059794252467937e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.899016884820219e-12,
-            "integrated_cross_section_omega_m2_per_s": 6.899016884820219e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.010905481247401653,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.008662809647284376,
             "transition_dipole_norm_D": 0.010905481247401653
           },
           {
@@ -4930,11 +5092,15 @@
             ],
             "assignment_weight": 0.7996184191913609,
             "freq_cm": 7587.034934685586,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.7656487297306925e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.597970366836927e-13,
-            "integrated_cross_section_omega_m2_per_s": 1.597970366836927e-13,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0016389939401395255,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": -0.0009946825818369612,
             "transition_dipole_norm_D": 0.0016389939401395255
           },
           {
@@ -5020,11 +5186,15 @@
             ],
             "assignment_weight": 0.4365882855383887,
             "freq_cm": 10851.214788380863,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0722935833527228e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.009378101327954e-14,
-            "integrated_cross_section_omega_m2_per_s": 1.009378101327954e-14,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0003444425440487465,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": -0.0002049680055862986,
             "transition_dipole_norm_D": 0.0003444425440487465
           },
           {
@@ -5096,11 +5266,15 @@
             ],
             "assignment_weight": 0.48227204085733755,
             "freq_cm": 10867.685238238346,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.925473467566846e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.128005872454001e-13,
-            "integrated_cross_section_omega_m2_per_s": 3.128005872454001e-13,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0019159946109005626,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -0.001522514385983844,
             "transition_dipole_norm_D": 0.0019159946109005626
           },
           {
@@ -5186,11 +5360,15 @@
             ],
             "assignment_weight": 0.433860980754504,
             "freq_cm": 11098.592947286923,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.6028238394037878e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.4481575871957537e-14,
-            "integrated_cross_section_omega_m2_per_s": 1.4481575871957537e-14,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00040794628195523977,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.0002477863261481552,
             "transition_dipole_norm_D": 0.00040794628195523977
           },
           {
@@ -5262,11 +5440,15 @@
             ],
             "assignment_weight": 0.4796127376157406,
             "freq_cm": 11271.115453610984,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.534671803266808e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.5120112435517086e-14,
-            "integrated_cross_section_omega_m2_per_s": 4.5120112435517086e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0007145467799419855,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": 0.0005673856727459501,
             "transition_dipole_norm_D": 0.0007145467799419855
           },
           {
@@ -5338,11 +5520,15 @@
             ],
             "assignment_weight": 0.48444624848720136,
             "freq_cm": 14217.854392669937,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.8094037021110467e-17,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.0016859246629009e-17,
-            "integrated_cross_section_omega_m2_per_s": 1.0016859246629009e-17,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 9.47933308031311e-06,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": 9.165548202825363e-06,
             "transition_dipole_norm_D": 9.47933308031311e-06
           },
           {
@@ -5414,11 +5600,15 @@
             ],
             "assignment_weight": 0.4942780162033913,
             "freq_cm": 14221.383701265891,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.5903389834745165e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.42737877968813e-14,
-            "integrated_cross_section_omega_m2_per_s": 2.42737877968813e-14,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00046658081512456737,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": 0.0003704416873328869,
             "transition_dipole_norm_D": 0.00046658081512456737
           },
           {
@@ -5497,11 +5687,15 @@
             ],
             "assignment_weight": 0.317228758159539,
             "freq_cm": 14552.370038389095,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.986003989733785e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 7.181259846873772e-16,
-            "integrated_cross_section_omega_m2_per_s": 7.181259846873772e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 7.93345723608992e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": 4.830213177219045e-05,
             "transition_dipole_norm_D": 7.93345723608992e-05
           }
         ],
@@ -5575,11 +5769,15 @@
             ],
             "assignment_weight": 0.5001738590686061,
             "freq_cm": 3723.135653605683,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.880738464164639e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.6989395204801577e-11,
-            "integrated_cross_section_omega_m2_per_s": 1.6989395204801577e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0241247909355082,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.014654741931275663,
             "transition_dipole_norm_D": 0.0241247909355082
           },
           {
@@ -5651,11 +5849,15 @@
             ],
             "assignment_weight": 0.5001848980869554,
             "freq_cm": 3819.582208993282,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.323699901400474e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.756527103250585e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.756527103250585e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.07658584806493521,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": 0.06082349517194127,
             "transition_dipole_norm_D": 0.07658584806493521
           },
           {
@@ -5734,11 +5936,15 @@
             ],
             "assignment_weight": 0.40154486064182604,
             "freq_cm": 7346.160038111711,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.444154419534255e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.753164599843573e-13,
-            "integrated_cross_section_omega_m2_per_s": 6.753164599843573e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0034241478133481755,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": -0.002075610675542014,
             "transition_dipole_norm_D": 0.0034241478133481755
           },
           {
@@ -5810,11 +6016,15 @@
             ],
             "assignment_weight": 0.5005307049807615,
             "freq_cm": 7396.057202441963,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.3033669215807894e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.88500575747559e-12,
-            "integrated_cross_section_omega_m2_per_s": 6.88500575747559e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.010896350188966304,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.00865568849330305,
             "transition_dipole_norm_D": 0.010896350188966304
           },
           {
@@ -5893,11 +6103,15 @@
             ],
             "assignment_weight": 0.8017299579746481,
             "freq_cm": 7585.710492009045,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.7897756910109462e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.6199383425094739e-13,
-            "integrated_cross_section_omega_m2_per_s": 1.6199383425094739e-13,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0016503655121682514,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": 0.001001542936363176,
             "transition_dipole_norm_D": 0.0016503655121682514
           },
           {
@@ -5983,11 +6197,15 @@
             ],
             "assignment_weight": 0.43934341538128724,
             "freq_cm": 10843.38065128438,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0139074053222581e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.594015433722185e-15,
-            "integrated_cross_section_omega_m2_per_s": 9.594015433722185e-15,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0003359285254134218,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.00019938165534179715,
             "transition_dipole_norm_D": 0.0003359285254134218
           },
           {
@@ -6059,11 +6277,15 @@
             ],
             "assignment_weight": 0.4831345789366315,
             "freq_cm": 10859.376210774804,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.825970922988862e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.0748768971613375e-13,
-            "integrated_cross_section_omega_m2_per_s": 3.0748768971613375e-13,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0019003800223437496,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -0.0015102544308761097,
             "transition_dipole_norm_D": 0.0019003800223437496
           },
           {
@@ -6149,11 +6371,15 @@
             ],
             "assignment_weight": 0.43626375941745266,
             "freq_cm": 11094.794331884814,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.631762614065937e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.4749219449710233e-14,
-            "integrated_cross_section_omega_m2_per_s": 1.4749219449710233e-14,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0004117692579836937,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": 0.0002500559903715206,
             "transition_dipole_norm_D": 0.0004117692579836937
           },
           {
@@ -6225,11 +6451,15 @@
             ],
             "assignment_weight": 0.4801224165903176,
             "freq_cm": 11267.868283795066,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.36112485267629e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.420174107529055e-14,
-            "integrated_cross_section_omega_m2_per_s": 4.420174107529055e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0007073393782746593,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": -0.0005616682505343475,
             "transition_dipole_norm_D": 0.0007073393782746593
           },
           {
@@ -6301,11 +6531,15 @@
             ],
             "assignment_weight": 0.48828017121323825,
             "freq_cm": 14197.792751770367,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.582023535512839e-17,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.9074456597759284e-17,
-            "integrated_cross_section_omega_m2_per_s": 1.9074456597759284e-17,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 1.3090152318037228e-05,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": -1.2928669010500932e-05,
             "transition_dipole_norm_D": 1.3090152318037228e-05
           },
           {
@@ -6377,11 +6611,15 @@
             ],
             "assignment_weight": 0.49718827028007173,
             "freq_cm": 14201.077665105593,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.238234352252981e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.2412907264591445e-14,
-            "integrated_cross_section_omega_m2_per_s": 2.2412907264591445e-14,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00044866012692655155,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": 0.00035620518268820225,
             "transition_dipole_norm_D": 0.00044866012692655155
           },
           {
@@ -6460,11 +6698,15 @@
             ],
             "assignment_weight": 0.31555576330117546,
             "freq_cm": 14543.95178823663,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.046538727012306e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 7.250525531662798e-16,
-            "integrated_cross_section_omega_m2_per_s": 7.250525531662798e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 7.973932573951796e-05,
+            "quanta": [
+              1,
+              3
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": 4.849888358180835e-05,
             "transition_dipole_norm_D": 7.973932573951796e-05
           }
         ],
@@ -6538,11 +6780,15 @@
             ],
             "assignment_weight": 0.5002058576720496,
             "freq_cm": 3741.0821726769827,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.872917725622764e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.6923410842489308e-11,
-            "integrated_cross_section_omega_m2_per_s": 1.6923410842489308e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.024020074726155204,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.014589121053543479,
             "transition_dipole_norm_D": 0.024020074726155204
           },
           {
@@ -6614,11 +6860,15 @@
             ],
             "assignment_weight": 0.5002178315692752,
             "freq_cm": 3837.328429948813,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.308966439068846e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.7487131486304236e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.7487131486304236e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.07623841016612569,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": -0.06054804112814715,
             "transition_dipole_norm_D": 0.07623841016612569
           },
           {
@@ -6697,11 +6947,15 @@
             ],
             "assignment_weight": 0.37727524932464757,
             "freq_cm": 7407.319300163535,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.316327188354859e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 7.538192400522708e-13,
-            "integrated_cross_section_omega_m2_per_s": 7.538192400522708e-13,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0036027332286702437,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": -0.0021847595806949037,
             "transition_dipole_norm_D": 0.0036027332286702437
           },
           {
@@ -6773,11 +7027,15 @@
             ],
             "assignment_weight": 0.5004080483848713,
             "freq_cm": 7464.315614522842,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.3830260492379388e-11,
             "integrated_cross_section_isotropic_omega_m2_per_s": 7.30615136522213e-12,
-            "integrated_cross_section_omega_m2_per_s": 7.30615136522213e-12,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.011173220372576542,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.008875413271390936,
             "transition_dipole_norm_D": 0.011173220372576542
           },
           {
@@ -6856,11 +7114,15 @@
             ],
             "assignment_weight": 0.7533957741185755,
             "freq_cm": 7627.748433264444,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2499002518607825e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.1327359362716852e-13,
-            "integrated_cross_section_omega_m2_per_s": 1.1327359362716852e-13,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0013762432051660123,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": -0.0008346567285804172,
             "transition_dipole_norm_D": 0.0013762432051660123
           },
           {
@@ -6946,11 +7208,15 @@
             ],
             "assignment_weight": 0.3897889349043914,
             "freq_cm": 10993.216887897372,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.358904704593536e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.1783027815843906e-14,
-            "integrated_cross_section_omega_m2_per_s": 2.1783027815843906e-14,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0005027195260289019,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": -0.0003020377329005085,
             "transition_dipole_norm_D": 0.0005027195260289019
           },
           {
@@ -7022,11 +7288,15 @@
             ],
             "assignment_weight": 0.47264580421192387,
             "freq_cm": 11018.682038391898,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.295495798735459e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.3796751490589907e-13,
-            "integrated_cross_section_omega_m2_per_s": 4.3796751490589907e-13,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.002251568442654499,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": 0.0017890593583507286,
             "transition_dipole_norm_D": 0.002251568442654499
           },
           {
@@ -7112,11 +7382,15 @@
             ],
             "assignment_weight": 0.3880243212102503,
             "freq_cm": 11192.789877939926,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0204678629250751e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.235907725307958e-15,
-            "integrated_cross_section_omega_m2_per_s": 9.235907725307958e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0003244140436813646,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.0001968787722465476,
             "transition_dipole_norm_D": 0.0003244140436813646
           },
           {
@@ -7188,11 +7462,15 @@
             ],
             "assignment_weight": 0.47098471269630543,
             "freq_cm": 11354.89451049454,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2433329377866834e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.572420555565044e-14,
-            "integrated_cross_section_omega_m2_per_s": 6.572420555565044e-14,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0008592116357024879,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": -0.0006822924557421161,
             "transition_dipole_norm_D": 0.0008592116357024879
           },
           {
@@ -7278,11 +7556,15 @@
             ],
             "assignment_weight": 0.4427763040522449,
             "freq_cm": 14485.840644794005,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.418095045389481e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.497031267275297e-16,
-            "integrated_cross_section_omega_m2_per_s": 9.497031267275297e-16,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 9.144313594612388e-05,
+            "quanta": [
+              0,
+              4
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": -4.970538733961733e-05,
             "transition_dipole_norm_D": 9.144313594612388e-05
           },
           {
@@ -7354,11 +7636,15 @@
             ],
             "assignment_weight": 0.47093104753762316,
             "freq_cm": 14493.644780980314,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2503378305818136e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.597303149667895e-14,
-            "integrated_cross_section_omega_m2_per_s": 6.597303149667895e-14,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000761944682944468,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": -0.0006056103390382575,
             "transition_dipole_norm_D": 0.000761944682944468
           },
           {
@@ -7451,11 +7737,15 @@
             ],
             "assignment_weight": 0.36372473417915013,
             "freq_cm": 14717.44371307745,
+            "integrated_cross_section_axis_omega_m2_per_s": 5.607769533726987e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 5.043168540502825e-16,
-            "integrated_cross_section_omega_m2_per_s": 5.043168540502825e-16,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 6.6109607461102e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": 4.0248276544346327e-05,
             "transition_dipole_norm_D": 6.6109607461102e-05
           }
         ]
@@ -8054,11 +8344,15 @@
             ],
             "assignment_weight": 0.9974176115904635,
             "freq_cm": 2772.8873983679223,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2646621780805613e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.662182616769335e-11,
-            "integrated_cross_section_omega_m2_per_s": 4.662182616769335e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0463081629039018,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.04403414314419162,
             "transition_dipole_norm_D": 0.0463081629039018
           },
           {
@@ -8123,11 +8417,15 @@
             ],
             "assignment_weight": 0.9973972064555782,
             "freq_cm": 3774.9545579794903,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.074763810478607e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.0220371210376376e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.0220371210376376e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.058763343744574786,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": 0.034791171673669546,
             "transition_dipole_norm_D": 0.058763343744574786
           },
           {
@@ -8192,11 +8490,15 @@
             ],
             "assignment_weight": 0.9955912996766121,
             "freq_cm": 5466.849706658982,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.64810129414354e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.4737280415485827e-12,
-            "integrated_cross_section_omega_m2_per_s": 1.4737280415485827e-12,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.005863664796650102,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": 0.005326393878733494,
             "transition_dipole_norm_D": 0.005863664796650102
           },
           {
@@ -8261,11 +8563,15 @@
             ],
             "assignment_weight": 0.9888032787768346,
             "freq_cm": 6543.427270671904,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.820994119671148e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.170921926640561e-13,
-            "integrated_cross_section_omega_m2_per_s": 4.170921926640561e-13,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0028512967530597753,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.000712847681709431,
             "transition_dipole_norm_D": 0.0028512967530597753
           },
           {
@@ -8330,11 +8636,15 @@
             ],
             "assignment_weight": 0.9931894539140732,
             "freq_cm": 7404.335200533992,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.628149473040269e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.49030770344382e-12,
-            "integrated_cross_section_omega_m2_per_s": 3.49030770344382e-12,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0077538581417460235,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": 0.005155004566589027,
             "transition_dipole_norm_D": 0.0077538581417460235
           },
           {
@@ -8399,11 +8709,15 @@
             ],
             "assignment_weight": 0.9942582661557343,
             "freq_cm": 8083.435739933689,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0285749830609841e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.9141593843769565e-14,
-            "integrated_cross_section_omega_m2_per_s": 4.9141593843769565e-14,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0008805533081769545,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.000735509667103056,
             "transition_dipole_norm_D": 0.0008805533081769545
           },
           {
@@ -8468,11 +8782,15 @@
             ],
             "assignment_weight": 0.9829350993857062,
             "freq_cm": 9233.264757108183,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2352517745552242e-17,
             "integrated_cross_section_isotropic_omega_m2_per_s": 8.963528756771555e-15,
-            "integrated_cross_section_omega_m2_per_s": 8.963528756771555e-15,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0003518770097726327,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": 7.541686938338475e-06,
             "transition_dipole_norm_D": 0.0003518770097726327
           },
           {
@@ -8537,11 +8855,15 @@
             ],
             "assignment_weight": 0.9749657607197088,
             "freq_cm": 10167.82255085302,
+            "integrated_cross_section_axis_omega_m2_per_s": 9.1194614781798e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.712193826739085e-15,
-            "integrated_cross_section_omega_m2_per_s": 6.712193826739085e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0002901665154652116,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.00019527157048912676,
             "transition_dipole_norm_D": 0.0002901665154652116
           },
           {
@@ -8606,11 +8928,15 @@
             ],
             "assignment_weight": 0.9932435018164303,
             "freq_cm": 10624.713353928297,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.495700111070671e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.7601056487552664e-15,
-            "integrated_cross_section_omega_m2_per_s": 2.7601056487552664e-15,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0001820259352018268,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": 0.0001341246054758138,
             "transition_dipole_norm_D": 0.0001820259352018268
           },
           {
@@ -8675,11 +9001,15 @@
             ],
             "assignment_weight": 0.9861890635250096,
             "freq_cm": 10895.595788863451,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.9895969308412167e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.7593083851963066e-13,
-            "integrated_cross_section_omega_m2_per_s": 1.7593083851963066e-13,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0014350747521571232,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": 0.0010800633507018712,
             "transition_dipole_norm_D": 0.0014350747521571232
           },
           {
@@ -8744,11 +9074,15 @@
             ],
             "assignment_weight": 0.9787936729526254,
             "freq_cm": 11845.915020094768,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.9946696642318765e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.639216901146665e-16,
-            "integrated_cross_section_omega_m2_per_s": 4.639216901146665e-16,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 7.067520251801237e-05,
+            "quanta": [
+              3,
+              1
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": -2.675590139147345e-05,
             "transition_dipole_norm_D": 7.067520251801237e-05
           },
           {
@@ -8813,11 +9147,15 @@
             ],
             "assignment_weight": 0.9634308558886171,
             "freq_cm": 12853.230024548615,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.4388590606836372e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.95571117354255e-17,
-            "integrated_cross_section_omega_m2_per_s": 4.95571117354255e-17,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 2.217562570468154e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": 2.1815812370278367e-05,
             "transition_dipole_norm_D": 2.217562570468154e-05
           }
         ],
@@ -8884,11 +9222,15 @@
             ],
             "assignment_weight": 0.9974149353178079,
             "freq_cm": 2772.869210694818,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2645619480828552e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.661773625288619e-11,
-            "integrated_cross_section_omega_m2_per_s": 4.661773625288619e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.04630628352430478,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": 0.04403254256797176,
             "transition_dipole_norm_D": 0.04630628352430478
           },
           {
@@ -8953,11 +9295,15 @@
             ],
             "assignment_weight": 0.9973945913597279,
             "freq_cm": 3774.4358020083337,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0750102250448037e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.0222061225980612e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.0222061225980612e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.058772240417935176,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": 0.0347975508169483,
             "transition_dipole_norm_D": 0.058772240417935176
           },
           {
@@ -9022,11 +9368,15 @@
             ],
             "assignment_weight": 0.9955874287266321,
             "freq_cm": 5466.76854237374,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.647216320396564e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.4734545726110993e-12,
-            "integrated_cross_section_omega_m2_per_s": 1.4734545726110993e-12,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.005863164256978988,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": 0.005325787323718668,
             "transition_dipole_norm_D": 0.005863164256978988
           },
           {
@@ -9091,11 +9441,15 @@
             ],
             "assignment_weight": 0.9887647686729408,
             "freq_cm": 6542.883927149395,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.805474631448505e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.170782644778902e-13,
-            "integrated_cross_section_omega_m2_per_s": 4.170782644778902e-13,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00285136753150809,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.0007121696341359195,
             "transition_dipole_norm_D": 0.00285136753150809
           },
           {
@@ -9160,11 +9514,15 @@
             ],
             "assignment_weight": 0.9931550122190675,
             "freq_cm": 7401.698810669295,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.621068661622417e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.482582933339509e-12,
-            "integrated_cross_section_omega_m2_per_s": 3.482582933339509e-12,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00774665220652905,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": 0.005151976910813316,
             "transition_dipole_norm_D": 0.00774665220652905
           },
           {
@@ -9229,11 +9587,15 @@
             ],
             "assignment_weight": 0.9942552725502957,
             "freq_cm": 8083.090602959774,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.028032174768708e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.911651462180036e-14,
-            "integrated_cross_section_omega_m2_per_s": 4.911651462180036e-14,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000880347380233628,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.0007353312651191581,
             "transition_dipole_norm_D": 0.000880347380233628
           },
           {
@@ -9298,11 +9660,15 @@
             ],
             "assignment_weight": 0.9828802226227141,
             "freq_cm": 9232.657915391177,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.1772210332152706e-17,
             "integrated_cross_section_isotropic_omega_m2_per_s": 8.947524110052074e-15,
-            "integrated_cross_section_omega_m2_per_s": 8.947524110052074e-15,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00035157427951662995,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": 7.3626479671142915e-06,
             "transition_dipole_norm_D": 0.00035157427951662995
           },
           {
@@ -9367,11 +9733,15 @@
             ],
             "assignment_weight": 0.9746817870667734,
             "freq_cm": 10165.12282877201,
+            "integrated_cross_section_axis_omega_m2_per_s": 9.10915796964358e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 6.659227526704695e-15,
-            "integrated_cross_section_omega_m2_per_s": 6.659227526704695e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000289057765115879,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.0001951871411509758,
             "transition_dipole_norm_D": 0.000289057765115879
           },
           {
@@ -9436,11 +9806,15 @@
             ],
             "assignment_weight": 0.993245570733262,
             "freq_cm": 10623.524424155714,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.500887379372533e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.7563080489660565e-15,
-            "integrated_cross_section_omega_m2_per_s": 2.7563080489660565e-15,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00018191084673675664,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": -0.00013420947096894065,
             "transition_dipole_norm_D": 0.00018191084673675664
           },
           {
@@ -9505,11 +9879,15 @@
             ],
             "assignment_weight": 0.9859562280460584,
             "freq_cm": 10887.164350442483,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.947935013855942e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.727241876141345e-13,
-            "integrated_cross_section_omega_m2_per_s": 1.727241876141345e-13,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0014224867144320907,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": -0.0010729264825506749,
             "transition_dipole_norm_D": 0.0014224867144320907
           },
           {
@@ -9574,11 +9952,15 @@
             ],
             "assignment_weight": 0.9787396731296041,
             "freq_cm": 11845.051297601784,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.0029846274873435e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.638662464749112e-16,
-            "integrated_cross_section_omega_m2_per_s": 4.638662464749112e-16,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 7.067355572908843e-05,
+            "quanta": [
+              3,
+              1
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": -2.681258812022733e-05,
             "transition_dipole_norm_D": 7.067355572908843e-05
           },
           {
@@ -9643,11 +10025,15 @@
             ],
             "assignment_weight": 0.9630380081722413,
             "freq_cm": 12850.454687822452,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.4351825929586133e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.9151494843845566e-17,
-            "integrated_cross_section_omega_m2_per_s": 4.9151494843845566e-17,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 2.208707200712077e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": -2.179027611992993e-05,
             "transition_dipole_norm_D": 2.208707200712077e-05
           }
         ],
@@ -9714,11 +10100,15 @@
             ],
             "assignment_weight": 0.9974985732492244,
             "freq_cm": 2774.5163481603613,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.2656081618277332e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.6684644643483405e-11,
-            "integrated_cross_section_omega_m2_per_s": 4.6684644643483405e-11,
             "n": 1,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.046325745149670236,
+            "quanta": [
+              1,
+              0
+            ],
+            "state_index": 1,
+            "transition_dipole_axis_D": -0.04403767591836259,
             "transition_dipole_norm_D": 0.046325745149670236
           },
           {
@@ -9783,11 +10173,15 @@
             ],
             "assignment_weight": 0.9974765851921048,
             "freq_cm": 3792.312310232864,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.0680202351222975e-10,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.0171358690163706e-10,
-            "integrated_cross_section_omega_m2_per_s": 1.0171358690163706e-10,
             "n": 2,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.058487958948854654,
+            "quanta": [
+              0,
+              1
+            ],
+            "state_index": 2,
+            "transition_dipole_axis_D": 0.03460238981018243,
             "transition_dipole_norm_D": 0.058487958948854654
           },
           {
@@ -9852,11 +10246,15 @@
             ],
             "assignment_weight": 0.9956816632164993,
             "freq_cm": 5475.197328262374,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.690358191820135e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 1.4906781756433896e-12,
-            "integrated_cross_section_omega_m2_per_s": 1.4906781756433896e-12,
             "n": 3,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.005892791671211331,
+            "quanta": [
+              2,
+              0
+            ],
+            "state_index": 3,
+            "transition_dipole_axis_D": 0.0053530681751885485,
             "transition_dipole_norm_D": 0.005892791671211331
           },
           {
@@ -9921,11 +10319,15 @@
             ],
             "assignment_weight": 0.9895893180068072,
             "freq_cm": 6562.469698724309,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.874324328721705e-14,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.1541625799117785e-13,
-            "integrated_cross_section_omega_m2_per_s": 4.1541625799117785e-13,
             "n": 4,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.002841431025299177,
+            "quanta": [
+              1,
+              1
+            ],
+            "state_index": 4,
+            "transition_dipole_axis_D": -0.0007142354392930159,
             "transition_dipole_norm_D": 0.002841431025299177
           },
           {
@@ -9990,11 +10392,15 @@
             ],
             "assignment_weight": 0.9938826962831729,
             "freq_cm": 7469.700678261883,
+            "integrated_cross_section_axis_omega_m2_per_s": 4.845897081975478e-12,
             "integrated_cross_section_isotropic_omega_m2_per_s": 3.71013750358534e-12,
-            "integrated_cross_section_omega_m2_per_s": 3.71013750358534e-12,
             "n": 5,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.007959255242438172,
+            "quanta": [
+              0,
+              2
+            ],
+            "state_index": 5,
+            "transition_dipole_axis_D": 0.005251748198743342,
             "transition_dipole_norm_D": 0.007959255242438172
           },
           {
@@ -10059,11 +10465,15 @@
             ],
             "assignment_weight": 0.994263512910981,
             "freq_cm": 8110.206693169013,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.154508930150118e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 5.4449010640834166e-14,
-            "integrated_cross_section_omega_m2_per_s": 5.4449010640834166e-14,
             "n": 6,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000925354335752732,
+            "quanta": [
+              3,
+              0
+            ],
+            "state_index": 6,
+            "transition_dipole_axis_D": 0.0007779489315549008,
             "transition_dipole_norm_D": 0.000925354335752732
           },
           {
@@ -10128,11 +10538,15 @@
             ],
             "assignment_weight": 0.983910967723596,
             "freq_cm": 9258.90365895198,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.313235952575481e-18,
             "integrated_cross_section_isotropic_omega_m2_per_s": 9.105199804219407e-15,
-            "integrated_cross_section_omega_m2_per_s": 9.105199804219407e-15,
             "n": 7,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.000354155496668658,
+            "quanta": [
+              2,
+              1
+            ],
+            "state_index": 7,
+            "transition_dipole_axis_D": -6.1783665803721985e-06,
             "transition_dipole_norm_D": 0.000354155496668658
           },
           {
@@ -10197,11 +10611,15 @@
             ],
             "assignment_weight": 0.9788005700749742,
             "freq_cm": 10235.103346482276,
+            "integrated_cross_section_axis_omega_m2_per_s": 8.538013945552437e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 7.708416582690999e-15,
-            "integrated_cross_section_omega_m2_per_s": 7.708416582690999e-15,
             "n": 8,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.0003099313453526232,
+            "quanta": [
+              1,
+              2
+            ],
+            "state_index": 8,
+            "transition_dipole_axis_D": -0.00018832185158072562,
             "transition_dipole_norm_D": 0.0003099313453526232
           },
           {
@@ -10266,11 +10684,15 @@
             ],
             "assignment_weight": 0.99306653288772,
             "freq_cm": 10688.986803033242,
+            "integrated_cross_section_axis_omega_m2_per_s": 7.617417160147097e-15,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.201665225776187e-15,
-            "integrated_cross_section_omega_m2_per_s": 4.201665225776187e-15,
             "n": 9,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.00022390896465378612,
+            "quanta": [
+              4,
+              0
+            ],
+            "state_index": 9,
+            "transition_dipole_axis_D": 0.0001740620127854538,
             "transition_dipole_norm_D": 0.00022390896465378612
           },
           {
@@ -10335,11 +10757,15 @@
             ],
             "assignment_weight": 0.9890656229071918,
             "freq_cm": 11048.784902224488,
+            "integrated_cross_section_axis_omega_m2_per_s": 3.9503551092121037e-13,
             "integrated_cross_section_isotropic_omega_m2_per_s": 2.5032436684873464e-13,
-            "integrated_cross_section_omega_m2_per_s": 2.5032436684873464e-13,
             "n": 10,
-            "orientation": "isotropic",
-            "transition_dipole_D": 0.001699899839287339,
+            "quanta": [
+              0,
+              3
+            ],
+            "state_index": 10,
+            "transition_dipole_axis_D": 0.0012329038563448557,
             "transition_dipole_norm_D": 0.001699899839287339
           },
           {
@@ -10404,11 +10830,15 @@
             ],
             "assignment_weight": 0.9794994344327905,
             "freq_cm": 11889.589797457553,
+            "integrated_cross_section_axis_omega_m2_per_s": 2.0627803151572368e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 4.99144707244553e-16,
-            "integrated_cross_section_omega_m2_per_s": 4.99144707244553e-16,
             "n": 11,
-            "orientation": "isotropic",
-            "transition_dipole_D": 7.317434246212307e-05,
+            "quanta": [
+              3,
+              1
+            ],
+            "state_index": 11,
+            "transition_dipole_axis_D": -2.7158854925162103e-05,
             "transition_dipole_norm_D": 7.317434246212307e-05
           },
           {
@@ -10473,11 +10903,15 @@
             ],
             "assignment_weight": 0.96836073625277,
             "freq_cm": 12926.98403127786,
+            "integrated_cross_section_axis_omega_m2_per_s": 1.391427561570925e-16,
             "integrated_cross_section_isotropic_omega_m2_per_s": 5.411231441876396e-17,
-            "integrated_cross_section_omega_m2_per_s": 5.411231441876396e-17,
             "n": 12,
-            "orientation": "isotropic",
-            "transition_dipole_D": 2.310619731038471e-05,
+            "quanta": [
+              2,
+              2
+            ],
+            "state_index": 12,
+            "transition_dipole_axis_D": -2.1391936283751642e-05,
             "transition_dipole_norm_D": 2.310619731038471e-05
           }
         ]

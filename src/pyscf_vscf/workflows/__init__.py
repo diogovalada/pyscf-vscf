@@ -11,14 +11,12 @@ from .harmonic import (
 )
 from .optimization import (
     OptimizationResult,
-    OptimizedMolecule,
     optimization_convergence_kwargs,
     run_opt,
 )
 
 __all__ = [
     "OptimizationResult",
-    "OptimizedMolecule",
     "StationarityDiagnostic",
     "analytic_hessian",
     "finite_difference_hessian_from_gradients",

@@ -8,8 +8,8 @@ quantum-chemistry programs.
 
 Run these first. They exercise the DVR solver, variational spectrum assembly,
 analytic Morse and harmonic-oscillator convergence, frozen PES/DMS regression
-arrays, the Einstein-A intensity identity, overlap-based state assignment,
-VSCF convergence, and shipped MARVEL/IUPAC reference-data schema.
+arrays, the Einstein-A intensity identity, overlap-based state assignment, and
+VSCF convergence.
 
 ```bash
 uv run --with pytest pytest tests/test_dvr.py tests/test_variational.py tests/test_validation_regressions.py -q

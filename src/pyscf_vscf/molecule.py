@@ -33,6 +33,8 @@ class Molecule:
         self.coords = np.asarray(self.coords, dtype=float)
         if self.coords.ndim != 2 or self.coords.shape[1] != 3:
             raise ValueError("Molecule coordinates must have shape (n_atoms, 3)")
+        if not np.all(np.isfinite(self.coords)):
+            raise ValueError("Molecule coordinates must be finite")
         if len(self.symbols) != self.coords.shape[0]:
             raise ValueError(
                 f"Expected one symbol per coordinate row, got {len(self.symbols)} symbols "

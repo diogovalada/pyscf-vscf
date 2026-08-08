@@ -8,39 +8,29 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyscf_vscf.variational import parse_intensity_mode, variational_1d, variational_2d
+from pyscf_vscf.variational import (
+    TransitionRecord,
+    parse_intensity_mode,
+    variational_1d,
+    variational_2d,
+)
 
 
-def test_variational_1d_axis_vector_and_both_records() -> None:
+def test_variational_1d_records_always_contain_both_intensity_conventions() -> None:
     R = np.linspace(0.75, 1.35, 31)
     E = 0.06 * (R - 1.0) ** 2
     MU = np.column_stack((R - 1.0, 2.0 * (R - 1.0), np.zeros_like(R)))
 
-    axis_records = variational_1d(R, E, MU, 1.0, axis=[1.0, 0.0, 0.0], vmax=3)
-    both_records = variational_1d(R, E, MU, 1.0, axis=[1.0, 0.0, 0.0], vmax=3, intensity="both")
-    vector_records = variational_1d(
-        R,
-        E,
-        MU,
-        1.0,
-        axis=[1.0, 0.0, 0.0],
-        vmax=3,
-        intensity="vector",
-    )
+    records = variational_1d(R, E, MU, 1.0, axis=[1.0, 0.0, 0.0], vmax=3)
 
-    assert [rec["v"] for rec in axis_records] == [1, 2, 3]
-    assert all(rec["freq_cm"] > 0.0 for rec in axis_records)
-    assert both_records[0]["transition_dipole_axis_D"] == pytest.approx(
-        axis_records[0]["transition_dipole_D"]
-    )
-    assert both_records[0]["transition_dipole_norm_D"] == pytest.approx(
-        vector_records[0]["transition_dipole_D"]
-    )
-    assert abs(vector_records[0]["transition_dipole_D"]) > abs(
-        axis_records[0]["transition_dipole_D"]
-    )
-    assert axis_records[0]["orientation"] == "polarized-axis"
-    assert vector_records[0]["orientation"] == "isotropic"
+    assert all(isinstance(record, TransitionRecord) for record in records)
+    assert [record.quanta for record in records] == [(1,), (2,), (3,)]
+    assert all(record.frequency_cm > 0.0 for record in records)
+    assert abs(records[0].transition_dipole_norm_D) > abs(records[0].transition_dipole_axis_D)
+    serialized = records[0].as_dict()
+    assert serialized["v"] == 1
+    assert "transition_dipole_D" not in serialized
+    assert "integrated_cross_section_omega_m2_per_s" not in serialized
 
 
 def test_variational_2d_records_and_intensity_validation() -> None:
@@ -60,11 +50,11 @@ def test_variational_2d_records_and_intensity_validation() -> None:
         1.2,
         axis=[1.0, 0.0, 0.0],
         nmax=3,
-        intensity="both",
     )
 
-    assert [rec["n"] for rec in records] == [1, 2, 3]
-    assert all(rec["freq_cm"] > 0.0 for rec in records)
+    assert [record.state_index for record in records] == [1, 2, 3]
+    assert all(record.frequency_cm > 0.0 for record in records)
+    serialized = records[0].as_dict()
     assert {
         "assignment",
         "assignment_weight",
@@ -72,7 +62,7 @@ def test_variational_2d_records_and_intensity_validation() -> None:
         "transition_dipole_norm_D",
         "integrated_cross_section_axis_omega_m2_per_s",
         "integrated_cross_section_isotropic_omega_m2_per_s",
-    } <= set(records[0])
+    } <= set(serialized)
     with pytest.raises(ValueError, match="Unknown intensity mode"):
         parse_intensity_mode("bad")
     with pytest.raises(ValueError, match="non-zero"):

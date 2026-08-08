@@ -25,8 +25,8 @@ This is VSCF, not VCI. `V_ij` arrays are coupling corrections.
 
 ## Cached 1D DVR
 
-Production cache reuse should go through the scan workflow loaders so the full
-schema-v2 scientific fingerprint is validated. The variational layer consumes
+Production cache reuse should go through the scan workflow loaders so the
+schema-v3 causal identity and array checksums are validated. The variational layer consumes
 arrays in Angstrom, Hartree relative to the grid minimum, and Debye:
 
 ```python
@@ -39,14 +39,13 @@ records = variational_1d(
     redmass_amu,
     axis=[1.0, 0.0, 0.0],
     vmax=8,
-    intensity="both",
 )
 for record in records:
     print(
-        record["v"],
-        record["freq_cm"],
-        record["transition_dipole_norm_D"],
-        record["integrated_cross_section_isotropic_omega_m2_per_s"],
+        record.quanta,
+        record.frequency_cm,
+        record.transition_dipole_norm_D,
+        record.integrated_cross_section_isotropic_omega_m2_per_s,
     )
 ```
 

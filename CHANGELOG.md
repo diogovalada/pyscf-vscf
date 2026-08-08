@@ -5,6 +5,30 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0a7] - 2026-08-08
+
+### Changed
+
+- Public scan and optimization workflows now use package-native `Molecule`,
+  `Bond`, settings, and result types instead of project-driver compatibility
+  objects.
+- Variational DVR calculations return immutable `TransitionRecord` objects
+  that always retain both polarized-axis and isotropic intensities.
+- Electronic settings are separated from harmonic and execution policy.
+- Grid-cache schema 3 fingerprints only inputs that can change a
+  Born-Oppenheimer PES/DMS. Isotope masses, labels, runtime versions, and
+  kinetic-model choices remain recorded provenance without preventing valid
+  surface reuse. Schema-2 metadata is migrated during validation.
+- The supported optimization path is geomeTRIC, matching the package's declared
+  dependencies.
+
+### Removed
+
+- Water-project geometries, reference tables, orchestration scripts, and the
+  monolithic research driver from the public package repository.
+- Development convenience profiles, legacy global aliases, duck-typed bond
+  syntax, and the duplicate `k_eigs` DVR argument.
+
 ## [0.1.0a6] - 2026-08-08
 
 ### Fixed
@@ -103,7 +127,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a6...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a7...HEAD
+[0.1.0a7]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a6...v0.1.0a7
 [0.1.0a6]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...v0.1.0a6
 [0.1.0a5]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...v0.1.0a5
 [0.1.0a4]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...v0.1.0a4

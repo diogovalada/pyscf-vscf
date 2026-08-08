@@ -1,8 +1,7 @@
 """PySCF-backed geometry optimization workflow.
 
-This module contains the package-level orchestration extracted from the legacy
-``pyscf_pme_pipeline.py`` script. It remains import-light: PySCF, geomeTRIC, and
-PyBerny are imported only when an optimization is actually run.
+This module remains import-light: PySCF, geomeTRIC, and PyBerny are imported
+only when an optimization is actually run.
 """
 
 from __future__ import annotations
@@ -16,54 +15,32 @@ import numpy as np
 
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.io import write_midas_mmol, write_xyz
-from pyscf_vscf.settings import DEFAULT_STRICT, ESSettings
+from pyscf_vscf.molecule import Molecule
+from pyscf_vscf.settings import ESSettings
 from pyscf_vscf.workflows.harmonic import StationarityDiagnostic, stationarity_diagnostic
 
 
 _DEFAULT_ES = ESSettings()
 
 
-@dataclass
-class OptimizedMolecule:
-    """Minimal optimized geometry container accepted by package I/O helpers."""
-
-    symbols: list[str]
-    coords: np.ndarray
-    charge: int = 0
-    spin: int = 0
-    label: str = "mol"
-    masses: np.ndarray | None = None
-
-
 @dataclass(frozen=True)
 class OptimizationResult:
     """Result returned by :func:`run_opt`."""
 
-    molecule: OptimizedMolecule
+    molecule: Molecule
     converged: bool
     backend: str
     output_path: Path | None = None
     stationarity: StationarityDiagnostic | None = None
 
 
-def optimization_convergence_kwargs(*, backend: str = "geometric") -> dict[str, float]:
+def optimization_convergence_kwargs() -> dict[str, float]:
     """Return the package optimization convergence thresholds."""
 
-    optimizer = backend.lower()
-    if optimizer == "geometric":
-        # Match the ORCA Opt thresholds used in legacy AiiDA inputs (Eh/Bohr).
-        # geomeTRIC uses convergence_{gmax,grms} in Eh/Bohr.
-        return {
-            "convergence_gmax": 4.5e-5,
-            "convergence_grms": 3.0e-5,
-        }
-    if optimizer == "berny":
-        # PyBerny uses gradient{max,rms} for the same force thresholds.
-        return {
-            "gradientmax": 4.5e-5,
-            "gradientrms": 3.0e-5,
-        }
-    raise ValueError(f"Unknown optimizer backend '{backend}'")
+    return {
+        "convergence_gmax": 4.5e-5,
+        "convergence_grms": 3.0e-5,
+    }
 
 
 def run_opt(
@@ -72,11 +49,12 @@ def run_opt(
     *,
     opt_out: Path | str | None,
     opt_maxsteps: int | None,
+    strict: bool = True,
     verbose: bool = False,
     log_fn: Callable[[str], None] | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
 ) -> OptimizationResult:
-    """Run a legacy-compatible PySCF geometry optimization and write the result."""
+    """Run a PySCF geometry optimization and write the result."""
 
     emit_log = log_fn or _noop_log
     emit_warning = warn_fn or pyscf_backend.warn_once
@@ -93,18 +71,11 @@ def run_opt(
     else:
         emit_log("Starting geometry optimization (backend=geomeTRIC; maxsteps=None)")
 
-    try:
-        converged, optmol, backend = _run_geometric(mf, maxsteps)
-    except ImportError as exc:
-        emit_warning(
-            "geometric_missing_fallback_berny",
-            f"geomeTRIC optimizer unavailable ({exc}); falling back to PySCF Berny optimizer",
-        )
-        converged, optmol, backend = _run_berny(mf, maxsteps)
+    converged, optmol, backend = _run_geometric(mf, maxsteps)
 
     if not converged:
         msg = "Geometry optimization did not converge within the allowed steps"
-        if bool(_cfg_get(cfg, "strict", DEFAULT_STRICT)):
+        if bool(strict):
             raise RuntimeError(msg)
         emit_warning("opt_not_converged", msg)
 
@@ -127,27 +98,15 @@ def _run_geometric(
     maxsteps: int | None,
 ) -> tuple[bool, Any, str]:
     solver = _load_geometric_solver()
-    kwargs = optimization_convergence_kwargs(backend="geometric")
+    kwargs = optimization_convergence_kwargs()
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
     converged, optmol = solver.kernel(mf, **kwargs)
     return bool(converged), optmol, "geomeTRIC"
 
 
-def _run_berny(
-    mf: Any,
-    maxsteps: int | None,
-) -> tuple[bool, Any, str]:
-    solver = _load_berny_solver()
-    kwargs = optimization_convergence_kwargs(backend="berny")
-    if maxsteps is not None:
-        kwargs["maxsteps"] = maxsteps
-    converged, optmol = solver.kernel(mf, **kwargs)
-    return bool(converged), optmol, "berny"
-
-
 def _post_optimization_stationarity(
-    mol_opt: OptimizedMolecule,
+    mol_opt: Molecule,
     cfg: Any,
     *,
     warn_fn: Callable[[str, str], None],
@@ -165,7 +124,7 @@ def _post_optimization_stationarity(
 
 
 def format_optimization_stationarity_diagnostic(diagnostic: StationarityDiagnostic) -> str:
-    """Format the post-optimization gradient check with legacy text."""
+    """Format the post-optimization gradient check."""
 
     return "\n".join(
         [
@@ -178,7 +137,7 @@ def format_optimization_stationarity_diagnostic(diagnostic: StationarityDiagnost
 
 
 def _write_optimized_geometry(
-    mol_opt: OptimizedMolecule,
+    mol_opt: Molecule,
     source_mol: Any,
     opt_out: Path | str | None,
 ) -> Path:
@@ -196,7 +155,7 @@ def _write_optimized_geometry(
     return output_path
 
 
-def _optimized_molecule_from_pyscf(source_mol: Any, optmol: Any) -> OptimizedMolecule:
+def _optimized_molecule_from_pyscf(source_mol: Any, optmol: Any) -> Molecule:
     atom_coords = getattr(optmol, "atom_coords")
     coords_opt = np.asarray(atom_coords(unit="Angstrom"), dtype=float)
     if coords_opt.ndim != 2 or coords_opt.shape[1] != 3:
@@ -205,13 +164,13 @@ def _optimized_molecule_from_pyscf(source_mol: Any, optmol: Any) -> OptimizedMol
     masses = _mol_get(source_mol, "masses", None)
     if masses is not None:
         masses = np.asarray(masses, dtype=float)
-    return OptimizedMolecule(
-        symbols=list(_mol_get(source_mol, "symbols", [])),
-        coords=coords_opt,
+    return Molecule.from_arrays(
+        list(_mol_get(source_mol, "symbols", [])),
+        coords_opt,
         charge=int(_mol_get(source_mol, "charge", 0)),
         spin=int(_mol_get(source_mol, "spin", 0)),
         label=str(_mol_get(source_mol, "label", "mol")),
-        masses=masses,
+        masses_amu=masses,
     )
 
 
@@ -228,14 +187,6 @@ def _load_geometric_solver() -> Any:
     except ImportError as exc:
         raise ImportError("geomeTRIC optimizer is unavailable") from exc
     return geometric_solver
-
-
-def _load_berny_solver() -> Any:
-    try:
-        from pyscf.geomopt import berny_solver
-    except ImportError as exc:
-        raise ImportError("PySCF Berny optimizer is unavailable") from exc
-    return berny_solver
 
 
 def _cfg_get(cfg: Any, name: str, default: Any) -> Any:
@@ -256,7 +207,6 @@ def _noop_log(_msg: str) -> None:
 
 __all__ = [
     "OptimizationResult",
-    "OptimizedMolecule",
     "format_optimization_stationarity_diagnostic",
     "optimization_convergence_kwargs",
     "run_opt",

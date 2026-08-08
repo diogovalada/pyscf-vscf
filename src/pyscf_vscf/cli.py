@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Sequence
@@ -23,9 +24,10 @@ def _package_version() -> str:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    from .settings import DEFAULT_MAX_PARALLEL, DEFAULT_PES_WORKERS, ESSettings
+    from .settings import DEFAULT_MAX_PARALLEL, DEFAULT_PES_WORKERS, ESSettings, HarmonicSettings
 
     defaults = ESSettings()
+    harmonic_defaults = HarmonicSettings()
     parser = argparse.ArgumentParser(
         prog="pyscf-vscf",
         description="PySCF-backed reduced-dimensional local-stretch DVR workflow driver.",
@@ -46,7 +48,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rtproj",
         choices=["pyscf", "mw_explicit", "none"],
-        default=defaults.rtproj,
+        default=harmonic_defaults.rtproj,
         help="RT projection for harmonic frequencies",
     )
     parser.add_argument(
@@ -99,7 +101,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--intensity",
         choices=["axis", "vector", "both"],
         default="axis",
-        help="Transition-dipole convention for variational intensities",
+        help="Transition-intensity columns shown in CLI output",
     )
     parser.add_argument(
         "--opt-out",
@@ -115,11 +117,6 @@ def _build_parser() -> argparse.ArgumentParser:
     strict_group.add_argument("--no-strict", dest="strict", action="store_false")
     parser.set_defaults(strict=True, use_ri=True)
     parser.add_argument("--allow-fd-hessian", action="store_true")
-    parser.add_argument("--dev-fast", action="store_true")
-    parser.add_argument("--fast-npts", type=int, default=21)
-    parser.add_argument("--fast-width", type=float, default=0.20)
-    parser.add_argument("--tight-scan", action="store_true")
-    parser.add_argument("--tight-width", type=float, default=0.30)
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 
@@ -147,7 +144,6 @@ def main(argv: list[str] | None = None) -> int:
             max_parallel=args.max_parallel,
             pes_workers=args.pes_workers,
             verbose=args.verbose,
-            dev_fast=args.dev_fast,
             strict=args.strict,
             allow_fd_hessian=args.allow_fd_hessian,
         )
@@ -161,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     start = time.perf_counter()
     try:
         molecule = _load_molecule(args, parser)
-        cfg, npts, tight_width = _build_es_settings(args)
+        cfg = _build_es_settings(args)
 
         log(f"Selected task: {args.task}")
         log(
@@ -175,21 +171,22 @@ def main(argv: list[str] | None = None) -> int:
         )
         if cfg.use_density_fit:
             log(f"RI auxiliary basis: {cfg.auxbasis or default_auxbasis(cfg.basis)}")
-        if args.dev_fast:
-            log(
-                "FAST MODE: "
-                f"method={cfg.method}, basis={cfg.basis}, npts={npts}, "
-                f"tight-width={tight_width:.2f}"
-            )
-
         if args.task == "harmonic":
-            _run_harmonic(molecule, cfg, verbose=args.verbose)
+            _run_harmonic(
+                molecule,
+                cfg,
+                rtproj=args.rtproj,
+                strict=args.strict,
+                allow_fd_hessian=args.allow_fd_hessian,
+                verbose=args.verbose,
+            )
         elif args.task == "opt":
             _run_opt(
                 molecule,
                 cfg,
                 opt_out=args.opt_out,
                 opt_maxsteps=args.opt_maxsteps,
+                strict=args.strict,
                 verbose=args.verbose,
                 log_fn=log,
             )
@@ -202,14 +199,15 @@ def main(argv: list[str] | None = None) -> int:
                 rmax=args.rmax,
                 smin=args.smin,
                 smax=args.smax,
-                npts=npts,
+                npts=args.npts,
                 vmax=args.vmax,
-                tight_scan=args.tight_scan,
-                tight_width=tight_width,
                 scan=args.scan,
                 dump_grid=args.dump_grid,
                 reuse_grid=args.reuse_grid,
                 intensity=args.intensity,
+                rtproj=args.rtproj,
+                strict=args.strict,
+                allow_fd_hessian=args.allow_fd_hessian,
                 log_fn=log,
                 executor_factory=executor_factory,
             )
@@ -223,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
                 bond2=args.bond2,
                 rmin=args.rmin,
                 rmax=args.rmax,
-                npts=npts,
+                npts=args.npts,
                 nmax=args.vmax,
                 keo=args.keo,
                 dump_grid=args.dump_grid,
@@ -266,44 +264,38 @@ def _load_molecule(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     )
 
 
-def _build_es_settings(args: argparse.Namespace) -> tuple[Any, int, float]:
-    from .settings import ESSettings, apply_development_fast_policy
+def _build_es_settings(args: argparse.Namespace) -> Any:
+    from .settings import ESSettings
 
     cfg = ESSettings(
         method=args.method,
         basis=args.basis,
         use_density_fit=args.use_ri,
         auxbasis=args.ri_aux,
-        rtproj=args.rtproj,
-        strict=bool(args.strict),
-        allow_fd_hessian=bool(args.allow_fd_hessian),
         scf_conv_tol=args.scf_conv_tol,
         scf_max_cycle=args.scf_max_cycle,
         dft_grid_level=args.dft_grid_level,
     )
-    npts = int(args.npts)
-    tight_width = float(args.tight_width)
-    if args.dev_fast:
-        dev = apply_development_fast_policy(
-            cfg,
-            npts=npts,
-            tight_width=tight_width,
-            fast_npts=args.fast_npts,
-            fast_width=args.fast_width,
-        )
-        cfg = dev.es
-        npts = npts if dev.npts is None else dev.npts
-        tight_width = tight_width if dev.tight_width is None else dev.tight_width
-    return cfg, npts, tight_width
+    return cfg
 
 
-def _run_harmonic(molecule: Any, cfg: Any, *, verbose: bool = False) -> None:
+def _run_harmonic(
+    molecule: Any,
+    cfg: Any,
+    *,
+    rtproj: str,
+    strict: bool,
+    allow_fd_hessian: bool,
+    verbose: bool = False,
+) -> None:
     from .workflows import harmonic as harmonic_workflow
 
     result = harmonic_workflow.harmonic_analysis(
         molecule,
         cfg,
-        rtproj=getattr(cfg, "rtproj", "pyscf"),
+        rtproj=rtproj,
+        strict=strict,
+        allow_fd_hessian=allow_fd_hessian,
         debug=verbose,
     )
     print(f"ZPE (harmonic): {result.zpe_cm:.2f} cm^-1")
@@ -317,6 +309,7 @@ def _run_opt(
     *,
     opt_out: Path | None,
     opt_maxsteps: int | None,
+    strict: bool,
     verbose: bool,
     log_fn: Any,
 ) -> None:
@@ -328,6 +321,7 @@ def _run_opt(
         cfg,
         opt_out=opt_out,
         opt_maxsteps=opt_maxsteps,
+        strict=strict,
         verbose=verbose,
         log_fn=log_fn,
         warn_fn=warn_once,
@@ -345,12 +339,13 @@ def _run_1d(
     smax: float,
     npts: int,
     vmax: int,
-    tight_scan: bool,
-    tight_width: float,
     scan: str,
     dump_grid: Path | None,
     reuse_grid: Path | None,
     intensity: str,
+    rtproj: str,
+    strict: bool,
+    allow_fd_hessian: bool,
     log_fn: Any,
     executor_factory: Any = None,
 ) -> None:
@@ -360,21 +355,12 @@ def _run_1d(
     from .workflows import scans
 
     b = scans.normalize_bond(bond)
-    axis_vec = np.asarray(molecule.coords[b.H], dtype=float) - np.asarray(
-        molecule.coords[b.O],
+    axis_vec = np.asarray(molecule.coords[b.j], dtype=float) - np.asarray(
+        molecule.coords[b.i],
         dtype=float,
     )
 
     if scan == "lbs-frozen":
-        if tight_scan:
-            r_eq = float(np.linalg.norm(axis_vec))
-            half_width = 0.5 * float(tight_width)
-            if half_width <= 0.0:
-                raise ValueError("--tight-width must be positive")
-            rmin = r_eq - half_width
-            rmax = r_eq + half_width
-            log_fn(f"Tight scan enabled: r_eq={r_eq:.4f} A; window [{rmin:.4f}, {rmax:.4f}] A")
-
         if reuse_grid is not None:
             R, E, MU = scans.load_lbs_frozen_1d_grid_cache(
                 reuse_grid,
@@ -423,24 +409,22 @@ def _run_1d(
                 "Grid caching is only implemented for --scan lbs-frozen in --task 1d."
             )
 
-        u_dir, mode_index, freq_cm, _modes, _freqs_cm = scans.calc_normal_mode_direction(
+        selected_mode = scans.calc_normal_mode_direction(
             molecule,
             cfg,
             b,
+            rtproj=rtproj,
+            strict=strict,
+            allow_fd_hessian=allow_fd_hessian,
             log_fn=log_fn,
         )
-        if tight_scan:
-            half_width = 0.5 * float(tight_width)
-            if half_width <= 0.0:
-                raise ValueError("--tight-width must be positive")
-            smin = -half_width
-            smax = half_width
-            log_fn(f"Tight scan (normal) enabled: window [{smin:.4f}, {smax:.4f}] A")
-        else:
-            smin = float(smin)
-            smax = float(smax)
-            if not smin < 0.0 < smax:
-                raise ValueError("Normal-coordinate bounds must satisfy --smin < 0 < --smax")
+        u_dir = selected_mode.u_dir
+        mode_index = selected_mode.mode_index
+        freq_cm = selected_mode.frequency_cm
+        smin = float(smin)
+        smax = float(smax)
+        if not smin < 0.0 < smax:
+            raise ValueError("Normal-coordinate bounds must satisfy --smin < 0 < --smax")
 
         if scan == "normal":
             R, E, MU = scans.grid_1d_pes_dms_normal(
@@ -463,9 +447,10 @@ def _run_1d(
                 smin,
                 smax,
                 npts,
-                relaxed_point_fn=pyscf_backend.normal_relaxed_point,
+                relaxed_point_fn=partial(pyscf_backend.normal_relaxed_point, strict=strict),
                 executor_factory=executor_factory,
                 log_fn=log_fn,
+                strict=strict,
             )
             if relaxed_grid.failed_indices:
                 raise RuntimeError(
@@ -492,7 +477,6 @@ def _run_1d(
         redmass_amu,
         axis=axis_vec,
         vmax=vmax,
-        intensity=intensity,
     )
 
     if normal_summary is not None:
@@ -500,7 +484,7 @@ def _run_1d(
         if records:
             print(
                 f"Harmonic nu (mode {mode_index}) = {freq_cm:.1f} cm^-1; "
-                f"DVR v=1 = {records[0]['freq_cm']:.1f} cm^-1; "
+                f"DVR v=1 = {records[0].frequency_cm:.1f} cm^-1; "
                 f"mu_eff = {mu_eff:.6f} amu"
             )
         else:
@@ -582,8 +566,8 @@ def _run_2d(
             )
             log_fn(f"Wrote 2D grid cache: {dump_grid}")
 
-    axis_vec = np.asarray(molecule.coords[b1.H], dtype=float) - np.asarray(
-        molecule.coords[b1.O],
+    axis_vec = np.asarray(molecule.coords[b1.j], dtype=float) - np.asarray(
+        molecule.coords[b1.i],
         dtype=float,
     )
     mu1 = scans.local_bond_reduced_mass_amu(molecule, b1)
@@ -606,37 +590,41 @@ def _run_2d(
         axis=axis_vec,
         nmax=nmax,
         g12_inv_amu=g12_inv_amu,
-        intensity=intensity,
     )
     _print_2d_records(records, parse_intensity_mode(intensity))
 
 
-def _print_1d_records(records: Sequence[dict[str, Any]], intensity: str) -> None:
+def _print_1d_records(records: Sequence[Any], intensity: str) -> None:
     if intensity == "both":
         print(
             "v  nu/cm^-1   mu_axis/D   int_axis/domega (m^2/s)   |mu|/D   int_iso/domega (m^2/s)"
         )
         for record in records:
             print(
-                f"{record['v']:>1d}  {record['freq_cm']:8.1f}   "
-                f"{record['transition_dipole_axis_D']:>12.4e}   "
-                f"{record['integrated_cross_section_axis_omega_m2_per_s']:>12.4e}   "
-                f"{record['transition_dipole_norm_D']:>12.4e}   "
-                f"{record['integrated_cross_section_isotropic_omega_m2_per_s']:>12.4e}"
+                f"{record.quanta[0]:>1d}  {record.frequency_cm:8.1f}   "
+                f"{record.transition_dipole_axis_D:>12.4e}   "
+                f"{record.integrated_cross_section_axis_omega_m2_per_s:>12.4e}   "
+                f"{record.transition_dipole_norm_D:>12.4e}   "
+                f"{record.integrated_cross_section_isotropic_omega_m2_per_s:>12.4e}"
             )
         return
 
+    orientation = "polarized-axis" if intensity == "axis" else "isotropic"
     print("v  nu/cm^-1   mu/D   integral sigma(omega)domega (m^2/s)   orientation")
     for record in records:
+        if intensity == "axis":
+            dipole = record.transition_dipole_axis_D
+            integrated = record.integrated_cross_section_axis_omega_m2_per_s
+        else:
+            dipole = record.transition_dipole_norm_D
+            integrated = record.integrated_cross_section_isotropic_omega_m2_per_s
         print(
-            f"{record['v']:>1d}  {record['freq_cm']:8.1f}   "
-            f"{record['transition_dipole_D']:>12.4e}   "
-            f"{record['integrated_cross_section_omega_m2_per_s']:>12.4e}   "
-            f"{record['orientation']}"
+            f"{record.quanta[0]:>1d}  {record.frequency_cm:8.1f}   "
+            f"{dipole:>12.4e}   {integrated:>12.4e}   {orientation}"
         )
 
 
-def _print_2d_records(records: Sequence[dict[str, Any]], intensity: str) -> None:
+def _print_2d_records(records: Sequence[Any], intensity: str) -> None:
     if intensity == "both":
         print(
             "n assignment weight  nu/cm^-1   mu_axis/D   int_axis/domega (m^2/s)   "
@@ -644,25 +632,30 @@ def _print_2d_records(records: Sequence[dict[str, Any]], intensity: str) -> None
         )
         for record in records:
             print(
-                f"{record['n']:>1d} {str(record['assignment']):>10s} "
-                f"{record['assignment_weight']:6.3f} {record['freq_cm']:8.1f}   "
-                f"{record['transition_dipole_axis_D']:>12.4e}   "
-                f"{record['integrated_cross_section_axis_omega_m2_per_s']:>12.4e}   "
-                f"{record['transition_dipole_norm_D']:>12.4e}   "
-                f"{record['integrated_cross_section_isotropic_omega_m2_per_s']:>12.4e}"
+                f"{record.state_index:>1d} {str(record.quanta):>10s} "
+                f"{record.assignment_weight:6.3f} {record.frequency_cm:8.1f}   "
+                f"{record.transition_dipole_axis_D:>12.4e}   "
+                f"{record.integrated_cross_section_axis_omega_m2_per_s:>12.4e}   "
+                f"{record.transition_dipole_norm_D:>12.4e}   "
+                f"{record.integrated_cross_section_isotropic_omega_m2_per_s:>12.4e}"
             )
         return
 
     print(
         "n assignment weight  nu/cm^-1   mu/D   integral sigma(omega)domega (m^2/s)   orientation"
     )
+    orientation = "polarized-axis" if intensity == "axis" else "isotropic"
     for record in records:
+        if intensity == "axis":
+            dipole = record.transition_dipole_axis_D
+            integrated = record.integrated_cross_section_axis_omega_m2_per_s
+        else:
+            dipole = record.transition_dipole_norm_D
+            integrated = record.integrated_cross_section_isotropic_omega_m2_per_s
         print(
-            f"{record['n']:>1d} {str(record['assignment']):>10s} "
-            f"{record['assignment_weight']:6.3f} {record['freq_cm']:8.1f}   "
-            f"{record['transition_dipole_D']:>12.4e}   "
-            f"{record['integrated_cross_section_omega_m2_per_s']:>12.4e}   "
-            f"{record['orientation']}"
+            f"{record.state_index:>1d} {str(record.quanta):>10s} "
+            f"{record.assignment_weight:6.3f} {record.frequency_cm:8.1f}   "
+            f"{dipole:>12.4e}   {integrated:>12.4e}   {orientation}"
         )
 
 
