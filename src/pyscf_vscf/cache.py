@@ -72,7 +72,6 @@ def electronic_structure_provenance(cfg) -> dict:
         "basis": settings.basis,
         "use_density_fit": settings.use_density_fit,
         "auxbasis": settings.auxbasis,
-        "dispersion": settings.dispersion,
         "rtproj": settings.rtproj,
         "strict": settings.strict,
         "allow_fd_hessian": settings.allow_fd_hessian,
@@ -97,8 +96,6 @@ def runtime_provenance() -> dict:
         "numpy",
         "scipy",
         "pyscf",
-        "pyscf-dispersion",
-        "dftd4",
     ):
         try:
             distributions[name] = version(name)
@@ -142,10 +139,14 @@ def validate_scientific_cache_metadata(actual: dict, expected: dict) -> None:
     embedded_fingerprint = actual.get("scientific_fingerprint_sha256")
     if embedded_fingerprint != scientific_fingerprint(embedded):
         raise ValueError("Grid cache scientific metadata fingerprint is corrupt")
+    expected_embedded = expected.get("scientific")
+    expected_fingerprint = expected.get("scientific_fingerprint_sha256")
+    if expected_fingerprint != scientific_fingerprint(expected_embedded):
+        raise ValueError("Expected grid cache scientific metadata fingerprint is corrupt")
     assert_meta_equal(
         "scientific_fingerprint_sha256",
         embedded_fingerprint,
-        expected["scientific_fingerprint_sha256"],
+        expected_fingerprint,
     )
 
 

@@ -75,7 +75,6 @@ def test_legacy_dev_fast_settings_are_materialized_before_backend_or_cache() -> 
 
     assert settings.method == "hf"
     assert settings.basis == "sto-3g"
-    assert settings.dispersion is None
     assert settings.scf_conv_tol == pytest.approx(1e-7)
     assert settings.scf_max_cycle == 50
     assert settings.dft_grid_level == 1
@@ -112,7 +111,7 @@ def test_legacy_normal_scan_uses_dedicated_centered_bounds(monkeypatch) -> None:
 
     legacy.run_1d(
         molecule,
-        legacy.ESSettings(dispersion=None),
+        legacy.ESSettings(),
         legacy.Bond(0, 1),
         0.75,
         1.25,
@@ -127,7 +126,7 @@ def test_legacy_normal_scan_uses_dedicated_centered_bounds(monkeypatch) -> None:
     with pytest.raises(ValueError, match="--smin < 0 < --smax"):
         legacy.run_1d(
             molecule,
-            legacy.ESSettings(dispersion=None),
+            legacy.ESSettings(),
             legacy.Bond(0, 1),
             0.75,
             1.25,
@@ -207,7 +206,6 @@ def test_harmonic_workflow_real_pyscf_h2_hf_sto3g_smoke() -> None:
         method="hf",
         basis="sto-3g",
         use_density_fit=False,
-        dispersion=None,
         strict=True,
     )
 
@@ -235,7 +233,6 @@ def test_harmonic_workflow_matches_legacy_h2_hf_sto3g() -> None:
         method="hf",
         basis="sto-3g",
         use_density_fit=False,
-        dispersion=None,
         strict=True,
     )
     package_result = harmonic_analysis(
@@ -249,7 +246,6 @@ def test_harmonic_workflow_matches_legacy_h2_hf_sto3g() -> None:
             method="hf",
             basis="sto-3g",
             use_density_fit=False,
-            dispersion=None,
             strict=True,
         ),
         rtproj="none",
@@ -276,7 +272,7 @@ def test_legacy_run_opt_delegates_to_package_workflow(monkeypatch, tmp_path: Pat
     legacy.VERBOSE = True
 
     mol = legacy.Molecule(["H", "H"], np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.74]]), label="h2")
-    cfg = legacy.ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None)
+    cfg = legacy.ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     opt_out = tmp_path / "h2.xyz"
 
     legacy.run_opt(mol, cfg, opt_out=opt_out, opt_maxsteps=4, opt_conv="orca")
@@ -309,7 +305,7 @@ def test_legacy_scan_grid_delegates_to_package_workflow(monkeypatch) -> None:
     )
 
     mol = legacy.Molecule(["O", "H"], np.array([[0.0, 0.0, 0.0], [0.96, 0.0, 0.0]]), label="oh")
-    cfg = legacy.ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None)
+    cfg = legacy.ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     bond = legacy.Bond(0, 1)
 
     R, E, MU = legacy.grid_1d_pes_dms(mol, cfg, bond, Rmin=0.8, Rmax=1.0, npts=2)

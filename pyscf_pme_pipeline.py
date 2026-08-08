@@ -411,7 +411,6 @@ class ESSettings:
     basis: str = 'aug-cc-pVTZ'
     use_density_fit: bool = True
     auxbasis: Optional[str] = None
-    dispersion: Optional[str] = 'd4'
     rtproj: str = 'pyscf'
     strict: bool = True
     allow_fd_hessian: bool = False
@@ -843,7 +842,7 @@ def harmonic_analysis(mol: Molecule, cfg: ESSettings, *, rtproj: str='pyscf', de
 
     log(f"Generating PySCF molecule for basis {cfg.basis}")
     pmol = mol.as_pyscf(cfg.basis)
-    log(f"Running mean-field calculation ({cfg.method}-{cfg.dispersion or ''})")
+    log(f"Running mean-field calculation ({cfg.method})")
     mf = make_mean_field(pmol, cfg)
 
     if debug:
@@ -1760,12 +1759,6 @@ def main():
     ap.add_argument('--task', choices=['harmonic','opt','1d','2d'], default='harmonic')
     ap.add_argument('--basis', default=_es_default('basis'))
     ap.add_argument('--method', default=_es_default('method'))
-    ap.add_argument(
-        '--dispersion',
-        choices=['d3', 'd4', 'none'],
-        default='d4',
-        help="DFT dispersion correction via PySCF's optional pyscf-dispersion package (default d4). Use 'none' to disable.",
-    )
     ap.add_argument('--rtproj', choices=['pyscf','mw_explicit','none'], default=_es_default('rtproj'),
                     help="RT projection for harmonic frequencies: 'pyscf' (default), 'mw_explicit', or 'none'")
     ap.add_argument('--no-ri', dest='use_ri', action='store_false', help='Disable RI density fitting (enabled by default)')
@@ -1858,7 +1851,6 @@ def main():
 
     log(f"Selected task: {args.task}")
     log(f"Method: {args.method} | Basis: {args.basis} | RI {'enabled' if args.use_ri else 'disabled'}")
-    log(f"Dispersion: {args.dispersion}")
     log(f"Parallel: max_parallel={MAX_PARALLEL} pes_workers={PES_WORKERS} => workers={WORKERS} threads={THREADS_PER_WORKER} (BLAS=1)")
 
     start = time.perf_counter()
@@ -1876,8 +1868,6 @@ def main():
                 args.method = 'hf'
             if args.basis == _es_default('basis'):
                 args.basis = 'sto-3g'
-            if args.dispersion == 'd4':
-                args.dispersion = 'none'
             # Cap npts and tight-width using configurable dev-fast caps
             cap_npts = int(max(5, args.fast_npts))
             cap_width = float(max(0.05, args.fast_width))
@@ -1886,9 +1876,8 @@ def main():
             if args.tight_width > cap_width:
                 args.tight_width = cap_width
             log(f"FAST MODE: method={args.method}, basis={args.basis}, npts={args.npts} (cap {cap_npts}), tight-width={args.tight_width:.2f} Å (cap {cap_width:.2f})")
-        disp = None if (args.dispersion or "d4").lower() == "none" else str(args.dispersion)
         cfg = ESSettings(method=args.method, basis=args.basis, use_density_fit=args.use_ri, auxbasis=args.ri_aux,
-                         dispersion=disp, rtproj=args.rtproj,
+                         rtproj=args.rtproj,
                          strict=STRICT, allow_fd_hessian=ALLOW_FD_HESSIAN,
                          scf_conv_tol=args.scf_conv_tol, scf_max_cycle=args.scf_max_cycle,
                          dft_grid_level=args.dft_grid_level)

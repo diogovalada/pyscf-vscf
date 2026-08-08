@@ -1,23 +1,24 @@
 # Installation
 
-For a consumer installation with Python 3.10 or newer, install the current
-alpha from PyPI:
+For a consumer installation with Python 3.10 or newer, install from PyPI:
 
 ```bash
-pip install "pyscf-vscf==0.1.0a4"
-pip install "pyscf-vscf[pyscf]==0.1.0a4"
+pip install pyscf-vscf
 ```
+
+PySCF is the supported electronic-structure backend and is installed with the
+package.
+geomeTRIC is also installed for the built-in optimization and relaxed-scan
+workflows. Install optional PySCF extensions directly through PySCF and select
+them with PySCF's native method specification; `pyscf-vscf` does not duplicate
+those dependencies or configuration options.
+
+PySCF does not support native Windows installations. Use WSL on Windows.
 
 For a source checkout, use `uv`:
 
 ```bash
 uv sync --extra dev
-```
-
-For PySCF-backed harmonic, optimization, and PES/DMS workflows:
-
-```bash
-uv sync --extra dev --extra pyscf
 ```
 
 Prevent unrelated user-site packages from leaking into managed environments:

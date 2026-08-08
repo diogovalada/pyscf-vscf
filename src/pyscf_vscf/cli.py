@@ -44,12 +44,6 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--basis", default=defaults.basis)
     parser.add_argument("--method", default=defaults.method)
     parser.add_argument(
-        "--dispersion",
-        choices=["d3", "d4", "none"],
-        default=defaults.dispersion or "none",
-        help="DFT dispersion correction; use 'none' to disable",
-    )
-    parser.add_argument(
         "--rtproj",
         choices=["pyscf", "mw_explicit", "none"],
         default=defaults.rtproj,
@@ -179,7 +173,6 @@ def main(argv: list[str] | None = None) -> int:
             f"Method: {cfg.method} | Basis: {cfg.basis} | "
             f"RI {'enabled' if cfg.use_density_fit else 'disabled'}"
         )
-        log(f"Dispersion: {cfg.dispersion}")
         log(
             "Parallel: "
             f"max_parallel={runtime.max_parallel} pes_workers={runtime.pes_workers} "
@@ -280,14 +273,13 @@ def _load_molecule(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
 
 
 def _build_es_settings(args: argparse.Namespace) -> tuple[Any, int, float]:
-    from .settings import ESSettings, apply_development_fast_policy, normalize_dispersion
+    from .settings import ESSettings, apply_development_fast_policy
 
     cfg = ESSettings(
         method=args.method,
         basis=args.basis,
         use_density_fit=args.use_ri,
         auxbasis=args.ri_aux,
-        dispersion=normalize_dispersion(args.dispersion),
         rtproj=args.rtproj,
         strict=bool(args.strict),
         allow_fd_hessian=bool(args.allow_fd_hessian),

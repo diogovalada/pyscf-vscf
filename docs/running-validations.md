@@ -1,8 +1,8 @@
 # Running validations
 
 The package has three validation tiers. The default tier is deliberately light:
-it does not require PySCF, does not launch electronic-structure scans, and does
-not require external quantum-chemistry programs.
+it does not invoke PySCF, launch electronic-structure scans, or require external
+quantum-chemistry programs.
 
 ## Tier 1: pure package checks
 
@@ -18,20 +18,19 @@ uv run --with pytest pytest tests/test_dvr.py tests/test_variational.py tests/te
 Full default suite:
 
 ```bash
-uv run --with pytest pytest -q
+uv run --with pytest pytest -m "not pyscf" -q
 ```
 
-If PySCF is not installed, PySCF-marked tests are skipped.
+PySCF-marked tests are excluded from this tier.
 
-## Tier 2: optional PySCF smoke checks
+## Tier 2: PySCF smoke checks
 
-These checks require only the package's optional PySCF backend dependencies.
-They use tiny HF/STO-3G systems and are intended to catch backend API, shape,
-isotope-mass, gradient, and dipole regressions. They are not heavy production
-simulations.
+These checks use tiny HF/STO-3G systems and are intended to catch backend API,
+shape, isotope-mass, gradient, and dipole regressions. They are not heavy
+production simulations.
 
 ```bash
-uv run --extra pyscf --with pytest pytest -m pyscf -q
+uv run --with pytest pytest -m pyscf -q
 ```
 
 ## Tier 3: research validation scripts
@@ -44,15 +43,19 @@ data yourself.
 Short validation script:
 
 ```bash
-uv run --extra validation python scripts/run_logged.py --tag validations -- python scripts/run_validations.py
+uv run python scripts/run_logged.py --tag validations -- python scripts/run_validations.py
 ```
+
+This uses the package defaults and does not require a PySCF dispersion
+extension. Select a dispersion-corrected method explicitly only after installing
+the corresponding PySCF extension.
 
 Longer opt-in validations:
 
 ```bash
-VSCF_LONG_VALIDATIONS=1 uv run --extra validation python scripts/run_logged.py --tag long_validations -- python scripts/run_validations.py
-VSCF_DIMER_VALIDATIONS=1 uv run --extra validation python scripts/run_logged.py --tag dimer_validations -- python scripts/run_validations.py
-VSCF_MARVEL_VALIDATIONS=1 uv run --extra validation python scripts/run_logged.py --tag marvel_validations -- python scripts/run_validations.py
+VSCF_LONG_VALIDATIONS=1 uv run python scripts/run_logged.py --tag long_validations -- python scripts/run_validations.py
+VSCF_DIMER_VALIDATIONS=1 uv run python scripts/run_logged.py --tag dimer_validations -- python scripts/run_validations.py
+VSCF_MARVEL_VALIDATIONS=1 uv run python scripts/run_logged.py --tag marvel_validations -- python scripts/run_validations.py
 ```
 
 Use these when you are validating research conclusions, not for every package
@@ -133,5 +136,5 @@ Examples of work that should remain opt-in:
 Example convergence matrix command, edited for the specific case under study:
 
 ```bash
-uv run --extra validation python scripts/run_logged.py --tag h2o_2d_npts31_vmax12 -- python scripts/compare_orca_gvpt2_2d_stretches.py --species H2O --npts 31 --vmax 12 --max-parallel 8 --pes-workers 8
+uv run python scripts/run_logged.py --tag h2o_2d_npts31_vmax12 -- python scripts/compare_orca_gvpt2_2d_stretches.py --species H2O --npts 31 --vmax 12 --max-parallel 8 --pes-workers 8
 ```

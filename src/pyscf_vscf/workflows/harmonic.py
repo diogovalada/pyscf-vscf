@@ -58,17 +58,15 @@ def harmonic_analysis(
     strict = bool(_cfg_get(cfg, "strict", DEFAULT_STRICT))
     basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
     allow_fd_hessian = bool(_cfg_get(cfg, "allow_fd_hessian", DEFAULT_ALLOW_FD_HESSIAN))
-    dispersion = _cfg_get(cfg, "dispersion", _DEFAULT_ES.dispersion)
-    has_dispersion = dispersion is not None and str(dispersion).strip().lower() != "none"
-
     pmol = pyscf_backend.molecule_to_pyscf(molecule, basis=basis)
     mf = pyscf_backend.make_mean_field(pmol, cfg)
+    dispersion = pyscf_backend.mean_field_dispersion(mf)
 
     if debug:
         _print_stationarity_diagnostic(mf)
 
     hessian_provenance = "analytic"
-    if has_dispersion:
+    if dispersion is not None:
         msg = (
             f"{dispersion} Hessians include a numerically differentiated dispersion "
             "component and are therefore semi-numerical"

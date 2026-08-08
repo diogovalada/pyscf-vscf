@@ -14,7 +14,7 @@ committed.
    verify that the release branch is synchronized with its upstream.
 2. Confirm `CHANGELOG.md`, `CITATION.cff`, `pyproject.toml`, and
    `pyscf_vscf.__version__` agree.
-3. Run the pure and optional PySCF test suites, regenerate both archived
+3. Run the pure and PySCF test suites, regenerate both archived
    validation reports, and compare them with the committed reports using
    `scripts/compare_validation_reports.py`. The comparison requires identical
    structure and discrete values and uses only tight floating-point tolerances

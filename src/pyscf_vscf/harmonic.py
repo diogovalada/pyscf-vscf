@@ -2,7 +2,7 @@
 
 The routines in this module are extracted from the legacy
 ``pyscf_pme_pipeline.py`` driver. They only depend on NumPy at import time; the
-optional PySCF thermo helpers are imported lazily by call sites that request the
+PySCF thermo helpers are imported lazily by call sites that request the
 ``rtproj="pyscf"`` path.
 """
 

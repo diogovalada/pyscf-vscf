@@ -16,7 +16,7 @@ import numpy as np
 
 from ..constants import ANG_TO_BOHR, MASS_AMU, atomic_mass_amu
 from ..molecule import Molecule
-from ..settings import ESSettings, default_auxbasis, normalize_dispersion
+from ..settings import ESSettings, default_auxbasis
 
 
 STRICT: bool = True
@@ -26,7 +26,7 @@ _WARNED_ONCE: set[str] = set()
 
 
 class BackendUnavailableError(ImportError):
-    """Raised when the optional PySCF backend dependency is unavailable."""
+    """Raised when the required PySCF backend dependency is unavailable."""
 
 
 @dataclass(frozen=True)
@@ -115,8 +115,7 @@ def make_mean_field(pmol: Any, cfg: Any):
     if method.lower() == "hf":
         mf = scf.UHF(pmol) if open_shell else scf.RHF(pmol)
     else:
-        mf = dft.UKS(pmol) if open_shell else dft.RKS(pmol)
-        mf.xc = method
+        mf = dft.UKS(pmol, xc=method) if open_shell else dft.RKS(pmol, xc=method)
 
     if bool(_cfg_get(cfg, "use_density_fit", True)):
         auxbasis = _cfg_get(cfg, "auxbasis", None)
@@ -130,11 +129,6 @@ def make_mean_field(pmol: Any, cfg: Any):
                 f"electronic-structure model ({exc})"
             )
             raise RuntimeError(msg) from exc
-
-    dispersion = normalize_dispersion(_cfg_get(cfg, "dispersion", "d4"))
-    if dispersion:
-        _require_pyscf_dispersion(dispersion)
-        mf.disp = dispersion
 
     dft_grid_level = _cfg_get(cfg, "dft_grid_level", None)
     if dft_grid_level is not None and is_dft:
@@ -155,6 +149,21 @@ def make_mean_field(pmol: Any, cfg: Any):
     if not mf.converged:
         raise RuntimeError("SCF did not converge")
     return mf
+
+
+def mean_field_dispersion(mf: Any) -> str | None:
+    """Return PySCF's effective D3/D4 label without loading its extension."""
+
+    explicit = getattr(mf, "disp", None)
+    method = getattr(mf, "xc", None)
+    method_text = "" if method is None else str(method).lower()
+    if explicit in (None, False, 0, "") and "-d3" not in method_text and "-d4" not in method_text:
+        return None
+
+    from pyscf.scf.dispersion import check_disp
+
+    detected = check_disp(mf)
+    return None if not detected else str(detected)
 
 
 def energy_gradient_at_coords_bohr(
@@ -311,21 +320,9 @@ def _require_pyscf():
         from pyscf.data import elements
     except Exception as exc:
         raise BackendUnavailableError(
-            "PySCF backend is unavailable. Install the 'pyscf' optional dependencies "
-            "to use this backend."
+            "PySCF is unavailable. Reinstall pyscf-vscf and its required dependencies."
         ) from exc
     return gto, scf, dft, elements
-
-
-def _require_pyscf_dispersion(dispersion: Any) -> None:
-    try:
-        import pyscf.dispersion  # noqa: F401
-    except Exception as exc:
-        raise BackendUnavailableError(
-            f"Dispersion was requested (cfg.dispersion={dispersion!r}) but "
-            "pyscf.dispersion is unavailable. Install pyscf-dispersion or pass "
-            "--dispersion none."
-        ) from exc
 
 
 def _analysis_masses(molecule: Any, symbols: list[str]) -> list[float]:
@@ -372,6 +369,7 @@ __all__ = [
     "energy_gradient_at_coords_bohr",
     "is_available",
     "make_mean_field",
+    "mean_field_dispersion",
     "molecule_to_pyscf",
     "normal_relaxed_point",
     "warn_once",

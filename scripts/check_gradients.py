@@ -5,7 +5,7 @@ import argparse
 import glob
 import sys
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 import numpy as np
 
@@ -29,7 +29,6 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     )
     p.add_argument("--method", default="wb97x")
     p.add_argument("--basis", default="aug-cc-pVTZ")
-    p.add_argument("--dispersion", default="d4", help="PySCF dispersion tag or 'none'")
     p.add_argument("--no-density-fit", action="store_true", help="Disable density fitting (RI)")
     p.add_argument("--scf-conv-tol", type=float, default=1e-10)
     p.add_argument("--dft-grid-level", type=int, default=3)
@@ -82,14 +81,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         sys.stderr.write("ERROR: no geometries found (expected geom/*.pyscf_opt.mmol or pass --mmol).\n")
         return 2
 
-    disp = None if str(args.dispersion).strip().lower() in {"none", "null", "off", "0", ""} else str(args.dispersion)
-
     # Build ES settings with strict SCF, since this is a guardrail tool.
     cfg = pipe.ESSettings(
         method=str(args.method),
         basis=str(args.basis),
         use_density_fit=not bool(args.no_density_fit),
-        dispersion=disp,
         strict=True,
         scf_conv_tol=float(args.scf_conv_tol),
         dft_grid_level=int(args.dft_grid_level),

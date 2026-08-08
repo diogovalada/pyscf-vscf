@@ -44,7 +44,6 @@ def _hf_sto3g_settings(backend):
                 "method": "hf",
                 "basis": "sto-3g",
                 "use_density_fit": False,
-                "dispersion": None,
             }
         settings_cls = ESSettings
 
@@ -52,7 +51,6 @@ def _hf_sto3g_settings(backend):
         method="hf",
         basis="sto-3g",
         use_density_fit=False,
-        dispersion=None,
     )
 
 
@@ -195,26 +193,26 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
             return FakeMF()
 
     class FakeDFT:
-        RKS = FakeSCF.RHF
-        UKS = FakeSCF.UHF
+        @staticmethod
+        def RKS(pmol, *, xc):
+            assert xc == "pbe"
+            return FakeSCF.RHF(pmol)
+
+        @staticmethod
+        def UKS(pmol, *, xc):
+            assert xc == "pbe"
+            return FakeSCF.UHF(pmol)
 
     monkeypatch.setattr(
         backend,
         "_require_pyscf",
         lambda: (object(), FakeSCF, FakeDFT, object()),
     )
-    monkeypatch.setattr(
-        backend,
-        "_require_pyscf_dispersion",
-        lambda value: pytest.fail(f"dispersion backend unexpectedly requested for {value!r}"),
-    )
-
     mean_field = backend.make_mean_field(
         SimpleNamespace(spin=1),
         SimpleNamespace(
-            method="hf",
+            method="pbe",
             use_density_fit=False,
-            dispersion="none",
             dev_fast=False,
             scf_conv_tol=1e-9,
             scf_max_cycle=37,
@@ -224,6 +222,18 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
     assert isinstance(mean_field, FakeMF)
     assert calls == ["UHF"]
     assert mean_field.max_cycle == 37
+
+
+@pytest.mark.pyscf
+def test_mean_field_dispersion_uses_pyscf_native_method_parser() -> None:
+    backend = importlib.import_module(BACKEND_MODULE)
+    from pyscf import dft, gto
+
+    molecule = gto.M(atom="H 0 0 0; F 0 0 0.9", basis="sto-3g", verbose=0)
+
+    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="pbe")) is None
+    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="b3lyp-d3bj")) == "d3bj"
+    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="wb97x-d4")) == "d4"
 
 
 @pytest.mark.pyscf

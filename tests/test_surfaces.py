@@ -132,7 +132,7 @@ def test_energy_dipole_coerces_mapping_before_selecting_basis(
 
     energy, dipole = surfaces.energy_dipole(
         _water(),
-        {"basis": "6-31g", "method": "hf", "dispersion": None, "scf_max_cycle": 37},
+        {"basis": "6-31g", "method": "hf", "scf_max_cycle": 37},
     )
 
     assert captured["basis"] == "6-31g"

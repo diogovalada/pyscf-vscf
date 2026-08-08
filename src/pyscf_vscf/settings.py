@@ -35,7 +35,6 @@ class ESSettings:
     basis: str = "aug-cc-pVTZ"
     use_density_fit: bool = True
     auxbasis: str | None = None
-    dispersion: str | None = "d4"
     rtproj: str = "pyscf"
     strict: bool = True
     allow_fd_hessian: bool = False
@@ -77,7 +76,6 @@ class DevFastPolicy:
 
     method: str = "hf"
     basis: str = "sto-3g"
-    dispersion: str | None = None
     fast_npts: int = 21
     fast_width: float = 0.20
     min_fast_npts: int = 5
@@ -134,17 +132,6 @@ def es_default(field_name: str):
 
 
 _es_default = es_default
-
-
-def normalize_dispersion(value: str | None) -> str | None:
-    """Map legacy dispersion CLI values onto ESSettings values."""
-
-    if value is None:
-        return None
-    text = str(value)
-    if text.lower() == "none":
-        return None
-    return text
 
 
 def default_auxbasis(main_basis: str) -> str:
@@ -240,7 +227,6 @@ def development_fast_settings(
         cfg,
         method=policy.method if cfg.method == defaults.method else cfg.method,
         basis=policy.basis if cfg.basis == defaults.basis else cfg.basis,
-        dispersion=policy.dispersion if cfg.dispersion == defaults.dispersion else cfg.dispersion,
         scf_conv_tol=policy.scf_conv_tol if cfg.scf_conv_tol is None else cfg.scf_conv_tol,
         scf_max_cycle=policy.max_cycle if cfg.scf_max_cycle is None else cfg.scf_max_cycle,
         dft_grid_level=policy.dft_grid_level if cfg.dft_grid_level is None else cfg.dft_grid_level,
@@ -356,7 +342,6 @@ __all__ = [
     "es_default",
     "format_runtime",
     "log",
-    "normalize_dispersion",
     "thread_env_updates",
     "warn",
     "warn_once",

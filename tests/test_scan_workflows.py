@@ -69,7 +69,6 @@ def _cfg(**overrides: object) -> SimpleNamespace:
         "basis": "sto-3g",
         "use_density_fit": False,
         "auxbasis": None,
-        "dispersion": None,
     }
     values.update(overrides)
     return SimpleNamespace(**values)

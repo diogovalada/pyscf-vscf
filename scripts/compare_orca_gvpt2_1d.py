@@ -199,8 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         import pyscf  # noqa: F401
     except Exception:
         sys.stderr.write(
-            "ERROR: PySCF is not importable. Install the validation dependencies "
-            "with 'uv sync --extra validation' or activate an environment containing PySCF.\n"
+            "ERROR: PySCF is not importable. Install the project dependencies "
+            "with 'uv sync' or activate an environment containing PySCF.\n"
         )
         return 2
 

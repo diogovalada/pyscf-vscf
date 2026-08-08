@@ -18,16 +18,10 @@ The package does not claim full-dimensional or general curvilinear VSCF/VCI.
 
 ## Install
 
-Install the current alpha from PyPI:
+Install from PyPI:
 
 ```bash
-pip install "pyscf-vscf==0.1.0a4"
-```
-
-Install the PySCF-backed workflows as well:
-
-```bash
-pip install "pyscf-vscf[pyscf]==0.1.0a4"
+pip install pyscf-vscf
 ```
 
 The source project uses `uv` for development:
@@ -36,17 +30,17 @@ The source project uses `uv` for development:
 uv sync --extra dev
 ```
 
-Install the optional electronic-structure backend for PySCF calculations:
-
-```bash
-uv sync --extra dev --extra pyscf
-```
-
-Pure numerical modules and the VSCF solver do not import PySCF.
+PySCF is the supported electronic-structure backend and is included in the
+standard installation. Electronic methods are specified using PySCF's native
+method syntax. Pure numerical modules and the VSCF solver avoid importing
+PySCF until an electronic-structure workflow is requested.
+On Windows, install and run the package under WSL because PySCF does not support
+native Windows installations.
 
 ## Runnable VSCF Example
 
-The wheel includes a deterministic, PySCF-free coupled two-mode example:
+The wheel includes a deterministic coupled two-mode example that performs no
+electronic-structure calculations:
 
 ```bash
 uv run python -m pyscf_vscf.examples.vscf_two_mode
@@ -82,14 +76,13 @@ validation material and is not installed into the wheel:
 ```bash
 pyscf-vscf --help
 pyscf-vscf --version
-pyscf-vscf --mmol geom/HDO.mmol --task harmonic --dispersion none
+pyscf-vscf --mmol geom/HDO.mmol --task harmonic
 pyscf-vscf --mmol geom/H2O.mmol --task 1d --bond 0-1 --npts 41
 ```
 
-PySCF-backed work requires the `pyscf` extra. The legacy
-`pyscf_pme_pipeline.py` remains in the source repository for historical
-compatibility, but release support and API guarantees apply to the package code
-under `src/pyscf_vscf`.
+The legacy `pyscf_pme_pipeline.py` remains in the source repository for
+historical compatibility, but release support and API guarantees apply to the
+package code under `src/pyscf_vscf`.
 
 XYZ and MMOL files do not reliably preserve molecular charge and spin. Supply
 `--charge` and `--spin` whenever a non-neutral or open-shell geometry is reused.
@@ -119,8 +112,8 @@ uv run ruff check src tests scripts/validate_archived_grids.py \
 uv run ruff format --check src tests scripts/validate_archived_grids.py \
   scripts/generate_nh3_three_mode.py scripts/expand_nh3_three_mode.py \
   scripts/validate_nh3_three_mode.py
-uv run pytest -q
-uv run --extra pyscf pytest -m pyscf -q
+uv run pytest -m "not pyscf" -q
+uv run pytest -m pyscf -q
 uv run python scripts/validate_archived_grids.py \
   --nmax 12 --output validation_data/convergence_report.json
 uv run python scripts/validate_nh3_three_mode.py
@@ -147,12 +140,3 @@ The fundamental, binary-combination, and triple-combination manifolds pass the
 as nonconverged. Across the final three variants, the maximum VSCF/exact
 centroid error is `4.43 cm^-1`. Reanalysis uses only the checked-in caches and
 does not require PySCF.
-
-## Release Status
-
-The current version is `0.1.0a4`. API changes remain possible during alpha.
-The repository includes an MIT license, citation metadata, changelog, CI,
-GitHub release automation, an opt-in trusted-publishing workflow, and a release
-checklist.
-Original validation data are separately licensed under CC BY 4.0; see
-`DATA_LICENSE.md` in the source repository.

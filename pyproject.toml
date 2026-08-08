@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyscf-vscf"
-version = "0.1.0a4"
+version = "0.1.0a5"
 description = "PySCF-backed reduced-dimensional VSCF and DVR vibrational spectroscopy"
 authors = [
     { name = "Diogo Valada" }
@@ -17,7 +17,7 @@ keywords = ["VSCF", "DVR", "PySCF", "vibrational spectroscopy", "quantum chemist
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -27,7 +27,9 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.23",
-    "scipy>=1.10"
+    "scipy>=1.10",
+    "pyscf>=2.3",
+    "geometric>=1.0"
 ]
 
 [project.urls]
@@ -37,20 +39,6 @@ Issues = "https://github.com/diogovalada/pyscf-vscf/issues"
 Changelog = "https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-pyscf = [
-    "pyscf>=2.3",
-    "pyscf-dispersion",
-    "dftd4>=3.6",
-    "geometric>=1.0"
-]
-validation = [
-    "pyscf>=2.3",
-    "pyscf-dispersion",
-    "dftd4>=3.6",
-    "geometric>=1.0",
-    "pytest",
-    "pytest-cov"
-]
 dev = [
     "build",
     "pytest",

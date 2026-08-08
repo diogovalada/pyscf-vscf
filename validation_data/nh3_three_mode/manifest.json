@@ -98,7 +98,7 @@
       "sha256": "67c3d3ad2f951ce4c5d939246ca1b325143dc617968527d118fce80f20e1e6df"
     },
     "report.json": {
-      "sha256": "e0d97807d0ba4af387557ce98c3f6ae1735024fadd7847b3acfd8a36d0696240"
+      "sha256": "c4303ab26af0a595c029d9aba69f777671c2baaa6fd0a3cdf4c3fd086899ae51"
     },
     "report_coarse_13_diagnostic.json": {
       "sha256": "17fc4cc1790f7faa0c5d94bf129ae66a554bc16d376ea64f2126133baf9fc5d3"
@@ -108,6 +108,6 @@
     }
   },
   "purpose": "reproducible non-water, three-mode package validation",
-  "regeneration_command": "uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 25 --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 31 --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/generate_nh3_three_mode.py --npts 31 --half-width 0.30 --tag wide --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 31 --source-tag wide --target-npts 37 --target-half-width 0.36 --target-tag wider --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 37 --source-tag wider --target-npts 43 --target-half-width 0.42 --target-tag widest --workers 8 --threads-per-worker 1 && uv run --extra pyscf python scripts/expand_nh3_three_mode.py --source-npts 43 --source-tag widest --target-npts 49 --target-half-width 0.48 --target-tag converged --workers 8 --threads-per-worker 1",
+  "regeneration_command": "uv run python scripts/generate_nh3_three_mode.py --npts 25 --workers 8 --threads-per-worker 1 && uv run python scripts/generate_nh3_three_mode.py --npts 31 --workers 8 --threads-per-worker 1 && uv run python scripts/generate_nh3_three_mode.py --npts 31 --half-width 0.30 --tag wide --workers 8 --threads-per-worker 1 && uv run python scripts/expand_nh3_three_mode.py --source-npts 31 --source-tag wide --target-npts 37 --target-half-width 0.36 --target-tag wider --workers 8 --threads-per-worker 1 && uv run python scripts/expand_nh3_three_mode.py --source-npts 37 --source-tag wider --target-npts 43 --target-half-width 0.42 --target-tag widest --workers 8 --threads-per-worker 1 && uv run python scripts/expand_nh3_three_mode.py --source-npts 43 --source-tag widest --target-npts 49 --target-half-width 0.48 --target-tag converged --workers 8 --threads-per-worker 1",
   "schema_version": 1
 }

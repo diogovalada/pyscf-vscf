@@ -84,7 +84,7 @@ def main(argv=None) -> int:
     ap.add_argument("--rmax", type=float, default=1.70)
     ap.add_argument("--nmax", type=int, default=80, help="Number of excited states to print for --task 2d (passed via --vmax)")
     ap.add_argument("--keo", choices=["reduced", "gmatrix"], default="gmatrix")
-    ap.add_argument("--dispersion", choices=["d3", "d4", "none"], default="none")
+    ap.add_argument("--method", default="wb97x")
     ap.add_argument("--intensity", choices=["axis", "vector", "both"], default="vector")
     ap.add_argument("--overwrite", action="store_true", help="Overwrite existing NPZ caches (default: hard error)")
     ap.add_argument("--dry-run", action="store_true", help="Print commands and exit")
@@ -115,7 +115,8 @@ def main(argv=None) -> int:
     for mmol in runlist:
         base = _base_stem_from_opt_mmol(mmol)
         b1, b2 = bonds_for_system(mmol)
-        cache_name = f"prod_{base}_2d_npts{args.npts}_nmax{args.nmax}_r{args.rmin:.2f}-{args.rmax:.2f}_keo{args.keo}_disp{args.dispersion}_mu{args.intensity}.npz"
+        method_tag = args.method.replace("/", "-").replace(" ", "")
+        cache_name = f"prod_{base}_2d_npts{args.npts}_nmax{args.nmax}_r{args.rmin:.2f}-{args.rmax:.2f}_keo{args.keo}_method{method_tag}_mu{args.intensity}.npz"
         cache_path = results_dir / cache_name
         if cache_path.exists() and not args.overwrite:
             raise SystemExit(f"Refusing to overwrite existing cache: {cache_path} (use --overwrite)")
@@ -151,8 +152,8 @@ def main(argv=None) -> int:
             str(args.pes_workers),
             "--keo",
             args.keo,
-            "--dispersion",
-            args.dispersion,
+            "--method",
+            args.method,
             "--intensity",
             args.intensity,
             "--dump-grid",

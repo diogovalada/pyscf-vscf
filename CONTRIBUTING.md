@@ -6,15 +6,15 @@ Use Python 3.10 or newer and `uv`.
 uv sync --extra dev
 uv run ruff check src tests scripts/validate_archived_grids.py
 uv run ruff format --check src tests scripts/validate_archived_grids.py
-uv run pytest -q
+uv run pytest -m "not pyscf" -q
 uv run python -m build
 uv run twine check dist/*
 ```
 
-PySCF-backed checks are optional locally:
+PySCF-backed checks are separated because they execute electronic-structure
+calculations:
 
 ```bash
-uv sync --extra dev --extra pyscf
 uv run pytest -m pyscf -q
 ```
 

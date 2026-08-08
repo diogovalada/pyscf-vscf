@@ -23,8 +23,8 @@ def main() -> int:
         import pyscf  # noqa: F401
     except Exception:
         sys.stderr.write(
-            "ERROR: PySCF is not importable. Install the validation dependencies "
-            "with 'uv sync --extra validation' or activate an environment containing PySCF.\n"
+            "ERROR: PySCF is not importable. Install the project dependencies "
+            "with 'uv sync' or activate an environment containing PySCF.\n"
         )
         return 2
 
@@ -46,7 +46,7 @@ def main() -> int:
         return 2
 
     mol = p.read_midas_mmol(geom)
-    cfg = p.ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None, rtproj="pyscf", strict=True)
+    cfg = p.ESSettings(method="hf", basis="sto-3g", use_density_fit=False, rtproj="pyscf", strict=True)
 
     bond = p.parse_bond("O0-H1")
     axis_vec = mol.coords[bond.H] - mol.coords[bond.O]

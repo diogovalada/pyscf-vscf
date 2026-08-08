@@ -80,7 +80,7 @@ def test_harmonic_analysis_uses_analytic_hessian_and_existing_harmonic_helpers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     molecule = _h2_molecule()
-    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None)
+    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     pmol = _FakePMol()
     hessian = np.eye(6)
 
@@ -109,7 +109,7 @@ def test_harmonic_analysis_uses_analytic_hessian_and_existing_harmonic_helpers(
 def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(dispersion="d4", allow_fd_hessian=False)
+    cfg = ESSettings(method="wb97x-d4", allow_fd_hessian=False)
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -118,6 +118,7 @@ def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
         "make_mean_field",
         lambda pmol_arg, cfg_arg: _FakeMeanField(np.eye(6)),
     )
+    monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
 
     with pytest.raises(RuntimeError, match="semi-numerical.*--allow-fd-hessian"):
         workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
@@ -126,7 +127,7 @@ def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
 def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(dispersion="d4", allow_fd_hessian=True)
+    cfg = ESSettings(method="wb97x-d4", allow_fd_hessian=True)
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -135,6 +136,7 @@ def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
         "make_mean_field",
         lambda pmol_arg, cfg_arg: _FakeMeanField(np.eye(6)),
     )
+    monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
 
     result = workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none")
 
@@ -144,7 +146,7 @@ def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
 def test_harmonic_analysis_strict_analytic_failure_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(strict=True, allow_fd_hessian=True, dispersion=None)
+    cfg = ESSettings(strict=True, allow_fd_hessian=True)
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -162,7 +164,7 @@ def test_harmonic_analysis_strict_analytic_failure_raises(
 def test_harmonic_analysis_non_strict_analytic_failure_still_blocks_fd_unless_allowed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg = ESSettings(strict=False, allow_fd_hessian=False, dispersion=None)
+    cfg = ESSettings(strict=False, allow_fd_hessian=False)
     monkeypatch.setattr(
         workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
     )
@@ -181,7 +183,7 @@ def test_harmonic_analysis_uses_fd_hessian_when_allowed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     molecule = _h2_molecule()
-    cfg = ESSettings(strict=True, allow_fd_hessian=True, dispersion=None)
+    cfg = ESSettings(strict=True, allow_fd_hessian=True)
     pmol = _FakePMol()
     hessian = np.eye(6)
     captured_x0: list[np.ndarray] = []
@@ -235,7 +237,6 @@ def test_finite_difference_fallback_preserves_all_es_settings() -> None:
         basis="def2-tzvp",
         use_density_fit=False,
         auxbasis="custom-jkfit",
-        dispersion=None,
         rtproj="mw_explicit",
         strict=False,
         allow_fd_hessian=True,

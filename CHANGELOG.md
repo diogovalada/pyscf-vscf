@@ -5,6 +5,14 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0a5] - 2026-08-08
+
+### Changed
+
+- PySCF and geomeTRIC are now installed by default. Electronic methods use
+  PySCF's native method specification instead of a separate package-level
+  dispersion option.
+
 ## [0.1.0a4] - 2026-07-30
 
 ### Changed
@@ -73,7 +81,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...HEAD
+[0.1.0a5]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...v0.1.0a5
 [0.1.0a4]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...v0.1.0a4
 [0.1.0a3]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...v0.1.0a3
 [0.1.0a2]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a1...v0.1.0a2

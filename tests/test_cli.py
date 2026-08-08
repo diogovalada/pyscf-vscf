@@ -69,7 +69,7 @@ sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a4")):
+    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a5")):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],
@@ -94,13 +94,20 @@ def test_normal_coordinate_default_bounds_bracket_equilibrium() -> None:
     assert args.smin < 0.0 < args.smax
 
 
+def test_cli_has_no_package_level_dispersion_option() -> None:
+    parser = cli._build_parser()
+
+    assert "--dispersion" not in parser.format_help()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--dispersion", "none"])
+
+
 def test_development_fast_materializes_all_backend_settings() -> None:
     args = cli._build_parser().parse_args(["--dev-fast"])
     cfg, npts, tight_width = cli._build_es_settings(args)
 
     assert cfg.method == "hf"
     assert cfg.basis == "sto-3g"
-    assert cfg.dispersion is None
     assert cfg.scf_conv_tol == pytest.approx(1e-7)
     assert cfg.scf_max_cycle == 50
     assert cfg.dft_grid_level == 1
@@ -172,8 +179,6 @@ def test_harmonic_task_dispatches_to_package_workflow(
                 "hf",
                 "--basis",
                 "sto-3g",
-                "--dispersion",
-                "none",
                 "--no-ri",
                 "--rtproj",
                 "none",
@@ -188,7 +193,6 @@ def test_harmonic_task_dispatches_to_package_workflow(
     assert cfg.method == "hf"
     assert cfg.basis == "sto-3g"
     assert cfg.use_density_fit is False
-    assert cfg.dispersion is None
     assert captured["rtproj"] == "none"
     assert captured["debug"] is True
     out = capsys.readouterr().out

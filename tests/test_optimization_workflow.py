@@ -96,7 +96,7 @@ def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     molecule = _FakeMolecule()
-    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None)
+    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     initial_pmol = _FakePySCFMol(molecule.coords)
     opt_coords = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.70]])
     opt_pmol = _FakePySCFMol(opt_coords)
@@ -242,7 +242,7 @@ def test_run_opt_keeps_going_when_post_optimization_stationarity_fails(
     tmp_path: Path,
 ) -> None:
     molecule = _FakeMolecule()
-    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False, dispersion=None)
+    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     opt_pmol = _FakePySCFMol(molecule.coords)
     warnings: list[tuple[str, str]] = []
 

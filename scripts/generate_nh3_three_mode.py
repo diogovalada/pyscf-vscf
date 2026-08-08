@@ -95,7 +95,6 @@ def _settings() -> ESSettings:
         basis="aug-cc-pVTZ",
         use_density_fit=True,
         auxbasis="aug-cc-pVTZ-jkfit",
-        dispersion=None,
         strict=True,
         scf_conv_tol=1e-10,
         scf_max_cycle=100,
