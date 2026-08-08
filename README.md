@@ -1,6 +1,6 @@
 # pyscf-vscf
 
-![pyscf-vscf: an H2O symmetric-stretch mode over a coupled two-coordinate potential-energy surface](docs/assets/pyscf-vscf-banner.png)
+![pyscf-vscf: an H2O symmetric-stretch mode over a coupled two-coordinate potential-energy surface](https://raw.githubusercontent.com/diogovalada/pyscf-vscf/main/docs/assets/pyscf-vscf-banner.png)
 
 `pyscf-vscf` is a public-alpha package for PySCF-backed construction and
 reduced-dimensional variational analysis of vibrational potential-energy and
@@ -43,7 +43,7 @@ The wheel includes a deterministic coupled two-mode example that performs no
 electronic-structure calculations:
 
 ```bash
-uv run python -m pyscf_vscf.examples.vscf_two_mode
+python -m pyscf_vscf.examples.vscf_two_mode
 ```
 
 The main API is:

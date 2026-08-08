@@ -77,17 +77,17 @@ print("optimization-ok")
     assert proc.stdout.strip() == "optimization-ok"
 
 
-def test_optimizer_profile_kwargs_match_legacy_thresholds() -> None:
-    assert workflow.opt_kwargs_for_profile("orca") == {
+def test_optimizer_convergence_kwargs_are_backend_specific() -> None:
+    assert workflow.optimization_convergence_kwargs() == {
         "convergence_gmax": 4.5e-5,
         "convergence_grms": 3.0e-5,
     }
-    assert workflow.opt_kwargs_for_profile("orca-tight", backend="berny") == {
+    assert workflow.optimization_convergence_kwargs(backend="berny") == {
         "gradientmax": 4.5e-5,
         "gradientrms": 3.0e-5,
     }
-    with pytest.raises(ValueError, match="Unknown --opt-conv profile"):
-        workflow.opt_kwargs_for_profile("loose")
+    with pytest.raises(ValueError, match="Unknown optimizer backend"):
+        workflow.optimization_convergence_kwargs(backend="unknown")
 
 
 def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
@@ -133,7 +133,6 @@ def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
         cfg,
         opt_out=output_path,
         opt_maxsteps=7,
-        opt_conv="orca",
         verbose=True,
     )
 
@@ -186,7 +185,6 @@ def test_run_opt_falls_back_to_berny_and_writes_mmol(
         cfg,
         opt_out=output_path,
         opt_maxsteps=3,
-        opt_conv="orca_tight",
         warn_fn=lambda key, msg: warnings.append((key, msg)),
     )
 
@@ -226,7 +224,6 @@ def test_run_opt_warns_when_non_strict_optimization_does_not_converge(
         cfg,
         opt_out=tmp_path / "optimized.xyz",
         opt_maxsteps=1,
-        opt_conv="orca",
         warn_fn=lambda key, msg: warnings.append((key, msg)),
     )
 
@@ -268,7 +265,6 @@ def test_run_opt_keeps_going_when_post_optimization_stationarity_fails(
         cfg,
         opt_out=tmp_path / "optimized.xyz",
         opt_maxsteps=1,
-        opt_conv="orca",
         warn_fn=lambda key, msg: warnings.append((key, msg)),
     )
 

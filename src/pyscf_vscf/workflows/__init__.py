@@ -12,7 +12,7 @@ from .harmonic import (
 from .optimization import (
     OptimizationResult,
     OptimizedMolecule,
-    opt_kwargs_for_profile,
+    optimization_convergence_kwargs,
     run_opt,
 )
 
@@ -25,7 +25,7 @@ __all__ = [
     "gradient_at",
     "harmonic_analysis",
     "nuclear_gradient",
-    "opt_kwargs_for_profile",
+    "optimization_convergence_kwargs",
     "run_opt",
     "stationarity_diagnostic",
 ]

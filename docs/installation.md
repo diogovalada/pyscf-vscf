@@ -8,8 +8,9 @@ pip install pyscf-vscf
 
 PySCF is the supported electronic-structure backend and is installed with the
 package.
-geomeTRIC is also installed for the built-in optimization and relaxed-scan
-workflows. Install optional PySCF extensions directly through PySCF and select
+geomeTRIC is also installed for the built-in geometry-optimization workflow.
+The constrained normal-relaxed scan uses SciPy. Install optional PySCF
+extensions directly through PySCF and select
 them with PySCF's native method specification; `pyscf-vscf` does not duplicate
 those dependencies or configuration options.
 

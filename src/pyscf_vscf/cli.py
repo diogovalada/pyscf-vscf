@@ -108,11 +108,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optimization output path (.mmol or .xyz)",
     )
     parser.add_argument("--opt-maxsteps", type=int, default=50)
-    parser.add_argument(
-        "--opt-conv",
-        choices=["orca", "orca-tight", "orca_tight"],
-        default="orca",
-    )
     parser.add_argument("--max-parallel", type=int, default=DEFAULT_MAX_PARALLEL)
     parser.add_argument("--pes-workers", type=int, default=DEFAULT_PES_WORKERS)
     strict_group = parser.add_mutually_exclusive_group()
@@ -195,7 +190,6 @@ def main(argv: list[str] | None = None) -> int:
                 cfg,
                 opt_out=args.opt_out,
                 opt_maxsteps=args.opt_maxsteps,
-                opt_conv=args.opt_conv,
                 verbose=args.verbose,
                 log_fn=log,
             )
@@ -323,7 +317,6 @@ def _run_opt(
     *,
     opt_out: Path | None,
     opt_maxsteps: int | None,
-    opt_conv: str | None,
     verbose: bool,
     log_fn: Any,
 ) -> None:
@@ -335,7 +328,6 @@ def _run_opt(
         cfg,
         opt_out=opt_out,
         opt_maxsteps=opt_maxsteps,
-        opt_conv=opt_conv,
         verbose=verbose,
         log_fn=log_fn,
         warn_fn=warn_once,
@@ -464,7 +456,7 @@ def _run_1d(
         else:
             from .backends import pyscf as pyscf_backend
 
-            R, E, MU = scans.grid_1d_pes_dms_normal_relaxed(
+            relaxed_grid = scans.grid_1d_pes_dms_normal_relaxed(
                 molecule,
                 cfg,
                 u_dir,
@@ -475,6 +467,14 @@ def _run_1d(
                 executor_factory=executor_factory,
                 log_fn=log_fn,
             )
+            if relaxed_grid.failed_indices:
+                raise RuntimeError(
+                    relaxed_grid.failure_summary()
+                    + "; refusing to compute a spectrum from unconverged points"
+                )
+            R = relaxed_grid.displacements_A
+            E = relaxed_grid.energies_hartree
+            MU = relaxed_grid.dipoles_debye
         redmass_amu = scans.normal_mode_effective_mass_amu(molecule, u_dir)
         normal_summary = (mode_index, freq_cm, redmass_amu)
 

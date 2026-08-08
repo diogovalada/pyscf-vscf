@@ -33,33 +33,11 @@ production simulations.
 uv run --with pytest pytest -m pyscf -q
 ```
 
-## Tier 3: research validation scripts
+## Tier 3: archived molecular validations
 
-These scripts compare against cached or curated reference data and can launch
-new PySCF calculations. They do not require ORCA, CFOUR, MidasCpp, or another
-external quantum-chemistry program unless you are regenerating the reference
-data yourself.
-
-Short validation script:
-
-```bash
-uv run python scripts/run_logged.py --tag validations -- python scripts/run_validations.py
-```
-
-This uses the package defaults and does not require a PySCF dispersion
-extension. Select a dispersion-corrected method explicitly only after installing
-the corresponding PySCF extension.
-
-Longer opt-in validations:
-
-```bash
-VSCF_LONG_VALIDATIONS=1 uv run python scripts/run_logged.py --tag long_validations -- python scripts/run_validations.py
-VSCF_DIMER_VALIDATIONS=1 uv run python scripts/run_logged.py --tag dimer_validations -- python scripts/run_validations.py
-VSCF_MARVEL_VALIDATIONS=1 uv run python scripts/run_logged.py --tag marvel_validations -- python scripts/run_validations.py
-```
-
-Use these when you are validating research conclusions, not for every package
-edit.
+The release includes scripts and cached surfaces for reproducible molecular
+solver checks. They do not launch new electronic-structure calculations or
+require ORCA, CFOUR, MidasCpp, or another external program.
 
 The checked-in H2O/HDO/D2O grids support an intermediate validation that needs
 neither PySCF nor an external program:
@@ -133,8 +111,6 @@ Examples of work that should remain opt-in:
 - Regenerating ORCA/GVPT2 or other external reference datasets. The checked-in
   six-transition summary can be consumed without ORCA.
 
-Example convergence matrix command, edited for the specific case under study:
-
-```bash
-uv run python scripts/run_logged.py --tag h2o_2d_npts31_vmax12 -- python scripts/compare_orca_gvpt2_2d_stretches.py --species H2O --npts 31 --vmax 12 --max-parallel 8 --pes-workers 8
-```
+The NH3 generation and expansion drivers are included to document the archive
+chain. Other project-specific regeneration and external-program comparison
+drivers are not part of the source distribution.

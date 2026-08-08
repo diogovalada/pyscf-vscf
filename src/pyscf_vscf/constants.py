@@ -26,7 +26,17 @@ def atomic_mass_amu(symbol: str) -> float:
     """Return the default analysis mass in amu for an atomic or isotope symbol."""
 
     key = str(symbol).upper()
-    try:
+    if key in MASS_AMU:
         return float(MASS_AMU[key])
-    except KeyError as exc:
-        raise ValueError(f"No mass is defined for atom symbol {key!r}") from exc
+
+    # PySCF is imported only for elements not covered by the exact-isotope
+    # overrides above, keeping numerical-only imports lightweight.
+    try:
+        from pyscf.data import elements
+
+        charge = int(elements.charge(key))
+        if charge <= 0:
+            raise ValueError
+        return float(elements.MASSES[charge])
+    except (ImportError, KeyError, TypeError, ValueError, IndexError) as exc:
+        raise ValueError(f"Unknown atom or isotope symbol {symbol!r}") from exc

@@ -429,13 +429,47 @@ def test_normal_relaxed_grid_is_represented_by_injected_point_optimizer() -> Non
         gtol=1e-5,
         maxiter=7,
     )
-    S, E, MU = result
-
-    np.testing.assert_allclose(S, [-0.1, 0.0, 0.1])
-    np.testing.assert_allclose(E, [0.01, 0.0, 0.01])
-    np.testing.assert_allclose(MU[:, 0], [-0.1, 0.0, 0.1])
+    np.testing.assert_allclose(result.displacements_A, [-0.1, 0.0, 0.1])
+    np.testing.assert_allclose(result.energies_hartree, [0.01, 0.0, 0.01])
+    np.testing.assert_allclose(result.dipoles_debye[:, 0], [-0.1, 0.0, 0.1])
     assert calls[-1] == (0.1, 1e-5, 7)
     np.testing.assert_allclose(result.constraint_residuals_A, 0.0)
+    assert result.failed_indices == ()
+
+
+def test_normal_relaxed_grid_warns_once_and_retains_diagnostics_when_not_strict() -> None:
+    mol = _water()
+    cfg = _cfg(strict=False)
+    u_dir = np.zeros_like(mol.coords)
+    u_dir[1, 0] = 1.0
+
+    def relaxed_point(molecule, cfg, direction, s, gtol, maxiter):
+        del molecule, cfg, direction, gtol, maxiter
+        return SimpleNamespace(
+            energy_hartree=s * s,
+            dipole_debye=np.zeros(3),
+            achieved_displacement_A=s,
+            constraint_residual_A=0.0,
+            converged=s != 0.0,
+            n_iterations=3,
+            message="failed" if s == 0.0 else "ok",
+        )
+
+    with pytest.warns(RuntimeWarning, match=r"failed at 1 point.*indices=\[1\]"):
+        result = scans.grid_1d_pes_dms_normal_relaxed(
+            mol,
+            cfg,
+            u_dir,
+            smin=-0.1,
+            smax=0.1,
+            npts=3,
+            relaxed_point_fn=relaxed_point,
+        )
+
+    assert result.failed_indices == (1,)
+    assert "max constraint residual=0.000e+00 A" in result.failure_summary()
+    with pytest.raises(TypeError):
+        tuple(result)
 
 
 def test_1d_lbs_cache_metadata_validation_and_roundtrip(tmp_path: Path) -> None:

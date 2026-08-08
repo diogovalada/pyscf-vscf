@@ -1451,26 +1451,13 @@ def run_harmonic(mol: Molecule, cfg: ESSettings):
     print("Frequencies (cm^-1):")
     print(" ".join(f"{f:.1f}" for f in res.freqs_cm[res.freqs_cm>1e-2]))
 
-def _opt_kwargs_for_profile(profile: str) -> Dict[str, float]:
-    profile = (profile or "orca").lower()
-    if profile in ("orca", "orca-tight", "orca_tight"):
-        # Match the ORCA Opt thresholds used in your AiiDA job input (Eh/Bohr).
-        # geomeTRIC uses convergence_{gmax,grms} in Eh/Bohr.
-        return {
-            "convergence_gmax": 4.5e-5,
-            "convergence_grms": 3.0e-5,
-        }
-    raise ValueError(f"Unknown --opt-conv profile '{profile}'")
-
-
-def run_opt(mol: Molecule, cfg: ESSettings, *, opt_out: Optional[Path], opt_maxsteps: int, opt_conv: str):
+def run_opt(mol: Molecule, cfg: ESSettings, *, opt_out: Optional[Path], opt_maxsteps: int):
     if _pkg_optimization is not None:
         _pkg_optimization.run_opt(
             mol,
             cfg,
             opt_out=opt_out,
             opt_maxsteps=opt_maxsteps,
-            opt_conv=opt_conv,
             verbose=VERBOSE,
             log_fn=log,
             warn_fn=warn_once,
@@ -1485,12 +1472,14 @@ def run_opt(mol: Molecule, cfg: ESSettings, *, opt_out: Optional[Path], opt_maxs
 
     from pyscf.geomopt import geometric_solver
 
-    kwargs: Dict[str, float] = {}
-    kwargs.update(_opt_kwargs_for_profile(opt_conv))
+    kwargs: Dict[str, float] = {
+        "convergence_gmax": 4.5e-5,
+        "convergence_grms": 3.0e-5,
+    }
     if opt_maxsteps is not None:
         kwargs["maxsteps"] = int(opt_maxsteps)
 
-    log(f"Starting geometry optimization (backend=geomeTRIC; maxsteps={int(opt_maxsteps)}; conv='{opt_conv}')")
+    log(f"Starting geometry optimization (backend=geomeTRIC; maxsteps={int(opt_maxsteps)})")
     converged, optmol = geometric_solver.kernel(mf, **kwargs)
     if not converged:
         msg = "Geometry optimization did not converge within the allowed steps"
@@ -1792,12 +1781,6 @@ def main():
     ap.add_argument('--opt-out', type=Path, default=None, help="For --task opt: output path (.mmol or .xyz). Default: <label>.pyscf_opt.mmol")
     ap.add_argument('--opt-maxsteps', type=int, default=50, help="For --task opt: maximum geometry steps (default 50)")
     ap.add_argument(
-        '--opt-conv',
-        choices=['orca'],
-        default='orca',
-        help="For --task opt: convergence profile (default 'orca')",
-    )
-    ap.add_argument(
         '--max-parallel',
         type=int,
         default=MAX_PARALLEL,
@@ -1890,7 +1873,7 @@ def main():
             run_harmonic(mol,cfg)
         elif args.task=='opt':
             log("Starting geometry optimization")
-            run_opt(mol, cfg, opt_out=args.opt_out, opt_maxsteps=args.opt_maxsteps, opt_conv=args.opt_conv)
+            run_opt(mol, cfg, opt_out=args.opt_out, opt_maxsteps=args.opt_maxsteps)
         elif args.task=='1d':
             log(f"Starting 1D PES/VSCF task for bond {args.bond} (scan={args.scan})")
             b = parse_bond(args.bond)

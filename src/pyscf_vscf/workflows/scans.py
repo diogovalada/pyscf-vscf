@@ -12,6 +12,7 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import warnings
 
 import numpy as np
 
@@ -26,7 +27,7 @@ from pyscf_vscf.coordinates import Bond, parse_bond
 from pyscf_vscf.coordinates import stretch_along_bond as _stretch_along_bond
 from pyscf_vscf.coordinates import stretch_two_bonds as _stretch_two_bonds
 from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.surfaces import energy_dipole
+from pyscf_vscf.electronic import energy_dipole
 
 
 EnergyDipoleFn = Callable[[Any, Any], tuple[float, np.ndarray]]
@@ -70,12 +71,23 @@ class NormalRelaxedGrid:
     iterations: np.ndarray
     messages: tuple[str, ...]
 
-    def __iter__(self):
-        """Allow legacy ``S, E, MU = result`` unpacking."""
+    @property
+    def failed_indices(self) -> tuple[int, ...]:
+        """Indices whose constrained optimizations did not converge."""
 
-        yield self.displacements_A
-        yield self.energies_hartree
-        yield self.dipoles_debye
+        return tuple(int(index) for index in np.flatnonzero(~self.converged))
+
+    def failure_summary(self) -> str:
+        """Return an actionable aggregate description of failed points."""
+
+        failed = self.failed_indices
+        if not failed:
+            return "normal-relaxed scan converged at every point"
+        max_residual = float(np.max(np.abs(self.constraint_residuals_A)))
+        return (
+            f"normal-relaxed scan failed at {len(failed)} point(s); "
+            f"indices={list(failed)}; max constraint residual={max_residual:.3e} A"
+        )
 
 
 def normalize_bond(bond: Bond | str | Any) -> Bond:
@@ -443,11 +455,8 @@ def grid_1d_pes_dms_normal_relaxed(
             "normal-relaxed constraint residual exceeded 1e-10 A: "
             f"max={np.max(np.abs(residuals)):.3e} A"
         )
-    if not np.all(converged) and bool(_cfg_get(cfg, "strict", True)):
-        failed = np.flatnonzero(~converged).tolist()
-        raise RuntimeError(f"normal-relaxed points did not converge at indices {failed}")
     energies -= float(np.min(energies))
-    return NormalRelaxedGrid(
+    result = NormalRelaxedGrid(
         displacements_A=S,
         energies_hartree=energies,
         dipoles_debye=dipoles,
@@ -457,6 +466,12 @@ def grid_1d_pes_dms_normal_relaxed(
         iterations=iterations,
         messages=tuple(messages),
     )
+    if result.failed_indices:
+        summary = result.failure_summary()
+        if bool(_cfg_get(cfg, "strict", True)):
+            raise RuntimeError(summary)
+        warnings.warn(summary, RuntimeWarning, stacklevel=2)
+    return result
 
 
 def grid_2d_pes_dms(

@@ -5,6 +5,28 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0a6] - 2026-08-08
+
+### Fixed
+
+- The public two-bond PES/DMS builder now uses the same orientation-independent
+  geometry construction as the package workflow and realizes both requested
+  shared-atom bond lengths exactly.
+- Relaxed normal-coordinate scans no longer discard convergence diagnostics by
+  tuple unpacking or continue into spectroscopy after a failed point.
+- Default molecular masses now cover the periodic table through PySCF while
+  preserving exact H/D and other existing isotope overrides.
+- PyPI rendering now uses a stable banner URL, and installed-example and
+  validation documentation only advertise commands present in the release.
+- Public normal-coordinate grid construction now normalizes its direction
+  vector, so the scan coordinate consistently measures displacement in
+  Angstrom.
+
+### Removed
+
+- The `--opt-conv` CLI option, whose two advertised profiles used identical
+  thresholds.
+
 ## [0.1.0a5] - 2026-08-08
 
 ### Changed
@@ -81,7 +103,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a6...HEAD
+[0.1.0a6]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...v0.1.0a6
 [0.1.0a5]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...v0.1.0a5
 [0.1.0a4]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a3...v0.1.0a4
 [0.1.0a3]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a2...v0.1.0a3

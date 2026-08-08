@@ -8,7 +8,6 @@ prune docs
 include docs/installation.md
 include docs/intensity-conventions.md
 include docs/running-validations.md
-include docs/releasing.md
 include docs/examples/current-package-state.md
 prune tests
 prune scripts

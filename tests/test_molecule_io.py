@@ -131,6 +131,36 @@ def test_molecule_default_masses_include_non_water_alpha_example():
     np.testing.assert_allclose(mol.masses, [1.00782503223, 18.99840316273])
 
 
+def test_default_masses_cover_general_elements_and_deuterium_override():
+    from pyscf_vscf.constants import MASS_AMU, atomic_mass_amu
+    from pyscf_vscf.molecule import Molecule
+
+    mol = Molecule.from_arrays(
+        ["H", "D", "S", "P", "Si", "Br"],
+        np.zeros((6, 3)),
+    )
+
+    assert mol.masses[0] == pytest.approx(MASS_AMU["H"])
+    assert mol.masses[1] == pytest.approx(MASS_AMU["D"])
+    np.testing.assert_allclose(
+        mol.masses[2:],
+        [atomic_mass_amu("S"), atomic_mass_amu("P"), atomic_mass_amu("Si"), atomic_mass_amu("Br")],
+    )
+    assert np.all(mol.masses[2:] > 20.0)
+
+
+def test_explicit_mass_overrides_take_precedence_over_periodic_table_defaults():
+    from pyscf_vscf.molecule import Molecule
+
+    mol = Molecule.from_arrays(
+        ["S", "P"],
+        [[0.0, 0.0, 0.0], [1.9, 0.0, 0.0]],
+        masses_amu=[33.0, 32.0],
+    )
+
+    np.testing.assert_allclose(mol.masses, [33.0, 32.0])
+
+
 def test_mass_overrides_support_arbitrary_elements_and_survive_displacement():
     from pyscf_vscf.molecule import Molecule
     from pyscf_vscf.workflows.scans import molecule_with_coords

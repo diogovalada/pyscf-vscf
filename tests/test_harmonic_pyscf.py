@@ -275,13 +275,12 @@ def test_legacy_run_opt_delegates_to_package_workflow(monkeypatch, tmp_path: Pat
     cfg = legacy.ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     opt_out = tmp_path / "h2.xyz"
 
-    legacy.run_opt(mol, cfg, opt_out=opt_out, opt_maxsteps=4, opt_conv="orca")
+    legacy.run_opt(mol, cfg, opt_out=opt_out, opt_maxsteps=4)
 
     assert calls["args"] == (mol, cfg)
     assert calls["kwargs"] == {
         "opt_out": opt_out,
         "opt_maxsteps": 4,
-        "opt_conv": "orca",
         "verbose": True,
         "log_fn": legacy.log,
         "warn_fn": legacy.warn_once,

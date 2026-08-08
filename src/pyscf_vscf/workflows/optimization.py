@@ -46,12 +46,8 @@ class OptimizationResult:
     stationarity: StationarityDiagnostic | None = None
 
 
-def opt_kwargs_for_profile(profile: str | None, *, backend: str = "geometric") -> dict[str, float]:
-    """Return optimizer convergence kwargs for a named legacy profile."""
-
-    profile = (profile or "orca").lower()
-    if profile not in ("orca", "orca-tight", "orca_tight"):
-        raise ValueError(f"Unknown --opt-conv profile '{profile}'")
+def optimization_convergence_kwargs(*, backend: str = "geometric") -> dict[str, float]:
+    """Return the package optimization convergence thresholds."""
 
     optimizer = backend.lower()
     if optimizer == "geometric":
@@ -76,7 +72,6 @@ def run_opt(
     *,
     opt_out: Path | str | None,
     opt_maxsteps: int | None,
-    opt_conv: str | None,
     verbose: bool = False,
     log_fn: Callable[[str], None] | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
@@ -94,24 +89,18 @@ def run_opt(
 
     maxsteps = None if opt_maxsteps is None else int(opt_maxsteps)
     if maxsteps is not None:
-        emit_log(
-            "Starting geometry optimization "
-            f"(backend=geomeTRIC; maxsteps={maxsteps}; conv='{opt_conv or 'orca'}')"
-        )
+        emit_log(f"Starting geometry optimization (backend=geomeTRIC; maxsteps={maxsteps})")
     else:
-        emit_log(
-            "Starting geometry optimization "
-            f"(backend=geomeTRIC; maxsteps=None; conv='{opt_conv or 'orca'}')"
-        )
+        emit_log("Starting geometry optimization (backend=geomeTRIC; maxsteps=None)")
 
     try:
-        converged, optmol, backend = _run_geometric(mf, opt_conv, maxsteps)
+        converged, optmol, backend = _run_geometric(mf, maxsteps)
     except ImportError as exc:
         emit_warning(
             "geometric_missing_fallback_berny",
             f"geomeTRIC optimizer unavailable ({exc}); falling back to PySCF Berny optimizer",
         )
-        converged, optmol, backend = _run_berny(mf, opt_conv, maxsteps)
+        converged, optmol, backend = _run_berny(mf, maxsteps)
 
     if not converged:
         msg = "Geometry optimization did not converge within the allowed steps"
@@ -135,11 +124,10 @@ def run_opt(
 
 def _run_geometric(
     mf: Any,
-    opt_conv: str | None,
     maxsteps: int | None,
 ) -> tuple[bool, Any, str]:
     solver = _load_geometric_solver()
-    kwargs = opt_kwargs_for_profile(opt_conv, backend="geometric")
+    kwargs = optimization_convergence_kwargs(backend="geometric")
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
     converged, optmol = solver.kernel(mf, **kwargs)
@@ -148,11 +136,10 @@ def _run_geometric(
 
 def _run_berny(
     mf: Any,
-    opt_conv: str | None,
     maxsteps: int | None,
 ) -> tuple[bool, Any, str]:
     solver = _load_berny_solver()
-    kwargs = opt_kwargs_for_profile(opt_conv, backend="berny")
+    kwargs = optimization_convergence_kwargs(backend="berny")
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
     converged, optmol = solver.kernel(mf, **kwargs)
@@ -267,13 +254,10 @@ def _noop_log(_msg: str) -> None:
     return None
 
 
-_opt_kwargs_for_profile = opt_kwargs_for_profile
-
-
 __all__ = [
     "OptimizationResult",
     "OptimizedMolecule",
     "format_optimization_stationarity_diagnostic",
-    "opt_kwargs_for_profile",
+    "optimization_convergence_kwargs",
     "run_opt",
 ]

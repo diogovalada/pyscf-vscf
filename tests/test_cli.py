@@ -69,7 +69,7 @@ sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a5")):
+    for argv, expected in ((["--help"], "--task"), (["--version"], "0.1.0a6")):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],
@@ -226,8 +226,6 @@ def test_opt_task_reads_xyz_and_dispatches_to_package_workflow(
                 str(output_path),
                 "--opt-maxsteps",
                 "7",
-                "--opt-conv",
-                "orca-tight",
                 "--charge",
                 "-1",
                 "--spin",
@@ -251,7 +249,7 @@ def test_opt_task_reads_xyz_and_dispatches_to_package_workflow(
     assert cfg.allow_fd_hessian is True
     assert kwargs["opt_out"] == output_path
     assert kwargs["opt_maxsteps"] == 7
-    assert kwargs["opt_conv"] == "orca-tight"
+    assert "opt_conv" not in kwargs
 
 
 def test_1d_task_dispatches_grid_and_variational_helpers(
@@ -485,10 +483,15 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
 
     def fake_grid(molecule, cfg, u_dir, smin, smax, npts, **kwargs):
         captured["grid"] = (molecule, cfg, u_dir, smin, smax, npts, kwargs)
-        return (
-            np.linspace(float(smin), float(smax), int(npts)),
-            np.array([0.0, 0.1, 0.2]),
-            np.zeros((3, 3)),
+        return scans.NormalRelaxedGrid(
+            displacements_A=np.linspace(float(smin), float(smax), int(npts)),
+            energies_hartree=np.array([0.0, 0.1, 0.2]),
+            dipoles_debye=np.zeros((3, 3)),
+            achieved_displacements_A=np.linspace(float(smin), float(smax), int(npts)),
+            constraint_residuals_A=np.zeros(3),
+            converged=np.ones(3, dtype=bool),
+            iterations=np.ones(3, dtype=int),
+            messages=("ok", "ok", "ok"),
         )
 
     def fake_variational(R, E, MU, redmass_amu, *, axis, vmax, intensity):
@@ -536,6 +539,56 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
     assert kwargs["relaxed_point_fn"] is pyscf_backend.normal_relaxed_point
     assert kwargs["executor_factory"] is cli._SequentialExecutor
     assert "3210.0" in capsys.readouterr().out
+
+
+def test_1d_normal_relaxed_refuses_spectrum_when_any_point_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from pyscf_vscf import variational
+
+    input_path = _write_xyz(tmp_path / "water.xyz")
+    u_dir = np.zeros((3, 3))
+    u_dir[1, 0] = 1.0
+    monkeypatch.setattr(
+        scans,
+        "calc_normal_mode_direction",
+        lambda *args, **kwargs: (u_dir, 2, 4321.0, np.eye(9), np.arange(9, dtype=float)),
+    )
+    monkeypatch.setattr(
+        scans,
+        "grid_1d_pes_dms_normal_relaxed",
+        lambda *args, **kwargs: scans.NormalRelaxedGrid(
+            displacements_A=np.array([-0.1, 0.0, 0.1]),
+            energies_hartree=np.array([0.1, 0.0, 0.1]),
+            dipoles_debye=np.zeros((3, 3)),
+            achieved_displacements_A=np.array([-0.1, 0.0, 0.1]),
+            constraint_residuals_A=np.zeros(3),
+            converged=np.array([True, False, True]),
+            iterations=np.array([2, 100, 2]),
+            messages=("ok", "maximum iterations", "ok"),
+        ),
+    )
+    monkeypatch.setattr(
+        variational,
+        "variational_1d",
+        lambda *args, **kwargs: pytest.fail("spectrum must not run"),
+    )
+
+    with pytest.raises(RuntimeError, match=r"failed at 1 point.*indices=\[1\].*refusing"):
+        cli.main(
+            [
+                "--xyz",
+                str(input_path),
+                "--task",
+                "1d",
+                "--scan",
+                "normal-relaxed",
+                "--no-strict",
+                "--npts",
+                "3",
+            ]
+        )
 
 
 def test_2d_task_dispatches_grid_and_variational_helpers(

@@ -126,7 +126,6 @@ def generate(
             cfg,
             opt_out=optimized_path,
             opt_maxsteps=100,
-            opt_conv="orca-tight",
             verbose=False,
             log_fn=lambda message: print(message, flush=True),
         )
