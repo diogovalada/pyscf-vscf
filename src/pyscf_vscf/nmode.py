@@ -902,10 +902,15 @@ class NModeSurfaceModel:
 
     def energy_Eh(self, q: np.ndarray, *, max_rank: int | None = None) -> float:
         values = _validated_shape("q", q, (self.n_modes,))
+        if np.array_equal(values, self.reference_values):
+            return self.reference_energy_Eh
         total = self.reference_energy_Eh
         for subset, surface in self.energy_increments.items():
+            subset_values = values[list(subset)]
+            if np.any(subset_values == self.reference_values[list(subset)]):
+                continue
             if max_rank is None or len(subset) <= max_rank:
-                total += float(surface.evaluate(values[list(subset)]))
+                total += float(surface.evaluate(subset_values))
         return float(total)
 
     def potential_Eh(self, q: np.ndarray, *, max_rank: int | None = None) -> float:
@@ -913,10 +918,15 @@ class NModeSurfaceModel:
 
     def dipole_body_au(self, q: np.ndarray, *, max_rank: int | None = None) -> np.ndarray:
         values = _validated_shape("q", q, (self.n_modes,))
+        if np.array_equal(values, self.reference_values):
+            return np.array(self.reference_dipole_body_au, copy=True)
         total = np.array(self.reference_dipole_body_au, copy=True)
         for subset, surface in self.dipole_increments.items():
+            subset_values = values[list(subset)]
+            if np.any(subset_values == self.reference_values[list(subset)]):
+                continue
             if max_rank is None or len(subset) <= max_rank:
-                total += np.asarray(surface.evaluate(values[list(subset)]), dtype=float)
+                total += np.asarray(surface.evaluate(subset_values), dtype=float)
         return total
 
     def pes_numerical_payload(self) -> dict[str, object]:
