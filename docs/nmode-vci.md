@@ -15,9 +15,10 @@ released 1D/2D scan and VSCF workflows do not require these APIs.
   angle in radians. `TriatomicJ0KineticOperator` implements the complete
   rotationless triatomic Jacobi operator for total angular momentum `J=0`; it
   is not a general curvilinear or rovibrational kinetic-energy operator.
-- Electronic energies and fitted potentials are in Hartree. Electronic and
-  transition dipoles are signed three-component vectors in atomic units in the
-  fixed molecular body frame.
+- Electronic energies and fitted potentials are in Hartree. Raw electronic
+  dipoles are signed three-component vectors in atomic units in the input
+  Cartesian frame. Fitted surfaces and transition dipoles use the coordinate
+  map's fixed molecular body frame.
 
 ## Surface workflow
 

@@ -470,20 +470,33 @@ def nmode_model_fingerprint(model: NModePotential) -> str:
     return digest.hexdigest()
 
 
+def nmode_model_content_fingerprint(model: NModePotential) -> str:
+    """Return an all-fields fingerprint for retained model content."""
+
+    payload = {
+        "schema": "pyscf-vscf-nmode-content",
+        "schema_version": 1,
+        "scientific_fingerprint_sha256": nmode_model_fingerprint(model),
+        "provenance": to_jsonable(model.provenance),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
 def dump_nmode_model(path: Path | str, model: NModePotential) -> None:
     """Write a self-describing, fingerprinted n-mode model archive."""
 
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
     meta = {
         "schema": "pyscf-vscf-nmode",
-        "schema_version": 2,
+        "schema_version": 3,
         "coordinate_units": model.coordinate_units,
         "masses_amu": list(model.masses_amu),
         "mode_labels": list(model.mode_labels or ()),
         "metadata": to_jsonable(model.metadata),
         "pairs": [list(pair) for pair in sorted(model.two_mode_couplings_Eh)],
         "fingerprint_sha256": nmode_model_fingerprint(model),
+        "content_fingerprint_sha256": nmode_model_content_fingerprint(model),
     }
     if model.provenance:
         meta["provenance"] = to_jsonable(model.provenance)
@@ -497,11 +510,8 @@ def dump_nmode_model(path: Path | str, model: NModePotential) -> None:
         arrays[f"v1_{mode}"] = potential
     for (i, j), coupling in model.two_mode_couplings_Eh.items():
         arrays[f"v2_{i}_{j}"] = coupling
-    np.savez_compressed(
-        target,
-        meta_json=np.array(json.dumps(meta, sort_keys=True, separators=(",", ":"))),
-        **arrays,
-    )
+    arrays["meta_json"] = np.array(json.dumps(meta, sort_keys=True, separators=(",", ":")))
+    atomic_savez_compressed(path, arrays)
 
 
 def load_nmode_model(path: Path | str) -> NModePotential:
@@ -512,7 +522,8 @@ def load_nmode_model(path: Path | str) -> NModePotential:
         if "meta_json" not in data.files:
             raise ValueError(f"N-mode archive '{source}' is missing meta_json")
         meta = json.loads(str(data["meta_json"].tolist()))
-        if meta.get("schema") != "pyscf-vscf-nmode" or meta.get("schema_version") != 2:
+        schema_version = meta.get("schema_version")
+        if meta.get("schema") != "pyscf-vscf-nmode" or schema_version not in (2, 3):
             raise ValueError(f"Unsupported n-mode archive schema in '{source}'")
         labels = tuple(str(value) for value in meta["mode_labels"])
         n_modes = len(labels)
@@ -539,6 +550,14 @@ def load_nmode_model(path: Path | str) -> NModePotential:
         raise ValueError(
             f"N-mode archive fingerprint mismatch: expected {expected!r}, calculated {actual!r}"
         )
+    if schema_version == 3:
+        expected_content = str(meta.get("content_fingerprint_sha256", ""))
+        actual_content = nmode_model_content_fingerprint(model)
+        if not expected_content or actual_content != expected_content:
+            raise ValueError(
+                "N-mode archive content fingerprint mismatch: "
+                f"expected {expected_content!r}, calculated {actual_content!r}"
+            )
     return model
 
 

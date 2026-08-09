@@ -84,6 +84,27 @@ def test_subset_enumeration_is_canonical_closed_and_selected_rank_three() -> Non
         enumerate_mode_subsets(3, selected_subsets=[(1, 0)])
 
 
+def test_explicit_point_plan_subsets_reject_rank_above_three() -> None:
+    reference = np.zeros((2, 3))
+    displacements = np.eye(6)[:4].reshape((4, 2, 3))
+    coordinate_map = LinearDisplacementCoordinateMap(
+        reference,
+        coordinate_ids=("q0", "q1", "q2", "q3"),
+        units=("angstrom",) * 4,
+        reference_values=np.zeros(4),
+        displacements_A_per_unit=displacements,
+    )
+
+    with pytest.raises(ValueError, match="rank at most three"):
+        plan_nmode_points(
+            coordinate_map,
+            tuple(np.array([0.0]) for _ in range(4)),
+            _NoopProvider(),
+            nuclear_charges=(1, 1),
+            subsets=((0, 1, 2, 3),),
+        )
+
+
 def test_point_plan_deduplicates_anchored_cuts_and_retains_complete_lineage() -> None:
     coordinate_map = _water_map()
     plan = plan_nmode_points(

@@ -280,12 +280,10 @@ def plan_nmode_points(
             selected_subsets=selected_subsets,
         )
     else:
-        normalized_subsets = tuple(
-            sorted(
-                {_normalize_subset(subset, n_modes) for subset in subsets},
-                key=lambda value: (len(value), value),
-            )
-        )
+        explicit_subsets = {_normalize_subset(subset, n_modes) for subset in subsets}
+        if any(len(subset) > 3 for subset in explicit_subsets):
+            raise ValueError("N-mode point planning supports rank at most three")
+        normalized_subsets = tuple(sorted(explicit_subsets, key=lambda value: (len(value), value)))
         _require_subset_closure(normalized_subsets)
 
     provider_id = provider_scientific_fingerprint(provider)

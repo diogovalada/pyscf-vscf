@@ -43,6 +43,19 @@ class _SettingsProvider:
         raise NotImplementedError
 
 
+def test_es_settings_preserves_released_positional_field_order() -> None:
+    settings = ESSettings("hf", "sto-3g", False, "aux", 1e-9, 77, 5)
+
+    assert settings.method == "hf"
+    assert settings.basis == "sto-3g"
+    assert settings.use_density_fit is False
+    assert settings.auxbasis == "aux"
+    assert settings.scf_conv_tol == 1e-9
+    assert settings.scf_max_cycle == 77
+    assert settings.dft_grid_level == 5
+    assert settings.dispersion is None
+
+
 @pytest.mark.parametrize(
     ("name", "changed"),
     [

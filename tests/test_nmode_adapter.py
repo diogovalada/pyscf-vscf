@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from pyscf_vscf.validation import exact_nmode_dvr
 from pyscf_vscf.vscf import (
     dump_nmode_model,
     load_nmode_model,
+    nmode_model_content_fingerprint,
     nmode_model_fingerprint,
     solve_vscf_state,
 )
@@ -170,7 +172,33 @@ def test_adapter_provenance_round_trips_without_changing_released_model_identity
     path = tmp_path / "adapted.npz"
 
     assert nmode_model_fingerprint(without_provenance) == nmode_model_fingerprint(adapted)
+    assert nmode_model_content_fingerprint(without_provenance) != nmode_model_content_fingerprint(
+        adapted
+    )
     dump_nmode_model(path, adapted)
     restored = load_nmode_model(path)
     assert dict(restored.provenance) == dict(adapted.provenance)
     assert nmode_model_fingerprint(restored) == nmode_model_fingerprint(adapted)
+    assert nmode_model_content_fingerprint(restored) == nmode_model_content_fingerprint(adapted)
+
+    with np.load(path, allow_pickle=False) as archive:
+        arrays = {name: np.array(archive[name], copy=True) for name in archive.files}
+    meta = json.loads(str(arrays["meta_json"].item()))
+    legacy_meta = dict(meta)
+    legacy_meta["schema_version"] = 2
+    del legacy_meta["content_fingerprint_sha256"]
+    legacy_arrays = dict(arrays)
+    legacy_arrays["meta_json"] = np.asarray(
+        json.dumps(legacy_meta, sort_keys=True, separators=(",", ":"))
+    )
+    legacy = tmp_path / "legacy-schema-2.npz"
+    np.savez_compressed(legacy, **legacy_arrays)
+    legacy_restored = load_nmode_model(legacy)
+    assert nmode_model_fingerprint(legacy_restored) == nmode_model_fingerprint(adapted)
+
+    meta["provenance"]["source_reference_energy_Eh"] += 1e-8
+    arrays["meta_json"] = np.asarray(json.dumps(meta, sort_keys=True, separators=(",", ":")))
+    tampered = tmp_path / "tampered-adapted.npz"
+    np.savez_compressed(tampered, **arrays)
+    with pytest.raises(ValueError, match="content fingerprint mismatch"):
+        load_nmode_model(tampered)

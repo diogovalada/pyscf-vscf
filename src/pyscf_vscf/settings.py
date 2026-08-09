@@ -34,10 +34,10 @@ class ESSettings:
     basis: str = "aug-cc-pVTZ"
     use_density_fit: bool = True
     auxbasis: str | None = None
-    dispersion: str | None = None
     scf_conv_tol: float | None = None
     scf_max_cycle: int | None = None
     dft_grid_level: int | None = None
+    dispersion: str | None = None
 
 
 @dataclass(frozen=True)
