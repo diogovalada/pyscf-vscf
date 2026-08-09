@@ -197,6 +197,8 @@ class PySCFMeanFieldProvider:
                 dipole = mf.dip_moment(unit="au", verbose=0)
         provider_id = provider_scientific_fingerprint(self)
         nuclear_field_energy = float(getattr(mf, "_pyscf_vscf_nuclear_field_energy_Eh", 0.0))
+        field_vector = np.zeros(3) if request.field_au is None else request.field_au
+        field_origin = np.zeros(3) if request.field_origin_A is None else request.field_origin_A
         runtime_seconds = time.perf_counter() - started
         return ElectronicResult(
             total_energy_Eh=float(mf.e_tot) + nuclear_field_energy,
@@ -206,7 +208,13 @@ class PySCFMeanFieldProvider:
             converged=bool(mf.converged),
             point_causal_fingerprint=request.causal_fingerprint(provider_id),
             provider_scientific_fingerprint=provider_id,
-            scientific_diagnostics={},
+            scientific_diagnostics={
+                "field_au": np.asarray(field_vector, dtype=float).tolist(),
+                "field_origin_A": np.asarray(field_origin, dtype=float).tolist(),
+                "field_hamiltonian": "H(F)=H(0)-F.mu",
+                "nuclear_field_energy_Eh": nuclear_field_energy,
+                "nuclear_field_term_included": True,
+            },
             execution_diagnostics={
                 "reference_class": type(mf).__name__,
                 "scf_cycles": _optional_int(getattr(mf, "cycles", None)),

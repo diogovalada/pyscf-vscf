@@ -6,6 +6,7 @@ include DATA_LICENSE.md
 recursive-include validation_data *.json *.md *.npz *.log *.mmol *.xyz
 prune docs
 include docs/installation.md
+include docs/correlated-providers.md
 include docs/intensity-conventions.md
 include docs/nmode-vci.md
 include docs/running-validations.md
