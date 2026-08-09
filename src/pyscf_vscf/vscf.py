@@ -44,6 +44,7 @@ class NModePotential:
     metadata: Mapping[str, Any] = field(default_factory=dict)
     coordinate_units: str = "angstrom"
     provenance: Mapping[str, Any] = field(default_factory=dict)
+    coordinate_map_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         coordinates = tuple(
@@ -111,6 +112,12 @@ class NModePotential:
         object.__setattr__(self, "metadata", immutable_json_mapping(self.metadata))
         object.__setattr__(self, "provenance", immutable_json_mapping(self.provenance))
         object.__setattr__(self, "coordinate_units", "angstrom")
+        map_id = self.coordinate_map_fingerprint
+        if map_id is not None:
+            map_id = str(map_id).strip()
+            if not map_id:
+                raise ValueError("coordinate_map_fingerprint must be non-empty when present")
+        object.__setattr__(self, "coordinate_map_fingerprint", map_id)
 
     @property
     def n_modes(self) -> int:
@@ -453,6 +460,8 @@ def nmode_model_fingerprint(model: NModePotential) -> str:
         "metadata": to_jsonable(model.metadata),
         "pairs": [list(pair) for pair in sorted(model.two_mode_couplings_Eh)],
     }
+    if model.coordinate_map_fingerprint is not None:
+        header["coordinate_map_fingerprint"] = model.coordinate_map_fingerprint
     digest.update(json.dumps(header, sort_keys=True, separators=(",", ":")).encode("utf-8"))
     for array in (*model.coordinates, *model.one_mode_potentials_Eh):
         _update_array_hash(digest, array)
@@ -478,6 +487,8 @@ def dump_nmode_model(path: Path | str, model: NModePotential) -> None:
     }
     if model.provenance:
         meta["provenance"] = to_jsonable(model.provenance)
+    if model.coordinate_map_fingerprint is not None:
+        meta["coordinate_map_fingerprint"] = model.coordinate_map_fingerprint
     arrays: dict[str, np.ndarray] = {}
     for mode, (coordinate, potential) in enumerate(
         zip(model.coordinates, model.one_mode_potentials_Eh)
@@ -519,6 +530,7 @@ def load_nmode_model(path: Path | str) -> NModePotential:
         mode_labels=labels,
         metadata=meta.get("metadata", {}),
         provenance=meta.get("provenance", {}),
+        coordinate_map_fingerprint=meta.get("coordinate_map_fingerprint"),
         coordinate_units=str(meta["coordinate_units"]),
     )
     expected = str(meta.get("fingerprint_sha256", ""))

@@ -729,10 +729,11 @@ class TensorProductSurface:
         component_count = 1 if values.ndim == len(axes) else values.shape[-1]
         if len(self.diagnostics.training_max_abs_error) != component_count:
             raise ValueError("Fit diagnostics do not match surface output components")
+        backend_method = "cubic_legacy" if method == "cubic" else method
         interpolator = RegularGridInterpolator(
             axes,
             values,
-            method=method,
+            method=backend_method,
             bounds_error=True,
         )
         training_prediction = np.asarray(interpolator(_mesh_points(axes)), dtype=float).reshape(
@@ -774,6 +775,7 @@ class TensorProductSurface:
         return {
             "representation": "scipy-regular-grid-interpolator",
             "method": self.method,
+            "backend_method": "cubic_legacy" if self.method == "cubic" else self.method,
             "bounds_error": True,
             "axes": [float64_array_identity(axis) for axis in self.axes],
             "node_values": float64_array_identity(self.node_values),
@@ -1142,6 +1144,7 @@ def nmode_potential_from_surface(
         two_mode_couplings_Eh=couplings,
         mode_labels=labels,
         provenance=provenance,
+        coordinate_map_fingerprint=model.coordinate_map_fingerprint,
         coordinate_units="angstrom",
     )
 
@@ -1281,10 +1284,11 @@ def _fit_tensor_surface(
 ) -> TensorProductSurface:
     normalized_axes = tuple(_validated_axis("fit axis", axis) for axis in axes)
     values = np.asarray(node_values, dtype=float)
+    backend_method = "cubic_legacy" if method == "cubic" else method
     interpolator = RegularGridInterpolator(
         normalized_axes,
         values,
-        method=method,
+        method=backend_method,
         bounds_error=True,
     )
     training_prediction = np.asarray(interpolator(_mesh_points(normalized_axes)), dtype=float)

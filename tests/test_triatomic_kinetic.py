@@ -58,7 +58,9 @@ def _surface(
     *,
     method: str,
 ) -> TensorProductSurface:
-    interpolator = RegularGridInterpolator((axis,), values, method=method, bounds_error=True)
+    backend_method = "cubic_legacy" if method == "cubic" else method
+    kwargs = {"method": backend_method, "bounds_error": True}
+    interpolator = RegularGridInterpolator((axis,), values, **kwargs)
     residual = np.asarray(interpolator(axis[:, None])).reshape(values.shape) - values
     components = 1 if values.ndim == 1 else values.shape[-1]
     maximum = tuple(
