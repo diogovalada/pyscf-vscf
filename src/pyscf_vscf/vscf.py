@@ -22,6 +22,8 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from ._arrays import immutable_array
+from ._artifacts import atomic_savez_compressed
 from ._identity import immutable_json_mapping, to_jsonable
 from .constants import HARTREE_TO_CM
 from .dvr import sinc_kinetic_1d
@@ -106,7 +108,7 @@ class NModePotential:
             MappingProxyType({pair: _readonly_copy(values) for pair, values in couplings.items()}),
         )
         object.__setattr__(self, "mode_labels", labels)
-        object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+        object.__setattr__(self, "metadata", immutable_json_mapping(self.metadata))
         object.__setattr__(self, "provenance", immutable_json_mapping(self.provenance))
         object.__setattr__(self, "coordinate_units", "angstrom")
 
@@ -448,7 +450,7 @@ def nmode_model_fingerprint(model: NModePotential) -> str:
         "coordinate_units": model.coordinate_units,
         "masses_amu": model.masses_amu,
         "mode_labels": model.mode_labels,
-        "metadata": dict(model.metadata),
+        "metadata": to_jsonable(model.metadata),
         "pairs": [list(pair) for pair in sorted(model.two_mode_couplings_Eh)],
     }
     digest.update(json.dumps(header, sort_keys=True, separators=(",", ":")).encode("utf-8"))
@@ -470,7 +472,7 @@ def dump_nmode_model(path: Path | str, model: NModePotential) -> None:
         "coordinate_units": model.coordinate_units,
         "masses_amu": list(model.masses_amu),
         "mode_labels": list(model.mode_labels or ()),
-        "metadata": dict(model.metadata),
+        "metadata": to_jsonable(model.metadata),
         "pairs": [list(pair) for pair in sorted(model.two_mode_couplings_Eh)],
         "fingerprint_sha256": nmode_model_fingerprint(model),
     }
@@ -603,9 +605,7 @@ def _positive_finite(name: str, value: float) -> float:
 
 
 def _readonly_copy(array: np.ndarray) -> np.ndarray:
-    copied = np.asarray(array, dtype=float).copy()
-    copied.flags.writeable = False
-    return copied
+    return immutable_array(array, dtype=float)
 
 
 def _phase_aligned(candidate: np.ndarray, reference: np.ndarray) -> np.ndarray:
