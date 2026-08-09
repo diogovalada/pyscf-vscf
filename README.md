@@ -7,6 +7,8 @@ PySCF electronic-structure backend. It includes:
 
 - state-specific VSCF for n-mode Hamiltonians with one-mode potentials and
   explicit two-mode coupling corrections;
+- fitted 1MR/2MR and selected 3MR scalar/vector n-mode surfaces;
+- VCI on converged VSCF modals and a complete triatomic Jacobi `J=0` operator;
 - 1D and 2D sinc-DVR solvers;
 - frozen local-bond, normal-coordinate, and constrained relaxed scans;
 - harmonic analysis and geometry optimization;
@@ -14,8 +16,8 @@ PySCF electronic-structure backend. It includes:
   intensities; and
 - provenance-checked PES/DMS caches.
 
-The package does not implement VCI, a full-dimensional PES generator, or
-general curvilinear kinetic-energy operators.
+The package does not implement a full-dimensional PES generator or a general
+curvilinear or rovibrational kinetic-energy operator.
 
 ## Install
 
@@ -93,6 +95,10 @@ See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v
 [installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/installation.md), and
 [validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/running-validations.md)
 for details.
+
+The evolving coordinate, fitted n-mode, triatomic `J=0`, VCI, and vector-DMS
+interfaces are documented in the
+[advanced n-mode and VCI guide](https://github.com/diogovalada/pyscf-vscf/blob/main/docs/nmode-vci.md).
 
 ## Validation
 

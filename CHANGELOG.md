@@ -5,6 +5,23 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- Backend-neutral electronic point identities, immutable result artifacts, and
+  reusable bond, linear-displacement, and triatomic valence coordinate maps.
+- Anchored fitted 1MR/2MR and selected 3MR scalar/vector n-mode surfaces with an
+  explicit adapter to the released rectilinear VSCF Hamiltonian.
+- A complete rotationless triatomic Jacobi `J=0` kinetic operator, VCI on
+  converged VSCF modals, and signed vector-DMS transition moments.
+- A portable analytic HOF end-to-end regression, an advanced API guide, and a
+  packaged PySCF-free VCI example.
+
+### Changed
+
+- Advanced generated artifacts bind numerical surfaces, source lineage,
+  coordinate maps, Hamiltonians, modal bases, and VCI results through separate
+  fail-closed fingerprint domains.
+
 ## [0.1.0] - 2026-08-14
 
 ### Changed

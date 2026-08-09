@@ -2,24 +2,24 @@
 
 ## Upgrades
 
-The minimum honest `pyscf-vscf` alpha scope is implemented: a multi-mode data
-model, 1MR/2MR potentials, state-specific VSCF iteration, convergence
-diagnostics, transition energies, and a packaged runnable example.
+The package now includes fitted scalar/vector n-mode surfaces, reusable
+coordinate maps, a complete triatomic Jacobi `J=0` kinetic operator, VCI on
+converged VSCF modals, and signed vector-DMS transition moments. These advanced
+interfaces remain evolving alpha APIs.
 
 The following capabilities can wait for later releases:
 
-- VCI on top of converged VSCF modals, with polyad and energy pruning.
 - Backend-neutral VPT2/GVPT2 support, staged from a solver that consumes
   user-supplied harmonic, cubic, and semi-diagonal quartic force fields to
   optional backend adapters for automatic force-field generation. Reliable
   resonance detection, deperturbation, and polyad diagonalization require
   independent reference benchmarks before being exposed as supported features.
-- Dipole-surface n-mode expansion and VSCF/VCI transition intensities.
 - Automated PySCF generation of general n-mode PES/DMS expansions.
 - GPU4PySCF acceleration for electronic surface generation, after persistent
   GPU-worker execution, CPU/GPU parity, and CUDA CI can be tested on supported
   NVIDIA hardware.
-- Curvilinear and coordinate-dependent kinetic-energy operators.
+- General polyatomic curvilinear, rovibrational, and coordinate-dependent
+  kinetic-energy operators beyond the current triatomic `J=0` implementation.
 - Full-dimensional workflows and broader chemical-coordinate support.
 - Exactly constrained relaxed local-bond (`lbs-relaxed`) scans.
 - DIIS or quasi-Newton acceleration for difficult VSCF iterations.
