@@ -68,6 +68,90 @@ def _hdo_molecule():
     )
 
 
+@pytest.mark.pyscf
+def test_mean_field_provider_agrees_with_released_energy_dipole() -> None:
+    _import_pyscf_or_skip()
+    from pyscf_vscf.electronic import (
+        AU_DIPOLE_TO_DEBYE,
+        ElectronicPointRequest,
+        energy_dipole,
+    )
+    from pyscf_vscf.molecule import Molecule
+
+    backend = importlib.import_module(BACKEND_MODULE)
+    molecule = Molecule.from_arrays(
+        ["H", "F"],
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 0.92]],
+        label="HF",
+    )
+    settings = _hf_sto3g_settings(backend)
+    provider = backend.PySCFMeanFieldProvider(settings, threads=1, max_memory_mb=512)
+    request = ElectronicPointRequest(
+        nuclear_charges=(1, 9),
+        coordinates_A=molecule.coords,
+    )
+
+    expected_energy, expected_dipole_debye = energy_dipole(molecule, settings)
+    result = provider.evaluate(request)
+
+    assert result.total_energy_Eh == pytest.approx(expected_energy, abs=1e-12)
+    np.testing.assert_allclose(
+        result.dipole_au * AU_DIPOLE_TO_DEBYE,
+        expected_dipole_debye,
+        rtol=0.0,
+        atol=1e-11,
+    )
+    assert result.dipole_unit == "atomic_unit"
+    assert result.dipole_frame == "input_cartesian"
+
+
+@pytest.mark.pyscf
+def test_mean_field_finite_difference_matches_signed_analytic_dipole_and_origin() -> None:
+    _import_pyscf_or_skip()
+    from pyscf_vscf.electronic import ElectronicPointRequest
+    from pyscf_vscf.molecule import Molecule
+
+    backend = importlib.import_module(BACKEND_MODULE)
+    molecule = Molecule.from_arrays(
+        ["H", "F"],
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 0.92]],
+        label="HF",
+    )
+    settings = _hf_sto3g_settings(backend)
+    provider = backend.PySCFMeanFieldProvider(settings, threads=1, max_memory_mb=512)
+    base = {
+        "nuclear_charges": (1, 9),
+        "coordinates_A": molecule.coords,
+    }
+    analytic = provider.evaluate(ElectronicPointRequest(**base))
+    step = 1e-4
+    plus_request = ElectronicPointRequest(
+        **base,
+        requested_properties=("energy",),
+        field_au=[0.0, 0.0, step],
+    )
+    minus_request = ElectronicPointRequest(
+        **base,
+        requested_properties=("energy",),
+        field_au=[0.0, 0.0, -step],
+    )
+    shifted_request = ElectronicPointRequest(
+        **base,
+        requested_properties=("energy",),
+        field_au=[0.0, 0.0, step],
+        field_origin_A=[0.2, -0.1, 0.3],
+    )
+    plus = provider.evaluate(plus_request)
+    minus = provider.evaluate(minus_request)
+    shifted = provider.evaluate(shifted_request)
+
+    finite_difference_dipole = -(plus.total_energy_Eh - minus.total_energy_Eh) / (2 * step)
+    assert finite_difference_dipole == pytest.approx(analytic.dipole_au[2], abs=2e-5)
+    assert shifted.total_energy_Eh == pytest.approx(plus.total_energy_Eh, abs=1e-10)
+    assert plus.point_causal_fingerprint != minus.point_causal_fingerprint
+    assert plus.point_causal_fingerprint != shifted.point_causal_fingerprint
+
+
 def test_normal_relaxed_point_enforces_exact_constraint_without_importing_pyscf(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

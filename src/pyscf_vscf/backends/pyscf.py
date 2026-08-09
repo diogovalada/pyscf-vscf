@@ -8,15 +8,24 @@ that need the backend raise :class:`BackendUnavailableError` when it is missing.
 from __future__ import annotations
 
 import sys
+import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
+from socket import gethostname
 from typing import Any
 
 import numpy as np
 
 from ..constants import ANG_TO_BOHR, MASS_AMU, atomic_mass_amu
+from ..cache import runtime_provenance
+from ..electronic import (
+    ElectronicPointRequest,
+    ElectronicResult,
+    provider_scientific_fingerprint,
+)
+from .._identity import immutable_json_mapping, to_jsonable
 from ..molecule import Molecule
-from ..settings import ESSettings, default_auxbasis
+from ..settings import ESSettings, coerce_es_settings, default_auxbasis, normalize_dispersion
 
 
 _WARNED_ONCE: set[str] = set()
@@ -39,6 +48,176 @@ class NormalRelaxedPointResult:
     converged: bool
     n_iterations: int
     message: str
+
+
+@dataclass(frozen=True)
+class _MeanFieldSettings:
+    method: str
+    basis: str
+    use_density_fit: bool
+    auxbasis: str | None
+    dispersion: str | None
+    scf_conv_tol: float
+    scf_max_cycle: int
+    dft_grid_level: int | None
+
+    @classmethod
+    def from_value(cls, value: object) -> _MeanFieldSettings:
+        settings = coerce_es_settings(value)
+        method = str(settings.method).strip()
+        basis = str(settings.basis).strip()
+        if not method or not basis:
+            raise ValueError("Electronic method and basis must be non-empty")
+        use_density_fit = bool(settings.use_density_fit)
+        auxbasis = None
+        if use_density_fit:
+            auxbasis = settings.auxbasis or default_auxbasis(basis)
+            auxbasis = str(auxbasis).strip()
+            if not auxbasis:
+                raise ValueError("Density fitting requires a non-empty auxiliary basis")
+        dispersion = normalize_dispersion(settings.dispersion)
+        tolerance = 1e-10 if settings.scf_conv_tol is None else float(settings.scf_conv_tol)
+        max_cycle = 50 if settings.scf_max_cycle is None else int(settings.scf_max_cycle)
+        if not np.isfinite(tolerance) or tolerance <= 0.0:
+            raise ValueError("scf_conv_tol must be finite and positive")
+        if max_cycle <= 0:
+            raise ValueError("scf_max_cycle must be positive")
+        grid_level = settings.dft_grid_level
+        if method.lower() == "hf":
+            grid_level = None
+        elif grid_level is None:
+            grid_level = 3
+        if grid_level is not None and int(grid_level) < 0:
+            raise ValueError("dft_grid_level must be non-negative")
+        return cls(
+            method=method,
+            basis=basis,
+            use_density_fit=use_density_fit,
+            auxbasis=auxbasis,
+            dispersion=dispersion,
+            scf_conv_tol=tolerance,
+            scf_max_cycle=max_cycle,
+            dft_grid_level=None if grid_level is None else int(grid_level),
+        )
+
+
+@dataclass(frozen=True)
+class PySCFMeanFieldProvider:
+    """Mean-field electronic points with split scientific and execution identity."""
+
+    settings: object
+    threads: int = 1
+    max_memory_mb: int = 4000
+    user_annotations: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "settings", _MeanFieldSettings.from_value(self.settings))
+        threads = int(self.threads)
+        memory = int(self.max_memory_mb)
+        if threads <= 0 or memory <= 0:
+            raise ValueError("threads and max_memory_mb must be positive")
+        object.__setattr__(self, "threads", threads)
+        object.__setattr__(self, "max_memory_mb", memory)
+        object.__setattr__(
+            self,
+            "user_annotations",
+            immutable_json_mapping(self.user_annotations),
+        )
+
+    def scientific_settings_payload(self) -> Mapping[str, object]:
+        """Return every setting that can change the intended calculation."""
+
+        return {
+            "schema": "pyscf-vscf-provider-settings",
+            "schema_version": 1,
+            "backend_family": "pyscf",
+            "provider": "mean-field",
+            "reference_policy": "restricted-if-spin-zero-otherwise-unrestricted",
+            "settings": asdict(self.settings),
+            "frozen_core_policy": "not-applicable",
+            "orbital_policy": "self-consistent-canonical",
+            "post_scf_tolerance": None,
+            "integral_policy": "pyscf-default-in-core-or-direct",
+            "field_convention": {
+                "field_units": "atomic_unit",
+                "origin_units": "angstrom",
+                "hamiltonian": "H(F)=H(0)-F.mu",
+                "nuclear_term": "included-in-total-energy",
+            },
+        }
+
+    def execution_provenance(self) -> Mapping[str, object]:
+        """Return runtime resources and software versions outside causal identity."""
+
+        return {
+            "threads_requested": self.threads,
+            "max_memory_mb": self.max_memory_mb,
+            "host": gethostname(),
+            "user_annotations": to_jsonable(self.user_annotations),
+            "runtime": runtime_provenance(),
+        }
+
+    def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult:
+        """Evaluate one immutable request without changing its causal identity."""
+
+        if request.electronic_state != "ground":
+            raise ValueError("PySCFMeanFieldProvider supports only electronic_state='ground'")
+        if request.field_au is not None and "dipole" in request.requested_properties:
+            raise ValueError("Finite-field requests support energy only")
+        if "dipole" in request.requested_properties and request.charge != 0:
+            raise ValueError(
+                "Charged-system dipoles require an independently selected origin convention"
+            )
+
+        started = time.perf_counter()
+        actual_threads = _configure_pyscf_threads(self.threads)
+        _, _, _, elements = _require_pyscf()
+        symbols = [elements._symbol(charge) for charge in request.nuclear_charges]
+        molecule = Molecule.from_arrays(
+            symbols,
+            request.coordinates_A,
+            charge=request.charge,
+            spin=request.spin,
+            label="electronic-point",
+        )
+        pmol = molecule_to_pyscf(molecule, self.settings.basis)
+        pmol.max_memory = self.max_memory_mb
+        mf = make_mean_field(
+            pmol,
+            self.settings,
+            field_au=request.field_au,
+            field_origin_A=request.field_origin_A,
+        )
+        dipole = None
+        if "dipole" in request.requested_properties:
+            density = mf.make_rdm1()
+            try:
+                dipole = mf.dip_moment(dm=density, unit="au", verbose=0)
+            except TypeError:
+                dipole = mf.dip_moment(unit="au", verbose=0)
+        provider_id = provider_scientific_fingerprint(self)
+        nuclear_field_energy = float(getattr(mf, "_pyscf_vscf_nuclear_field_energy_Eh", 0.0))
+        runtime_seconds = time.perf_counter() - started
+        return ElectronicResult(
+            total_energy_Eh=float(mf.e_tot) + nuclear_field_energy,
+            dipole_au=None if dipole is None else np.asarray(dipole, dtype=float),
+            dipole_unit=None if dipole is None else "atomic_unit",
+            dipole_frame=None if dipole is None else "input_cartesian",
+            converged=bool(mf.converged),
+            point_causal_fingerprint=request.causal_fingerprint(provider_id),
+            provider_scientific_fingerprint=provider_id,
+            scientific_diagnostics={},
+            execution_diagnostics={
+                "reference_class": type(mf).__name__,
+                "scf_cycles": _optional_int(getattr(mf, "cycles", None)),
+                "runtime_seconds": runtime_seconds,
+                "max_rss_mb": _max_rss_mb(),
+                "threads_actual": actual_threads,
+                "max_memory_mb": self.max_memory_mb,
+                "warnings": [],
+            },
+            provenance=self.execution_provenance(),
+        )
 
 
 def warn_once(key: str, msg: str) -> None:
@@ -102,7 +281,13 @@ def molecule_to_pyscf(molecule: Any, basis: str = "aug-cc-pVTZ"):
     return pmol
 
 
-def make_mean_field(pmol: Any, cfg: Any):
+def make_mean_field(
+    pmol: Any,
+    cfg: Any,
+    *,
+    field_au: np.ndarray | None = None,
+    field_origin_A: np.ndarray | None = None,
+):
     """Create and run a PySCF mean-field object from an ESSettings-like config."""
 
     _, scf, dft, _ = _require_pyscf()
@@ -127,9 +312,22 @@ def make_mean_field(pmol: Any, cfg: Any):
             )
             raise RuntimeError(msg) from exc
 
+    dispersion = normalize_dispersion(_cfg_get(cfg, "dispersion", None))
+    if dispersion is not None:
+        _require_pyscf_dispersion(dispersion)
+        mf.disp = dispersion
+
     dft_grid_level = _cfg_get(cfg, "dft_grid_level", None)
     if dft_grid_level is not None and is_dft:
         mf.grids.level = int(dft_grid_level)
+
+    nuclear_field_energy = _apply_electric_field(
+        mf,
+        pmol,
+        np.zeros(3) if field_au is None else field_au,
+        np.zeros(3) if field_origin_A is None else field_origin_A,
+    )
+    mf._pyscf_vscf_nuclear_field_energy_Eh = nuclear_field_energy
 
     mf.conv_tol = 1e-10
 
@@ -146,6 +344,41 @@ def make_mean_field(pmol: Any, cfg: Any):
     if not mf.converged:
         raise RuntimeError("SCF did not converge")
     return mf
+
+
+def _apply_electric_field(
+    mean_field: Any,
+    molecule: Any,
+    field_au: np.ndarray,
+    origin_A: np.ndarray,
+) -> float:
+    """Apply ``H(F)=H(0)-F.mu`` and return the nuclear-field energy."""
+
+    field_vector = np.asarray(field_au, dtype=float)
+    origin = np.asarray(origin_A, dtype=float)
+    if field_vector.shape != (3,) or origin.shape != (3,):
+        raise ValueError("Electric field and origin must be three-component vectors")
+    if not np.all(np.isfinite(field_vector)) or not np.all(np.isfinite(origin)):
+        raise ValueError("Electric field and origin must be finite")
+    if not np.any(field_vector):
+        return 0.0
+    origin_bohr = origin * ANG_TO_BOHR
+    with molecule.with_common_orig(origin_bohr):
+        position_ao = molecule.intor_symmetric("int1e_r", comp=3)
+    field_hcore = np.einsum("x,xij->ij", field_vector, position_ao, optimize=True)
+    base_get_hcore = mean_field.get_hcore
+
+    def get_hcore(mol=None):
+        return base_get_hcore(mol) + field_hcore
+
+    mean_field.get_hcore = get_hcore
+    nuclear_dipole = np.einsum(
+        "i,ix->x",
+        molecule.atom_charges(),
+        molecule.atom_coords() - origin_bohr[None, :],
+        optimize=True,
+    )
+    return -float(field_vector @ nuclear_dipole)
 
 
 def mean_field_dispersion(mf: Any) -> str | None:
@@ -324,6 +557,15 @@ def _require_pyscf():
     return gto, scf, dft, elements
 
 
+def _require_pyscf_dispersion(dispersion: str) -> None:
+    try:
+        import pyscf.dispersion  # noqa: F401
+    except Exception as exc:
+        raise BackendUnavailableError(
+            f"Dispersion was requested ({dispersion!r}) but pyscf.dispersion is unavailable"
+        ) from exc
+
+
 def _analysis_masses(molecule: Any, symbols: list[str]) -> list[float]:
     analysis_masses = getattr(molecule, "analysis_masses", None)
     if callable(analysis_masses):
@@ -357,10 +599,37 @@ def _default_pyscf_masses(symbols: list[str], gto: Any, elements: Any) -> list[f
     return result
 
 
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
+
+
+def _configure_pyscf_threads(threads: int) -> int:
+    try:
+        from pyscf import lib
+    except Exception as exc:
+        raise BackendUnavailableError(
+            "PySCF is unavailable. Reinstall pyscf-vscf and its required dependencies."
+        ) from exc
+    lib.num_threads(int(threads))
+    return int(lib.num_threads())
+
+
+def _max_rss_mb() -> float | None:
+    try:
+        import resource
+    except ImportError:
+        return None
+    maximum = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    if sys.platform == "darwin":
+        return maximum / (1024.0 * 1024.0)
+    return maximum / 1024.0
+
+
 __all__ = [
     "BackendUnavailableError",
     "ESSettings",
     "NormalRelaxedPointResult",
+    "PySCFMeanFieldProvider",
     "default_auxbasis",
     "electronic_symbol",
     "energy_gradient_at_coords_bohr",

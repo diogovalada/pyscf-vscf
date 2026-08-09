@@ -34,6 +34,7 @@ class ESSettings:
     basis: str = "aug-cc-pVTZ"
     use_density_fit: bool = True
     auxbasis: str | None = None
+    dispersion: str | None = None
     scf_conv_tol: float | None = None
     scf_max_cycle: int | None = None
     dft_grid_level: int | None = None
@@ -103,6 +104,17 @@ def default_auxbasis(main_basis: str) -> str:
     if bas.startswith("def2-tzvp"):
         return "def2-universal-jkfit"
     return "weigend+etb"
+
+
+def normalize_dispersion(value: str | None) -> str | None:
+    """Normalize an optional explicit PySCF dispersion correction label."""
+
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() == "none":
+        return None
+    return text.lower()
 
 
 def derive_parallel_settings(
@@ -231,6 +243,7 @@ __all__ = [
     "derive_parallel_settings",
     "format_runtime",
     "log",
+    "normalize_dispersion",
     "thread_env_updates",
     "warn",
     "warn_once",

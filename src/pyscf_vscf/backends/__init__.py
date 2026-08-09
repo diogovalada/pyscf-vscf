@@ -11,6 +11,7 @@ electronic_symbol = _pyscf_backend.electronic_symbol
 is_available = _pyscf_backend.is_available
 make_mean_field = _pyscf_backend.make_mean_field
 molecule_to_pyscf = _pyscf_backend.molecule_to_pyscf
+PySCFMeanFieldProvider = _pyscf_backend.PySCFMeanFieldProvider
 
 del _import_module, _pyscf_backend
 
@@ -22,4 +23,5 @@ __all__ = [
     "is_available",
     "make_mean_field",
     "molecule_to_pyscf",
+    "PySCFMeanFieldProvider",
 ]
