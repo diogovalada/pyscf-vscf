@@ -374,3 +374,48 @@ def test_h2_ccsd_perturbative_triples_smoke() -> None:
     assert diagnostics["d1_diagnostic"] >= 0.0
     assert result.execution_diagnostics["actual_integral_path"] in {"incore", "outcore"}
     assert result.execution_diagnostics["runtime_seconds"] >= 0.0
+
+
+@pytest.mark.pyscf
+def test_h2_density_fitted_ccsd_perturbative_triples_smoke() -> None:
+    result = PySCFCCSDPerturbativeTriplesProvider(
+        CCSDPerturbativeTriplesSettings(
+            basis="sto-3g",
+            density_fit=True,
+            auxiliary_basis="weigend",
+            scf_conv_tol=1e-11,
+            cc_conv_tol=1e-10,
+        ),
+        threads=1,
+    ).evaluate(_h2_request())
+
+    diagnostics = result.scientific_diagnostics
+    assert result.converged
+    assert np.isfinite(result.total_energy_Eh)
+    assert diagnostics["effective_method"] == "RHF-DF-CCSD(T)"
+    assert diagnostics["density_fitting"] is True
+    assert diagnostics["scf_density_fitting"] is False
+    assert diagnostics["effective_auxiliary_basis"] == "weigend"
+    assert diagnostics["triples_completed"] is True
+    assert result.execution_diagnostics["actual_integral_path"] == "density-fitted"
+
+
+@pytest.mark.pyscf
+def test_h2_outcore_ccsd_perturbative_triples_smoke() -> None:
+    result = PySCFCCSDPerturbativeTriplesProvider(
+        CCSDPerturbativeTriplesSettings(
+            basis="sto-3g",
+            integral_policy="outcore",
+            scf_conv_tol=1e-11,
+            cc_conv_tol=1e-10,
+        ),
+        threads=1,
+    ).evaluate(_h2_request())
+
+    diagnostics = result.scientific_diagnostics
+    assert result.converged
+    assert np.isfinite(result.total_energy_Eh)
+    assert diagnostics["effective_method"] == "RHF-CCSD(T)"
+    assert diagnostics["integral_policy"] == "outcore"
+    assert diagnostics["triples_completed"] is True
+    assert result.execution_diagnostics["actual_integral_path"] == "outcore"
