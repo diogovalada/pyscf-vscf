@@ -22,6 +22,7 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from ._identity import immutable_json_mapping, to_jsonable
 from .constants import HARTREE_TO_CM
 from .dvr import sinc_kinetic_1d
 
@@ -40,6 +41,7 @@ class NModePotential:
     mode_labels: tuple[str, ...] | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     coordinate_units: str = "angstrom"
+    provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         coordinates = tuple(
@@ -105,6 +107,7 @@ class NModePotential:
         )
         object.__setattr__(self, "mode_labels", labels)
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+        object.__setattr__(self, "provenance", immutable_json_mapping(self.provenance))
         object.__setattr__(self, "coordinate_units", "angstrom")
 
     @property
@@ -471,6 +474,8 @@ def dump_nmode_model(path: Path | str, model: NModePotential) -> None:
         "pairs": [list(pair) for pair in sorted(model.two_mode_couplings_Eh)],
         "fingerprint_sha256": nmode_model_fingerprint(model),
     }
+    if model.provenance:
+        meta["provenance"] = to_jsonable(model.provenance)
     arrays: dict[str, np.ndarray] = {}
     for mode, (coordinate, potential) in enumerate(
         zip(model.coordinates, model.one_mode_potentials_Eh)
@@ -511,6 +516,7 @@ def load_nmode_model(path: Path | str) -> NModePotential:
         two_mode_couplings_Eh=couplings,
         mode_labels=labels,
         metadata=meta.get("metadata", {}),
+        provenance=meta.get("provenance", {}),
         coordinate_units=str(meta["coordinate_units"]),
     )
     expected = str(meta.get("fingerprint_sha256", ""))
