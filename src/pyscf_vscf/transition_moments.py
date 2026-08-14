@@ -27,7 +27,12 @@ from .kinetic import (
     TriatomicJacobiTransform,
     _jacobi_valence_grid,
 )
-from .nmode import ModeSubset, NModeSurfaceModel, nmode_dms_fingerprint
+from .nmode import (
+    ModeSubset,
+    NModeSurfaceModel,
+    _coordinate_references_match,
+    nmode_dms_fingerprint,
+)
 from .spectra import einstein_a_from_debye, integrated_cross_section_omega
 from .vci import (
     Configuration,
@@ -616,7 +621,7 @@ def dipole_on_jacobi_grid(
         raise ValueError("Source coordinate map fingerprint does not match the DMS model")
     if tuple(coordinate_map.coordinate_ids) != model.coordinate_ids:
         raise ValueError("Source coordinate IDs do not match the DMS model")
-    if not np.array_equal(coordinate_map.reference_values, model.reference_values):
+    if not _coordinate_references_match(coordinate_map.reference_values, model.reference_values):
         raise ValueError("Source coordinate reference does not match the DMS model")
     if not isinstance(hamiltonian, TriatomicJ0Hamiltonian):
         raise TypeError("hamiltonian must be a TriatomicJ0Hamiltonian")

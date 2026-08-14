@@ -20,7 +20,7 @@ from ._identity import (
 from .constants import AMU, ANG_TO_BOHR
 from .coordinates import TriatomicValenceCoordinateMap, coordinate_map_fingerprint
 from .dvr import sinc_kinetic_1d
-from .nmode import NModeSurfaceModel, nmode_pes_fingerprint
+from .nmode import NModeSurfaceModel, _coordinate_references_match, nmode_pes_fingerprint
 
 
 @runtime_checkable
@@ -525,7 +525,7 @@ def potential_on_jacobi_grid(
         raise ValueError("Source coordinate map fingerprint does not match the PES model")
     if tuple(coordinate_map.coordinate_ids) != model.coordinate_ids:
         raise ValueError("Source coordinate IDs do not match the PES model")
-    if not np.array_equal(coordinate_map.reference_values, model.reference_values):
+    if not _coordinate_references_match(coordinate_map.reference_values, model.reference_values):
         raise ValueError("Source coordinate reference does not match the PES model")
     _, valence = _jacobi_valence_grid(coordinate_map, transform, kinetic)
     potential = np.empty(kinetic.shape, dtype=float)

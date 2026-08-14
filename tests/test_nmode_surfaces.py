@@ -10,6 +10,7 @@ from pyscf_vscf.coordinates import LinearDisplacementCoordinateMap
 from pyscf_vscf.electronic import ElectronicPointRequest, ElectronicResult
 from pyscf_vscf.nmode import (
     HeldOutCutSamples,
+    _coordinate_references_match,
     assemble_nmode_samples,
     dump_nmode_surface,
     fit_nmode_surface,
@@ -171,6 +172,14 @@ def test_cubic_fit_reconstructs_polynomial_pes_vector_dms_and_held_out_points() 
     diagnostics = model.energy_increments[(0, 1, 2)].diagnostics
     assert diagnostics.n_held_out_points == 2
     assert max(diagnostics.held_out_max_abs_error or ()) < 2e-12
+
+
+def test_surface_coordinate_reference_binding_allows_only_roundoff() -> None:
+    reference = np.array([0.98, 0.98, 1.82])
+
+    assert _coordinate_references_match(reference, reference + 5e-13)
+    assert not _coordinate_references_match(reference, reference + 2e-12)
+    assert not _coordinate_references_match(reference, reference[:2])
 
 
 def test_inclusion_exclusion_recovers_pair_and_triple_increments_without_double_counting() -> None:

@@ -39,6 +39,17 @@ ModeSubset = tuple[int, ...]
 LineageKey = tuple[ModeSubset, tuple[int, ...]]
 NMODE_POINT_PLAN_SCHEMA_VERSION = 1
 NMODE_SURFACE_SCHEMA_VERSION = 1
+_COORDINATE_REFERENCE_ATOL = 1e-12
+
+
+def _coordinate_references_match(left: np.ndarray, right: np.ndarray) -> bool:
+    """Return whether coordinate references agree within reconstruction roundoff."""
+
+    left_array = np.asarray(left, dtype=float)
+    right_array = np.asarray(right, dtype=float)
+    return left_array.shape == right_array.shape and bool(
+        np.allclose(left_array, right_array, rtol=0.0, atol=_COORDINATE_REFERENCE_ATOL)
+    )
 
 
 def enumerate_mode_subsets(
@@ -817,7 +828,7 @@ class NModeSurfaceModel:
         if tuple(coordinate_map.coordinate_ids) != ids or tuple(coordinate_map.units) != units:
             raise ValueError("Coordinate order or units do not match the coordinate map")
         reference = _validated_shape("reference_values", self.reference_values, (len(ids),))
-        if not np.array_equal(reference, coordinate_map.reference_values):
+        if not _coordinate_references_match(reference, coordinate_map.reference_values):
             raise ValueError("Reference values do not match the coordinate map")
         reference_energy = float(self.reference_energy_Eh)
         if not np.isfinite(reference_energy):
