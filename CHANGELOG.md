@@ -5,6 +5,13 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-14
+
+### Changed
+
+- Promoted the reviewed `0.1.0a7` code to the first final `0.1` release. The
+  numerical methods and archived scientific results are unchanged.
+
 ## [0.1.0a7] - 2026-08-08
 
 ### Changed
@@ -127,7 +134,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a7...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a7...v0.1.0
 [0.1.0a7]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a6...v0.1.0a7
 [0.1.0a6]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...v0.1.0a6
 [0.1.0a5]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a4...v0.1.0a5

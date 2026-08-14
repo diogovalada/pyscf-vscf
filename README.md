@@ -89,9 +89,9 @@ control reuse; isotope masses, labels, runtime versions, and vibrational
 analysis policy do not invalidate the same Born-Oppenheimer surface. Array
 checksums are always verified.
 
-See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/intensity-conventions.md),
-[installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/installation.md), and
-[validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0a7/docs/running-validations.md)
+See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/intensity-conventions.md),
+[installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/installation.md), and
+[validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/running-validations.md)
 for details.
 
 ## Validation

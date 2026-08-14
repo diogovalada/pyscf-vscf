@@ -15,7 +15,7 @@
   },
   "method": "assigned cached-grid convergence and VSCF-vs-exact-DVR molecular benchmark; no electronic-structure recomputation",
   "nmax": 12,
-  "package_version": "0.1.0a7",
+  "package_version": "0.1.0",
   "source_manifest_sha256": "0d9ec8557f02fc10495dd64680a9eb2d5bf71027ed1c1761572f98f1485fdb8d",
   "systems": {
     "D2O": {
