@@ -98,6 +98,30 @@ The adapter rejects rank-3 energy increments because the separable
 instead use `TriatomicJacobiTransform`, `TriatomicJ0KineticOperator`, and
 `potential_on_jacobi_grid` from `pyscf_vscf.kinetic`.
 
+Analytic triatomic surfaces can bypass n-mode tensors and interpolation with
+`potential_on_jacobi_grid_from_callable` and
+`dipole_on_jacobi_grid_from_callable`. Both callables receive one vectorized
+`(..., 3)` array in the map's ordered Angstrom, Angstrom, radian convention.
+The PES returns absolute Hartree energies with shape `(...)`; projection
+subtracts a separate evaluation at the map reference. The DMS returns
+`(..., 3)` atomic-unit vectors in the map's fixed package body frame and is
+stored as the reference vector plus one full-rank increment. Callers must
+supply stable, non-empty scientific source fingerprints: Python callable
+identity is deliberately excluded. Each result also binds the exact map,
+mass-dependent transform, solver grid, and, for the DMS, Hamiltonian.
+The fixed-frame axes are the columns of `coordinate_map.frame_to_lab`: axis 0
+points from the center to `outer_atom_1` in the reference geometry, axis 1 is
+the in-plane orthogonal direction toward `outer_atom_2`, and axis 2 is their
+right-handed cross product. No lab-frame, Eckart-frame, molecular-bisector, or
+other geometry-dependent DMS rotation is performed; the callable must return
+components already transformed into these fixed axes.
+
+For the strongest DMS provenance checks, construct the Hamiltonian with
+`TriatomicJ0Hamiltonian.from_projection`. A Hamiltonian built directly from an
+unbound analytical potential array has no source map or transform fingerprint,
+so callable DMS projection can bind the kinetic grid and Hamiltonian but cannot
+verify those absent source identities.
+
 ## VCI and transitions
 
 Build converged ground-state modals and solve a deterministic pruned VCI:

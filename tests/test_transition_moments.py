@@ -471,6 +471,35 @@ def test_jacobi_vci_transition_moments_match_direct_3d_dvr_with_3mr_dms() -> Non
         )
 
 
+def test_fitted_jacobi_dms_rejects_foreign_hamiltonian_projection_identity() -> None:
+    model, coordinate_map, cases = _triatomic_fixture()
+    transform, hamiltonian = cases["H2O"]
+    projection = potential_on_jacobi_grid(
+        model,
+        coordinate_map,
+        transform,
+        hamiltonian.kinetic,
+    )
+
+    foreign_map = replace(projection, source_coordinate_map_fingerprint="foreign-map")
+    with pytest.raises(ValueError, match="Coordinate map fingerprint"):
+        dipole_on_jacobi_grid(
+            model,
+            coordinate_map,
+            transform,
+            TriatomicJ0Hamiltonian.from_projection(hamiltonian.kinetic, foreign_map),
+        )
+
+    foreign_transform = replace(projection, transform_fingerprint="foreign-transform")
+    with pytest.raises(ValueError, match="Jacobi transform fingerprint"):
+        dipole_on_jacobi_grid(
+            model,
+            coordinate_map,
+            transform,
+            TriatomicJ0Hamiltonian.from_projection(hamiltonian.kinetic, foreign_transform),
+        )
+
+
 def test_signed_increment_cancellation_is_preserved() -> None:
     potential, surface = _two_mode_models(coupling=0.012)
     _, _, result, _, operator_template, _ = _solve_models(potential, surface, 9)

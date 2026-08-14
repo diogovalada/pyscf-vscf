@@ -16,6 +16,8 @@ once a public release is tagged.
   explicit adapter to the released rectilinear VSCF Hamiltonian.
 - A complete rotationless triatomic Jacobi `J=0` kinetic operator, VCI on
   converged VSCF modals, and signed vector-DMS transition moments.
+- Direct, fingerprint-bound projection of vectorized analytic triatomic PES
+  and fixed-body-frame DMS callables onto Jacobi solver grids.
 - A portable analytic HOF end-to-end regression, an advanced API guide, and a
   packaged PySCF-free VCI example.
 

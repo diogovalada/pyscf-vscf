@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import operator
+from collections.abc import Callable
 from dataclasses import InitVar, dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -21,7 +22,11 @@ from ._identity import (
 )
 from .constants import ATOMIC_DIPOLE_TO_DEBYE, HARTREE_TO_CM
 from .coordinates import TriatomicValenceCoordinateMap, coordinate_map_fingerprint
-from .kinetic import TriatomicJ0Hamiltonian, TriatomicJacobiTransform
+from .kinetic import (
+    TriatomicJ0Hamiltonian,
+    TriatomicJacobiTransform,
+    _jacobi_valence_grid,
+)
 from .nmode import ModeSubset, NModeSurfaceModel, nmode_dms_fingerprint
 from .spectra import einstein_a_from_debye, integrated_cross_section_omega
 from .vci import (
@@ -613,18 +618,16 @@ def dipole_on_jacobi_grid(
         raise ValueError("Source coordinate IDs do not match the DMS model")
     if not np.array_equal(coordinate_map.reference_values, model.reference_values):
         raise ValueError("Source coordinate reference does not match the DMS model")
-    expected_order = (
-        coordinate_map.outer_atom_1,
-        coordinate_map.center_atom,
-        coordinate_map.outer_atom_2,
-    )
+    if not isinstance(hamiltonian, TriatomicJ0Hamiltonian):
+        raise TypeError("hamiltonian must be a TriatomicJ0Hamiltonian")
     kinetic = hamiltonian.kinetic
-    if transform.atom_indices != expected_order or kinetic.atom_indices != expected_order:
-        raise ValueError("Jacobi transform atom order does not match the ordered valence map")
-    if transform.masses_amu != kinetic.masses_amu:
-        raise ValueError("Jacobi transform and Hamiltonian masses do not match")
-    meshes = np.meshgrid(*kinetic.coordinate_grids, indexing="ij")
-    valence = transform.jacobi_to_valence(np.stack(meshes, axis=-1))
+    _, valence = _jacobi_valence_grid(coordinate_map, transform, kinetic)
+    transform_fingerprint = transform.fingerprint()
+    _validate_jacobi_hamiltonian_binding(
+        hamiltonian,
+        coordinate_map_fingerprint=map_fingerprint,
+        transform_fingerprint=transform_fingerprint,
+    )
     increments = {}
     for subset, surface in model.dipole_increments.items():
         values = surface.evaluate(valence[..., list(subset)])
@@ -640,10 +643,102 @@ def dipole_on_jacobi_grid(
         metadata={
             "projection": "ordered-valence-to-jacobi",
             "coordinate_map_fingerprint": map_fingerprint,
-            "transform_fingerprint": transform.fingerprint(),
+            "transform_fingerprint": transform_fingerprint,
         },
         _construction_token=_CONSTRUCTION_TOKEN,
     )
+
+
+def dipole_on_jacobi_grid_from_callable(
+    dipole_body_au: Callable[[np.ndarray], object],
+    coordinate_map: TriatomicValenceCoordinateMap,
+    transform: TriatomicJacobiTransform,
+    hamiltonian: TriatomicJ0Hamiltonian,
+    *,
+    source_dms_fingerprint: str,
+) -> GridDipoleExpansion:
+    """Evaluate one vectorized fixed-body-frame DMS callable on a Jacobi grid.
+
+    Components use the coordinate map's fixed ``frame_to_lab`` axes. No lab,
+    Eckart, bisector, or other geometry-dependent frame conversion is applied.
+    """
+
+    source_fingerprint = _nonempty("source_dms_fingerprint", source_dms_fingerprint)
+    if not callable(dipole_body_au):
+        raise TypeError("dipole_body_au must be callable")
+    if not isinstance(hamiltonian, TriatomicJ0Hamiltonian):
+        raise TypeError("hamiltonian must be a TriatomicJ0Hamiltonian")
+    kinetic = hamiltonian.kinetic
+    map_fingerprint, valence = _jacobi_valence_grid(coordinate_map, transform, kinetic)
+    transform_fingerprint = transform.fingerprint()
+    _validate_jacobi_hamiltonian_binding(
+        hamiltonian,
+        coordinate_map_fingerprint=map_fingerprint,
+        transform_fingerprint=transform_fingerprint,
+    )
+    dipole = np.asarray(dipole_body_au(valence))
+    if np.iscomplexobj(dipole):
+        raise ValueError("dipole_body_au must return real-valued Jacobi-grid dipoles")
+    dipole = np.asarray(dipole, dtype=float)
+    expected_shape = (*kinetic.shape, 3)
+    if dipole.shape != expected_shape:
+        raise ValueError(
+            f"dipole_body_au must return shape {expected_shape} for the Jacobi grid; "
+            f"got {dipole.shape}"
+        )
+    if not np.all(np.isfinite(dipole)):
+        raise ValueError("dipole_body_au returned non-finite Jacobi-grid dipoles")
+    reference = np.asarray(dipole_body_au(coordinate_map.reference_values))
+    if np.iscomplexobj(reference):
+        raise ValueError("dipole_body_au must return a real-valued reference dipole")
+    reference = np.asarray(reference, dtype=float)
+    if reference.shape != (3,):
+        raise ValueError(
+            "dipole_body_au must return shape (3,) for coordinate_map.reference_values; "
+            f"got {reference.shape}"
+        )
+    if not np.all(np.isfinite(reference)):
+        raise ValueError("dipole_body_au returned a non-finite reference dipole")
+    return GridDipoleExpansion(
+        coordinate_ids=kinetic.coordinate_ids,
+        shape=kinetic.shape,
+        coordinate_grids=tuple(kinetic.coordinate_grids),
+        reference_dipole_body_au=reference,
+        increment_grids_au={(0, 1, 2): dipole - reference},
+        source_dms_fingerprint=source_fingerprint,
+        hamiltonian_fingerprint=hamiltonian.fingerprint(),
+        metadata={
+            "projection": "vectorized-callable-ordered-valence-to-jacobi",
+            "coordinate_map_fingerprint": map_fingerprint,
+            "transform_fingerprint": transform_fingerprint,
+            "valence_units": list(coordinate_map.units),
+            "dipole_frame": "coordinate-map-fixed-body",
+            "dipole_units": "atomic-unit",
+        },
+        _construction_token=_CONSTRUCTION_TOKEN,
+    )
+
+
+def _validate_jacobi_hamiltonian_binding(
+    hamiltonian: TriatomicJ0Hamiltonian,
+    *,
+    coordinate_map_fingerprint: str,
+    transform_fingerprint: str,
+) -> None:
+    if (
+        hamiltonian.source_coordinate_map_fingerprint is not None
+        and hamiltonian.source_coordinate_map_fingerprint != coordinate_map_fingerprint
+    ):
+        raise ValueError(
+            "Coordinate map fingerprint does not match the Hamiltonian PES projection"
+        )
+    if (
+        hamiltonian.source_transform_fingerprint is not None
+        and hamiltonian.source_transform_fingerprint != transform_fingerprint
+    ):
+        raise ValueError(
+            "Jacobi transform fingerprint does not match the Hamiltonian PES projection"
+        )
 
 
 def build_vci_dipole_operator(
@@ -800,7 +895,9 @@ def _configuration(values: Sequence[int]) -> Configuration:
 
 
 def _nonempty(name: str, value: str) -> str:
-    text = str(value).strip()
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string")
+    text = value.strip()
     if not text:
         raise ValueError(f"{name} must be non-empty")
     return text
@@ -816,6 +913,7 @@ __all__ = [
     "VCITransitionMoment",
     "build_vci_dipole_operator",
     "dipole_on_jacobi_grid",
+    "dipole_on_jacobi_grid_from_callable",
     "dump_vci_dipole_projection",
     "dump_vci_transition_moments",
     "load_vci_dipole_projection",

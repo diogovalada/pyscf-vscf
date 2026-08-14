@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Mapping, Protocol, Sequence, runtime_checkable
 
@@ -354,6 +355,22 @@ class TriatomicJ0Hamiltonian:
         )
 
     @property
+    def source_coordinate_map_fingerprint(self) -> str | None:
+        return (
+            None
+            if self._source_projection is None
+            else self._source_projection.source_coordinate_map_fingerprint
+        )
+
+    @property
+    def source_transform_fingerprint(self) -> str | None:
+        return (
+            None
+            if self._source_projection is None
+            else self._source_projection.transform_fingerprint
+        )
+
+    @property
     def kinetic_fingerprint(self) -> str:
         return self.kinetic.fingerprint()
 
@@ -510,26 +527,66 @@ def potential_on_jacobi_grid(
         raise ValueError("Source coordinate IDs do not match the PES model")
     if not np.array_equal(coordinate_map.reference_values, model.reference_values):
         raise ValueError("Source coordinate reference does not match the PES model")
-    expected_atom_order = (
-        coordinate_map.outer_atom_1,
-        coordinate_map.center_atom,
-        coordinate_map.outer_atom_2,
-    )
-    if transform.atom_indices != expected_atom_order:
-        raise ValueError("Jacobi transform atom order does not match the ordered valence map")
-    if transform.masses_amu != kinetic.masses_amu:
-        raise ValueError("Jacobi transform and kinetic operator masses must match")
-    if transform.atom_indices != kinetic.atom_indices:
-        raise ValueError("Jacobi transform and kinetic operator atom order must match")
-    meshes = np.meshgrid(*kinetic.coordinate_grids, indexing="ij")
-    jacobi = np.stack(meshes, axis=-1)
-    valence = transform.jacobi_to_valence(jacobi)
+    _, valence = _jacobi_valence_grid(coordinate_map, transform, kinetic)
     potential = np.empty(kinetic.shape, dtype=float)
     for index in np.ndindex(kinetic.shape):
         potential[index] = model.potential_Eh(valence[index])
     return JacobiGridProjection(
         potential_Eh=potential,
         source_pes_fingerprint=nmode_pes_fingerprint(model),
+        source_coordinate_map_fingerprint=map_fingerprint,
+        transform_fingerprint=transform.fingerprint(),
+        kinetic_fingerprint=kinetic.fingerprint(),
+        coordinate_ids=tuple(coordinate_map.coordinate_ids),
+        atom_indices=transform.atom_indices,
+    )
+
+
+def potential_on_jacobi_grid_from_callable(
+    energy_Eh: Callable[[np.ndarray], object],
+    coordinate_map: TriatomicValenceCoordinateMap,
+    transform: TriatomicJacobiTransform,
+    kinetic: TriatomicJ0KineticOperator,
+    *,
+    source_pes_fingerprint: str,
+) -> JacobiGridProjection:
+    """Evaluate one vectorized absolute-energy callable on a Jacobi grid.
+
+    The callable receives ordered ``(r1, r2, theta)`` valence coordinates in
+    Angstrom, Angstrom, and radians. Its source identity is supplied explicitly;
+    Python callable identity and representation are not scientific provenance.
+    """
+
+    source_fingerprint = _nonempty("source_pes_fingerprint", source_pes_fingerprint)
+    if not callable(energy_Eh):
+        raise TypeError("energy_Eh must be callable")
+    map_fingerprint, valence = _jacobi_valence_grid(coordinate_map, transform, kinetic)
+    potential = np.asarray(energy_Eh(valence))
+    if np.iscomplexobj(potential):
+        raise ValueError("energy_Eh must return real-valued Jacobi-grid energies")
+    potential = np.asarray(potential, dtype=float)
+    if potential.shape != kinetic.shape:
+        raise ValueError(
+            f"energy_Eh must return shape {kinetic.shape} for the Jacobi grid; "
+            f"got {potential.shape}"
+        )
+    if not np.all(np.isfinite(potential)):
+        raise ValueError("energy_Eh returned non-finite Jacobi-grid energies")
+    reference = np.asarray(energy_Eh(coordinate_map.reference_values))
+    if np.iscomplexobj(reference):
+        raise ValueError("energy_Eh must return a real-valued reference energy")
+    reference = np.asarray(reference, dtype=float)
+    if reference.shape != ():
+        raise ValueError(
+            "energy_Eh must return a scalar for coordinate_map.reference_values; "
+            f"got shape {reference.shape}"
+        )
+    reference_energy = float(reference.item())
+    if not np.isfinite(reference_energy):
+        raise ValueError("energy_Eh returned a non-finite reference energy")
+    return JacobiGridProjection(
+        potential_Eh=potential - reference_energy,
+        source_pes_fingerprint=source_fingerprint,
         source_coordinate_map_fingerprint=map_fingerprint,
         transform_fingerprint=transform.fingerprint(),
         kinetic_fingerprint=kinetic.fingerprint(),
@@ -694,6 +751,37 @@ def _positive_tuple(name: str, values: Sequence[float], length: int) -> tuple[fl
     return parsed
 
 
+def _jacobi_valence_grid(
+    coordinate_map: TriatomicValenceCoordinateMap,
+    transform: TriatomicJacobiTransform,
+    kinetic: TriatomicJ0KineticOperator,
+) -> tuple[str, np.ndarray]:
+    """Validate one ordered triatomic Jacobi relationship and build valence nodes."""
+
+    if not isinstance(coordinate_map, TriatomicValenceCoordinateMap):
+        raise TypeError("coordinate_map must be a TriatomicValenceCoordinateMap")
+    if not isinstance(transform, TriatomicJacobiTransform):
+        raise TypeError("transform must be a TriatomicJacobiTransform")
+    if not isinstance(kinetic, TriatomicJ0KineticOperator):
+        raise TypeError("kinetic must be a TriatomicJ0KineticOperator")
+    if coordinate_map.units != ("angstrom", "angstrom", "radian"):
+        raise ValueError("Jacobi projection requires valence units (angstrom, angstrom, radian)")
+    expected_atom_order = (
+        coordinate_map.outer_atom_1,
+        coordinate_map.center_atom,
+        coordinate_map.outer_atom_2,
+    )
+    if transform.atom_indices != expected_atom_order:
+        raise ValueError("Jacobi transform atom order does not match the ordered valence map")
+    if kinetic.atom_indices != expected_atom_order:
+        raise ValueError("Kinetic operator atom order does not match the ordered valence map")
+    if transform.masses_amu != kinetic.masses_amu:
+        raise ValueError("Jacobi transform and kinetic operator masses must match")
+    meshes = np.meshgrid(*kinetic.coordinate_grids, indexing="ij")
+    jacobi = np.stack(meshes, axis=-1)
+    return coordinate_map_fingerprint(coordinate_map), transform.jacobi_to_valence(jacobi)
+
+
 def _phase_canonical_columns(vectors: np.ndarray) -> np.ndarray:
     canonical = np.array(vectors, dtype=float, copy=True)
     for column in range(canonical.shape[1]):
@@ -711,7 +799,9 @@ def _deterministic_initial(dimension: int) -> np.ndarray:
 
 
 def _nonempty(name: str, value: str) -> str:
-    text = str(value).strip()
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string")
+    text = value.strip()
     if not text:
         raise ValueError(f"{name} must be non-empty")
     return text
@@ -730,5 +820,6 @@ __all__ = [
     "TriatomicJ0KineticOperator",
     "TriatomicJacobiTransform",
     "potential_on_jacobi_grid",
+    "potential_on_jacobi_grid_from_callable",
     "solve_triatomic_direct_dvr",
 ]
