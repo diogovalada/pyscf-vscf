@@ -106,43 +106,6 @@ def test_harmonic_analysis_uses_analytic_hessian_and_existing_harmonic_helpers(
     assert result.hessian_provenance == "analytic"
 
 
-def test_harmonic_analysis_blocks_semi_numerical_dispersion_hessian(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    cfg = ESSettings(method="wb97x-d4")
-    monkeypatch.setattr(
-        workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
-    )
-    monkeypatch.setattr(
-        workflow.pyscf_backend,
-        "make_mean_field",
-        lambda pmol_arg, cfg_arg: _FakeMeanField(np.eye(6)),
-    )
-    monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
-
-    with pytest.raises(RuntimeError, match="semi-numerical.*--allow-fd-hessian"):
-        workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none", allow_fd_hessian=False)
-
-
-def test_harmonic_analysis_records_semi_numerical_dispersion_hessian(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    cfg = ESSettings(method="wb97x-d4")
-    monkeypatch.setattr(
-        workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
-    )
-    monkeypatch.setattr(
-        workflow.pyscf_backend,
-        "make_mean_field",
-        lambda pmol_arg, cfg_arg: _FakeMeanField(np.eye(6)),
-    )
-    monkeypatch.setattr(workflow.pyscf_backend, "mean_field_dispersion", lambda mf: "d4")
-
-    result = workflow.harmonic_analysis(_h2_molecule(), cfg, rtproj="none", allow_fd_hessian=True)
-
-    assert result.hessian_provenance == "analytic-electronic+finite-difference-dispersion"
-
-
 def test_harmonic_analysis_strict_analytic_failure_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

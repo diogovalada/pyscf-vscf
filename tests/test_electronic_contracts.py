@@ -53,7 +53,6 @@ def test_es_settings_preserves_released_positional_field_order() -> None:
     assert settings.scf_conv_tol == 1e-9
     assert settings.scf_max_cycle == 77
     assert settings.dft_grid_level == 5
-    assert settings.dispersion is None
 
 
 @pytest.mark.parametrize(
@@ -167,14 +166,6 @@ def test_real_mean_field_provider_fingerprints_effective_settings() -> None:
                 basis="sto-3g",
                 use_density_fit=True,
                 auxbasis="weigend",
-            )
-        ),
-        PySCFMeanFieldProvider(
-            ESSettings(
-                method="hf",
-                basis="sto-3g",
-                use_density_fit=False,
-                dispersion="d4",
             )
         ),
     ]

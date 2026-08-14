@@ -52,8 +52,8 @@ Before a quantitative molecular result set is published:
 - Report grid-density, coordinate-window, state-count, and assignment-weight
   error budgets for every cited transition.
 - Test sensitivity to electronic-structure method, basis, DFT grid, SCF
-  tolerance, density fitting, and dispersion when conclusions depend on small
-  differences.
+  tolerance, density fitting, and any provider-level dispersion model when
+  conclusions depend on small differences.
 - Archive current-schema source grids, commands, software versions, geometries,
   hashes, and generated reports with the publication.
 

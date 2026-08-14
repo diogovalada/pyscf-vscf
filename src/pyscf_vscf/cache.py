@@ -16,7 +16,7 @@ from importlib.metadata import PackageNotFoundError, version
 import numpy as np
 
 from .io import dump_grid_npz, load_grid_npz
-from .settings import coerce_es_settings, default_auxbasis, normalize_dispersion
+from .settings import coerce_es_settings, default_auxbasis
 
 CACHE_SCHEMA_VERSION = 3
 
@@ -92,9 +92,6 @@ def electronic_structure_identity(cfg, *, backend_identity: str = "pyscf") -> di
     values["effective_auxbasis"] = (
         settings.auxbasis or default_auxbasis(settings.basis) if settings.use_density_fit else None
     )
-    dispersion = normalize_dispersion(settings.dispersion)
-    if dispersion is not None:
-        values["dispersion"] = dispersion
     backend = str(backend_identity).strip()
     if not backend:
         raise ValueError("backend_identity must be a non-empty stable identifier")

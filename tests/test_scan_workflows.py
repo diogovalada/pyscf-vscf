@@ -564,18 +564,6 @@ def test_cache_identity_covers_causal_inputs_but_not_policy_or_isotope() -> None
         )
 
 
-def test_cache_identity_separates_explicit_dispersion_without_changing_default_shape() -> None:
-    mol = _water()
-    default_meta = scans.lbs_frozen_1d_cache_metadata(mol, _cfg(), Bond(0, 1), 0.8, 1.2, 5)
-    dispersion_meta = scans.lbs_frozen_1d_cache_metadata(
-        mol, _cfg(dispersion=" D4 "), Bond(0, 1), 0.8, 1.2, 5
-    )
-
-    assert "dispersion" not in default_meta["identity"]["electronic_structure"]
-    assert dispersion_meta["identity"]["electronic_structure"]["dispersion"] == "d4"
-    assert default_meta["cache_identity_sha256"] != dispersion_meta["cache_identity_sha256"]
-
-
 def test_schema_v2_cache_metadata_is_migrated_and_runtime_drift_warns() -> None:
     mol = _water()
     cfg = _cfg()

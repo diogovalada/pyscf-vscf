@@ -25,7 +25,7 @@ from ..electronic import (
 )
 from .._identity import immutable_json_mapping, to_jsonable
 from ..molecule import Molecule
-from ..settings import ESSettings, coerce_es_settings, default_auxbasis, normalize_dispersion
+from ..settings import ESSettings, coerce_es_settings, default_auxbasis
 
 
 _WARNED_ONCE: set[str] = set()
@@ -56,7 +56,6 @@ class _MeanFieldSettings:
     basis: str
     use_density_fit: bool
     auxbasis: str | None
-    dispersion: str | None
     scf_conv_tol: float
     scf_max_cycle: int
     dft_grid_level: int | None
@@ -75,7 +74,6 @@ class _MeanFieldSettings:
             auxbasis = str(auxbasis).strip()
             if not auxbasis:
                 raise ValueError("Density fitting requires a non-empty auxiliary basis")
-        dispersion = normalize_dispersion(settings.dispersion)
         tolerance = 1e-10 if settings.scf_conv_tol is None else float(settings.scf_conv_tol)
         max_cycle = 50 if settings.scf_max_cycle is None else int(settings.scf_max_cycle)
         if not np.isfinite(tolerance) or tolerance <= 0.0:
@@ -94,7 +92,6 @@ class _MeanFieldSettings:
             basis=basis,
             use_density_fit=use_density_fit,
             auxbasis=auxbasis,
-            dispersion=dispersion,
             scf_conv_tol=tolerance,
             scf_max_cycle=max_cycle,
             dft_grid_level=None if grid_level is None else int(grid_level),
@@ -320,11 +317,6 @@ def make_mean_field(
             )
             raise RuntimeError(msg) from exc
 
-    dispersion = normalize_dispersion(_cfg_get(cfg, "dispersion", None))
-    if dispersion is not None:
-        _require_pyscf_dispersion(dispersion)
-        mf.disp = dispersion
-
     dft_grid_level = _cfg_get(cfg, "dft_grid_level", None)
     if dft_grid_level is not None and is_dft:
         mf.grids.level = int(dft_grid_level)
@@ -387,21 +379,6 @@ def _apply_electric_field(
         optimize=True,
     )
     return -float(field_vector @ nuclear_dipole)
-
-
-def mean_field_dispersion(mf: Any) -> str | None:
-    """Return PySCF's effective D3/D4 label without loading its extension."""
-
-    explicit = getattr(mf, "disp", None)
-    method = getattr(mf, "xc", None)
-    method_text = "" if method is None else str(method).lower()
-    if explicit in (None, False, 0, "") and "-d3" not in method_text and "-d4" not in method_text:
-        return None
-
-    from pyscf.scf.dispersion import check_disp
-
-    detected = check_disp(mf)
-    return None if not detected else str(detected)
 
 
 def energy_gradient_at_coords_bohr(
@@ -565,15 +542,6 @@ def _require_pyscf():
     return gto, scf, dft, elements
 
 
-def _require_pyscf_dispersion(dispersion: str) -> None:
-    try:
-        import pyscf.dispersion  # noqa: F401
-    except Exception as exc:
-        raise BackendUnavailableError(
-            f"Dispersion was requested ({dispersion!r}) but pyscf.dispersion is unavailable"
-        ) from exc
-
-
 def _analysis_masses(molecule: Any, symbols: list[str]) -> list[float]:
     analysis_masses = getattr(molecule, "analysis_masses", None)
     if callable(analysis_masses):
@@ -643,7 +611,6 @@ __all__ = [
     "energy_gradient_at_coords_bohr",
     "is_available",
     "make_mean_field",
-    "mean_field_dispersion",
     "molecule_to_pyscf",
     "normal_relaxed_point",
     "warn_once",

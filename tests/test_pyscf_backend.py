@@ -308,18 +308,6 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
 
 
 @pytest.mark.pyscf
-def test_mean_field_dispersion_uses_pyscf_native_method_parser() -> None:
-    backend = importlib.import_module(BACKEND_MODULE)
-    from pyscf import dft, gto
-
-    molecule = gto.M(atom="H 0 0 0; F 0 0 0.9", basis="sto-3g", verbose=0)
-
-    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="pbe")) is None
-    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="b3lyp-d3bj")) == "d3bj"
-    assert backend.mean_field_dispersion(dft.RKS(molecule, xc="wb97x-d4")) == "d4"
-
-
-@pytest.mark.pyscf
 def test_backend_module_import_does_not_request_pyscf() -> None:
     code = f"""
 import importlib

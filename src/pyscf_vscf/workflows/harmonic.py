@@ -55,25 +55,11 @@ def harmonic_analysis(
     allow_fd_hessian = bool(allow_fd_hessian)
     pmol = pyscf_backend.molecule_to_pyscf(molecule, basis=basis)
     mf = pyscf_backend.make_mean_field(pmol, cfg)
-    dispersion = pyscf_backend.mean_field_dispersion(mf)
 
     if debug:
         _print_stationarity_diagnostic(mf)
 
     hessian_provenance = "analytic"
-    if dispersion is not None:
-        msg = (
-            f"{dispersion} Hessians include a numerically differentiated dispersion "
-            "component and are therefore semi-numerical"
-        )
-        if not allow_fd_hessian:
-            raise RuntimeError(msg + " (blocked; pass --allow-fd-hessian to proceed)")
-        harmonic_helpers.warn_once(
-            "semi_numerical_dispersion_hessian",
-            msg + " (enabled by --allow-fd-hessian)",
-        )
-        hessian_provenance = "analytic-electronic+finite-difference-dispersion"
-
     hessian = None
     try:
         hessian = analytic_hessian(mf)
