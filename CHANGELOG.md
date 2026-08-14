@@ -7,6 +7,9 @@ once a public release is tagged.
 
 ### Added
 
+- Optional raw-Mulliken and meta-Lowdin/ANO continuity descriptors for
+  closed-shell PySCF mean-field points, with explicit off, best-effort, and
+  strict collection modes.
 - Backend-neutral electronic point identities, immutable result artifacts, and
   reusable bond, linear-displacement, and triatomic valence coordinate maps.
 - Anchored fitted 1MR/2MR and selected 3MR scalar/vector n-mode surfaces with an

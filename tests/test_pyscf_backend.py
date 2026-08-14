@@ -68,6 +68,44 @@ def _hdo_molecule():
     )
 
 
+def _complete_continuity_diagnostics() -> dict[str, object]:
+    return {
+        "continuity_descriptor_scope": ("closed-shell-mulliken-and-meta-lowdin-ao-metrics"),
+        "mulliken_density_atom_populations": [1.9, 0.1],
+        "meta_lowdin_density_atom_populations": [1.8, 0.2],
+        "meta_lowdin_pre_orthogonalization": "ANO",
+        "mulliken_occupied_orbital_atom_populations": [[0.95, 0.05]],
+        "occupied_orbital_energies_Eh": [-0.5],
+        "reference_homo_lumo_gap_Eh": 0.3,
+        "occupied_mo_coefficients_ao": [[0.8], [0.6]],
+    }
+
+
+def test_continuity_success_schema_rejects_malformed_fields() -> None:
+    backend = importlib.import_module(BACKEND_MODULE)
+    valid = _complete_continuity_diagnostics()
+    frozen = backend._validated_continuity_diagnostics(
+        valid,
+        require_coefficients=True,
+    )
+    assert frozen["reference_homo_lumo_gap_Eh"] == pytest.approx(0.3)
+
+    malformed = (
+        {**valid, "mulliken_density_atom_populations": "not-an-array"},
+        {**valid, "meta_lowdin_density_atom_populations": [2.0]},
+        {**valid, "mulliken_occupied_orbital_atom_populations": [[1.0]]},
+        {**valid, "occupied_orbital_energies_Eh": []},
+        {**valid, "reference_homo_lumo_gap_Eh": None},
+        {**valid, "occupied_mo_coefficients_ao": [[0.8, 0.1], [0.6, 0.2]]},
+    )
+    for diagnostics in malformed:
+        with pytest.raises(ValueError):
+            backend._validated_continuity_diagnostics(
+                diagnostics,
+                require_coefficients=True,
+            )
+
+
 @pytest.mark.pyscf
 def test_mean_field_provider_agrees_with_released_energy_dipole() -> None:
     _import_pyscf_or_skip()
@@ -85,7 +123,13 @@ def test_mean_field_provider_agrees_with_released_energy_dipole() -> None:
         label="HF",
     )
     settings = _hf_sto3g_settings(backend)
-    provider = backend.PySCFMeanFieldProvider(settings, threads=1, max_memory_mb=512)
+    provider = backend.PySCFMeanFieldProvider(
+        settings,
+        threads=1,
+        max_memory_mb=512,
+        continuity_diagnostics="strict",
+        retain_occupied_mo_coefficients=True,
+    )
     request = ElectronicPointRequest(
         nuclear_charges=(1, 9),
         coordinates_A=molecule.coords,
@@ -103,6 +147,163 @@ def test_mean_field_provider_agrees_with_released_energy_dipole() -> None:
     )
     assert result.dipole_unit == "atomic_unit"
     assert result.dipole_frame == "input_cartesian"
+    diagnostics = result.scientific_diagnostics
+    assert diagnostics["continuity_descriptor_scope"] == (
+        "closed-shell-mulliken-and-meta-lowdin-ao-metrics"
+    )
+    assert len(diagnostics["mulliken_density_atom_populations"]) == 2
+    assert len(diagnostics["meta_lowdin_density_atom_populations"]) == 2
+    assert diagnostics["meta_lowdin_pre_orthogonalization"] == "ANO"
+    assert sum(diagnostics["meta_lowdin_density_atom_populations"]) == pytest.approx(
+        10.0, abs=1e-10
+    )
+    assert len(diagnostics["mulliken_occupied_orbital_atom_populations"]) == 5
+    assert "density_atom_populations" not in diagnostics
+    assert "occupied_orbital_atom_populations" not in diagnostics
+    assert diagnostics["reference_homo_lumo_gap_Eh"] > 0.0
+    assert np.asarray(diagnostics["occupied_mo_coefficients_ao"]).shape[1] == 5
+
+
+@pytest.mark.pyscf
+def test_continuity_collection_modes_do_not_discard_valid_energy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _import_pyscf_or_skip()
+    from pyscf_vscf.electronic import ElectronicPointRequest
+
+    backend = importlib.import_module(BACKEND_MODULE)
+    settings = _hf_sto3g_settings(backend)
+    request = ElectronicPointRequest(
+        nuclear_charges=(1, 1),
+        coordinates_A=[[0.0, 0.0, -0.37], [0.0, 0.0, 0.37]],
+        requested_properties=("energy",),
+    )
+
+    def fail_diagnostics(*_args, **_kwargs):
+        raise ValueError("simulated population-analysis failure")
+
+    monkeypatch.setattr(backend, "_mean_field_continuity_diagnostics", fail_diagnostics)
+
+    disabled = backend.PySCFMeanFieldProvider(settings).evaluate(request)
+    assert "continuity_descriptor_scope" not in disabled.scientific_diagnostics
+
+    best_effort = backend.PySCFMeanFieldProvider(
+        settings,
+        continuity_diagnostics="best-effort",
+    ).evaluate(request)
+    assert best_effort.total_energy_Eh == pytest.approx(disabled.total_energy_Eh, abs=1e-12)
+    assert (
+        best_effort.scientific_diagnostics["continuity_descriptor_scope"]
+        == "unavailable-after-error"
+    )
+    assert (
+        best_effort.scientific_diagnostics["continuity_descriptor_error_type"]
+        == "builtins.ValueError"
+    )
+
+    with pytest.raises(RuntimeError, match="Strict continuity diagnostics failed"):
+        backend.PySCFMeanFieldProvider(
+            settings,
+            continuity_diagnostics="strict",
+        ).evaluate(request)
+
+    def nonfinite_diagnostics(*_args, **_kwargs):
+        return {
+            "continuity_descriptor_scope": "closed-shell-test-descriptor",
+            "invalid_value": np.nan,
+        }
+
+    monkeypatch.setattr(backend, "_mean_field_continuity_diagnostics", nonfinite_diagnostics)
+
+    best_effort_nonfinite = backend.PySCFMeanFieldProvider(
+        settings,
+        continuity_diagnostics="best-effort",
+    ).evaluate(request)
+    assert best_effort_nonfinite.total_energy_Eh == pytest.approx(
+        disabled.total_energy_Eh, abs=1e-12
+    )
+    assert (
+        best_effort_nonfinite.scientific_diagnostics["continuity_descriptor_scope"]
+        == "unavailable-after-error"
+    )
+    assert (
+        best_effort_nonfinite.scientific_diagnostics["continuity_descriptor_error_type"]
+        == "builtins.ValueError"
+    )
+
+    monkeypatch.setattr(
+        backend,
+        "_mean_field_continuity_diagnostics",
+        lambda *_args, **_kwargs: {"unexpected": "JSON-valid but incomplete"},
+    )
+    best_effort_malformed = backend.PySCFMeanFieldProvider(
+        settings,
+        continuity_diagnostics="best-effort",
+    ).evaluate(request)
+    assert best_effort_malformed.total_energy_Eh == pytest.approx(
+        disabled.total_energy_Eh, abs=1e-12
+    )
+    assert (
+        best_effort_malformed.scientific_diagnostics["continuity_descriptor_scope"]
+        == "unavailable-after-error"
+    )
+
+
+@pytest.mark.pyscf
+@pytest.mark.parametrize(
+    "diagnostics",
+    [
+        {"continuity_descriptor_scope": "unavailable-for-open-shell-reference"},
+        {
+            "continuity_descriptor_scope": ("closed-shell-mulliken-and-meta-lowdin-ao-metrics"),
+            "mulliken_density_atom_populations": [2.0],
+        },
+    ],
+)
+def test_strict_continuity_rejects_unavailable_or_incomplete_descriptors(
+    monkeypatch: pytest.MonkeyPatch,
+    diagnostics: dict[str, object],
+) -> None:
+    _import_pyscf_or_skip()
+    from pyscf_vscf.electronic import ElectronicPointRequest
+
+    backend = importlib.import_module(BACKEND_MODULE)
+    settings = _hf_sto3g_settings(backend)
+    request = ElectronicPointRequest(
+        nuclear_charges=(1, 1),
+        coordinates_A=[[0.0, 0.0, -0.37], [0.0, 0.0, 0.37]],
+        requested_properties=("energy",),
+    )
+    monkeypatch.setattr(
+        backend,
+        "_mean_field_continuity_diagnostics",
+        lambda *_args, **_kwargs: diagnostics,
+    )
+
+    with pytest.raises(RuntimeError, match="Strict continuity diagnostics failed"):
+        backend.PySCFMeanFieldProvider(
+            settings,
+            continuity_diagnostics="strict",
+        ).evaluate(request)
+
+
+def test_continuity_diagnostics_reject_open_shell_occupations() -> None:
+    backend = _import_backend_or_skip()
+    mean_field = SimpleNamespace(
+        mo_coeff=np.eye(2),
+        mo_occ=np.array([2.0, 1.0]),
+        mo_energy=np.array([-0.5, -0.1]),
+        make_rdm1=lambda: np.diag([2.0, 1.0]),
+        get_ovlp=lambda: np.eye(2),
+        mol=SimpleNamespace(aoslice_by_atom=lambda: np.array([[0, 0, 0, 2]])),
+    )
+
+    diagnostics = backend._mean_field_continuity_diagnostics(
+        mean_field,
+        retain_occupied_mo_coefficients=True,
+    )
+
+    assert diagnostics == {"continuity_descriptor_scope": "unavailable-for-open-shell-reference"}
 
 
 @pytest.mark.pyscf

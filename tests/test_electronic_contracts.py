@@ -121,6 +121,37 @@ def test_mean_field_runtime_resources_do_not_change_scientific_identity() -> Non
     assert large.execution_provenance()["host"]
 
 
+def test_mean_field_continuity_retention_changes_scientific_identity() -> None:
+    settings = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
+    disabled = PySCFMeanFieldProvider(settings)
+    compact = PySCFMeanFieldProvider(settings, continuity_diagnostics="strict")
+    retained = PySCFMeanFieldProvider(
+        settings,
+        continuity_diagnostics="strict",
+        retain_occupied_mo_coefficients=True,
+    )
+
+    assert provider_scientific_fingerprint(disabled) != provider_scientific_fingerprint(compact)
+    assert provider_scientific_fingerprint(compact) != provider_scientific_fingerprint(retained)
+
+
+def test_mean_field_continuity_settings_fail_closed() -> None:
+    settings = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
+
+    with pytest.raises(ValueError, match="continuity_diagnostics"):
+        PySCFMeanFieldProvider(settings, continuity_diagnostics="sometimes")
+    with pytest.raises(TypeError, match="continuity_diagnostics"):
+        PySCFMeanFieldProvider(settings, continuity_diagnostics=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="retain_occupied_mo_coefficients"):
+        PySCFMeanFieldProvider(settings, retain_occupied_mo_coefficients=True)
+    with pytest.raises(ValueError, match="retain_occupied_mo_coefficients"):
+        PySCFMeanFieldProvider(
+            settings,
+            continuity_diagnostics="best-effort",
+            retain_occupied_mo_coefficients=True,
+        )
+
+
 def test_mean_field_provider_normalizes_inactive_hf_grid() -> None:
     baseline = PySCFMeanFieldProvider(
         ESSettings(method="hf", basis="sto-3g", use_density_fit=False)

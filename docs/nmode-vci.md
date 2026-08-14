@@ -52,6 +52,34 @@ retains those vectors and transforms them to the coordinate map's fixed body
 frame. Inclusion-exclusion produces signed 1MR/2MR and selected 3MR increments;
 fits reject evaluation outside their training axes.
 
+### Electronic continuity descriptors
+
+The PySCF mean-field provider leaves continuity analysis off by default so an
+ancillary population analysis cannot invalidate an otherwise successful SCF
+point. Surface campaigns can request descriptors explicitly:
+
+```python
+from pyscf_vscf.backends.pyscf import PySCFMeanFieldProvider
+
+provider = PySCFMeanFieldProvider(
+    settings,
+    continuity_diagnostics="strict",
+    retain_occupied_mo_coefficients=True,
+)
+```
+
+`best-effort` retains an unavailable/error marker instead of failing the
+electronic point. `strict` requires the complete supported closed-shell
+Mulliken and meta-Lowdin/ANO descriptor set. Canonical-orbital population
+fields are Mulliken quantities and must not be treated as invariant state
+labels.
+
+Retained occupied MO coefficients are AO coefficients at one geometry. Compare
+neighboring occupied spaces with the cross-geometry AO overlap and singular
+values of `C_left.T @ S_left,right @ C_right`; direct coefficient, sign, or
+orbital-row comparisons are not meaningful. The package deliberately supplies
+descriptors rather than molecule-specific continuity thresholds.
+
 For a complete rectilinear 1MR/2MR PES, adapt the fit to the existing VSCF
 Hamiltonian:
 

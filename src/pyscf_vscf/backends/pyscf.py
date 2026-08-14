@@ -29,6 +29,17 @@ from ..settings import ESSettings, coerce_es_settings, default_auxbasis
 
 
 _WARNED_ONCE: set[str] = set()
+_CONTINUITY_SUCCESS_SCOPE = "closed-shell-mulliken-and-meta-lowdin-ao-metrics"
+_CONTINUITY_REQUIRED_FIELDS = frozenset(
+    {
+        "mulliken_density_atom_populations",
+        "meta_lowdin_density_atom_populations",
+        "meta_lowdin_pre_orthogonalization",
+        "mulliken_occupied_orbital_atom_populations",
+        "occupied_orbital_energies_Eh",
+        "reference_homo_lumo_gap_Eh",
+    }
+)
 
 
 class BackendUnavailableError(ImportError):
@@ -106,6 +117,8 @@ class PySCFMeanFieldProvider:
     threads: int = 1
     max_memory_mb: int = 4000
     user_annotations: Mapping[str, Any] = field(default_factory=dict)
+    retain_occupied_mo_coefficients: bool = False
+    continuity_diagnostics: str = "off"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "settings", _MeanFieldSettings.from_value(self.settings))
@@ -115,6 +128,17 @@ class PySCFMeanFieldProvider:
             raise ValueError("threads and max_memory_mb must be positive")
         object.__setattr__(self, "threads", threads)
         object.__setattr__(self, "max_memory_mb", memory)
+        object.__setattr__(
+            self,
+            "retain_occupied_mo_coefficients",
+            bool(self.retain_occupied_mo_coefficients),
+        )
+        continuity_mode = _normalized_continuity_mode(self.continuity_diagnostics)
+        if self.retain_occupied_mo_coefficients and continuity_mode != "strict":
+            raise ValueError(
+                "retain_occupied_mo_coefficients requires continuity_diagnostics='strict'"
+            )
+        object.__setattr__(self, "continuity_diagnostics", continuity_mode)
         object.__setattr__(
             self,
             "user_annotations",
@@ -135,6 +159,19 @@ class PySCFMeanFieldProvider:
             "orbital_policy": "self-consistent-canonical",
             "post_scf_tolerance": None,
             "integral_policy": "pyscf-default-in-core-or-direct",
+            "continuity_diagnostics": {
+                "mode": self.continuity_diagnostics,
+                "scope": (
+                    "disabled"
+                    if self.continuity_diagnostics == "off"
+                    else _CONTINUITY_SUCCESS_SCOPE
+                ),
+                "primary_density_population_partition": "meta-lowdin",
+                "meta_lowdin_pre_orthogonalization": "ANO",
+                "secondary_density_population_partition": "mulliken",
+                "occupied_orbital_population_partition": "mulliken",
+                "retain_occupied_mo_coefficients": self.retain_occupied_mo_coefficients,
+            },
             "field_convention": {
                 "field_units": "atomic_unit",
                 "origin_units": "angstrom",
@@ -192,10 +229,46 @@ class PySCFMeanFieldProvider:
                 dipole = mf.dip_moment(dm=density, unit="au", verbose=0)
             except TypeError:
                 dipole = mf.dip_moment(unit="au", verbose=0)
-        provider_id = provider_scientific_fingerprint(self)
         nuclear_field_energy = float(getattr(mf, "_pyscf_vscf_nuclear_field_energy_Eh", 0.0))
         field_vector = np.zeros(3) if request.field_au is None else request.field_au
         field_origin = np.zeros(3) if request.field_origin_A is None else request.field_origin_A
+        scientific_diagnostics = {
+            "field_au": np.asarray(field_vector, dtype=float).tolist(),
+            "field_origin_A": np.asarray(field_origin, dtype=float).tolist(),
+            "field_hamiltonian": "H(F)=H(0)-F.mu",
+            "nuclear_field_energy_Eh": nuclear_field_energy,
+            "nuclear_field_term_included": True,
+        }
+        if self.continuity_diagnostics != "off":
+            try:
+                continuity = _validated_continuity_diagnostics(
+                    _mean_field_continuity_diagnostics(
+                        mf,
+                        retain_occupied_mo_coefficients=self.retain_occupied_mo_coefficients,
+                    ),
+                    require_coefficients=self.retain_occupied_mo_coefficients,
+                )
+                if (
+                    self.continuity_diagnostics == "strict"
+                    and continuity.get("continuity_descriptor_scope") != _CONTINUITY_SUCCESS_SCOPE
+                ):
+                    raise ValueError(
+                        "strict continuity diagnostics require scope "
+                        f"{_CONTINUITY_SUCCESS_SCOPE!r}"
+                    )
+            except Exception as exc:
+                if self.continuity_diagnostics == "strict":
+                    raise RuntimeError("Strict continuity diagnostics failed") from exc
+                continuity = immutable_json_mapping(
+                    {
+                        "continuity_descriptor_scope": "unavailable-after-error",
+                        "continuity_descriptor_error_type": (
+                            f"{type(exc).__module__}.{type(exc).__qualname__}"
+                        ),
+                    }
+                )
+            scientific_diagnostics.update(continuity)
+        provider_id = provider_scientific_fingerprint(self)
         runtime_seconds = time.perf_counter() - started
         return ElectronicResult(
             total_energy_Eh=float(mf.e_tot) + nuclear_field_energy,
@@ -205,13 +278,7 @@ class PySCFMeanFieldProvider:
             converged=bool(mf.converged),
             point_causal_fingerprint=request.causal_fingerprint(provider_id),
             provider_scientific_fingerprint=provider_id,
-            scientific_diagnostics={
-                "field_au": np.asarray(field_vector, dtype=float).tolist(),
-                "field_origin_A": np.asarray(field_origin, dtype=float).tolist(),
-                "field_hamiltonian": "H(F)=H(0)-F.mu",
-                "nuclear_field_energy_Eh": nuclear_field_energy,
-                "nuclear_field_term_included": True,
-            },
+            scientific_diagnostics=scientific_diagnostics,
             execution_diagnostics={
                 "reference_class": type(mf).__name__,
                 "scf_cycles": _optional_int(getattr(mf, "cycles", None)),
@@ -223,6 +290,164 @@ class PySCFMeanFieldProvider:
             },
             provenance=self.execution_provenance(),
         )
+
+
+def _mean_field_continuity_diagnostics(
+    mean_field: Any,
+    *,
+    retain_occupied_mo_coefficients: bool,
+) -> dict[str, object]:
+    """Return compact closed-shell density and occupied-orbital descriptors."""
+
+    from pyscf.scf import hf
+
+    required = ("mo_coeff", "mo_occ", "mo_energy", "make_rdm1", "get_ovlp", "mol")
+    if any(not hasattr(mean_field, name) for name in required):
+        return {"continuity_descriptor_scope": "unavailable"}
+    coefficients = np.asarray(mean_field.mo_coeff, dtype=float)
+    occupations = np.asarray(mean_field.mo_occ, dtype=float)
+    orbital_energies = np.asarray(mean_field.mo_energy, dtype=float)
+    density = np.asarray(mean_field.make_rdm1(), dtype=float)
+    if coefficients.ndim != 2 or occupations.ndim != 1 or density.ndim != 2:
+        return {"continuity_descriptor_scope": "unavailable-for-spin-resolved-reference"}
+    occupied = np.flatnonzero(occupations > 0.0)
+    virtual = np.flatnonzero(occupations == 0.0)
+    if not np.all(np.isclose(occupations[occupied], 2.0)):
+        return {"continuity_descriptor_scope": "unavailable-for-open-shell-reference"}
+    overlap = np.asarray(mean_field.get_ovlp(), dtype=float)
+    gross_ao = np.einsum("ij,ji->i", density, overlap, optimize=True)
+    atom_slices = np.asarray(mean_field.mol.aoslice_by_atom(), dtype=int)[:, 2:4]
+    mulliken_atom_populations = [
+        float(np.sum(gross_ao[start:stop])) for start, stop in atom_slices
+    ]
+    _, meta_lowdin_charges = hf.mulliken_pop_meta_lowdin_ao(
+        mean_field.mol,
+        density,
+        verbose=0,
+        pre_orth_method="ANO",
+        s=overlap,
+    )
+    meta_lowdin_atom_populations = (
+        np.asarray(mean_field.mol.atom_charges(), dtype=float)
+        - np.asarray(meta_lowdin_charges, dtype=float)
+    ).tolist()
+    occupied_characters = []
+    for orbital in occupied:
+        vector = coefficients[:, orbital]
+        gross_orbital = vector * (overlap @ vector)
+        occupied_characters.append(
+            [float(np.sum(gross_orbital[start:stop])) for start, stop in atom_slices]
+        )
+    gap = None
+    if occupied.size and virtual.size:
+        gap = float(orbital_energies[virtual[0]] - orbital_energies[occupied[-1]])
+    diagnostics = {
+        "continuity_descriptor_scope": _CONTINUITY_SUCCESS_SCOPE,
+        "mulliken_density_atom_populations": mulliken_atom_populations,
+        "meta_lowdin_density_atom_populations": meta_lowdin_atom_populations,
+        "meta_lowdin_pre_orthogonalization": "ANO",
+        "mulliken_occupied_orbital_atom_populations": occupied_characters,
+        "occupied_orbital_energies_Eh": orbital_energies[occupied].tolist(),
+        "reference_homo_lumo_gap_Eh": gap,
+    }
+    if retain_occupied_mo_coefficients:
+        diagnostics["occupied_mo_coefficients_ao"] = coefficients[:, occupied].tolist()
+    return diagnostics
+
+
+def _validated_continuity_diagnostics(
+    diagnostics: Mapping[str, object],
+    *,
+    require_coefficients: bool,
+) -> Mapping[str, object]:
+    """Freeze one descriptor mapping and validate a claimed successful scope."""
+
+    frozen = immutable_json_mapping(diagnostics)
+    scope = frozen.get("continuity_descriptor_scope")
+    if isinstance(scope, str) and scope.startswith("unavailable"):
+        return frozen
+    if scope != _CONTINUITY_SUCCESS_SCOPE:
+        raise ValueError("Continuity diagnostics returned an invalid descriptor scope")
+    required = set(_CONTINUITY_REQUIRED_FIELDS)
+    if require_coefficients:
+        required.add("occupied_mo_coefficients_ao")
+    missing = sorted(required.difference(frozen))
+    if missing:
+        raise ValueError(f"Successful continuity diagnostics are missing fields: {missing}")
+    if frozen["meta_lowdin_pre_orthogonalization"] != "ANO":
+        raise ValueError("Successful continuity diagnostics require ANO pre-orthogonalization")
+    mulliken_density = _continuity_array(
+        "mulliken_density_atom_populations",
+        frozen["mulliken_density_atom_populations"],
+        ndim=1,
+    )
+    meta_lowdin_density = _continuity_array(
+        "meta_lowdin_density_atom_populations",
+        frozen["meta_lowdin_density_atom_populations"],
+        ndim=1,
+    )
+    occupied_populations = _continuity_array(
+        "mulliken_occupied_orbital_atom_populations",
+        frozen["mulliken_occupied_orbital_atom_populations"],
+        ndim=2,
+    )
+    occupied_energies = _continuity_array(
+        "occupied_orbital_energies_Eh",
+        frozen["occupied_orbital_energies_Eh"],
+        ndim=1,
+    )
+    atom_count = mulliken_density.size
+    occupied_count = occupied_energies.size
+    if atom_count == 0 or meta_lowdin_density.shape != (atom_count,):
+        raise ValueError("Continuity atom-population arrays must have the same non-zero length")
+    if occupied_count == 0 or occupied_populations.shape != (occupied_count, atom_count):
+        raise ValueError("Occupied-orbital populations must have shape (occupied orbitals, atoms)")
+    _continuity_scalar(
+        "reference_homo_lumo_gap_Eh",
+        frozen["reference_homo_lumo_gap_Eh"],
+    )
+    if require_coefficients:
+        coefficients = _continuity_array(
+            "occupied_mo_coefficients_ao",
+            frozen["occupied_mo_coefficients_ao"],
+            ndim=2,
+        )
+        if coefficients.shape[0] == 0 or coefficients.shape[1] != occupied_count:
+            raise ValueError(
+                "Occupied MO coefficients must have shape (AO functions, occupied orbitals)"
+            )
+    return frozen
+
+
+def _continuity_array(name: str, value: object, *, ndim: int) -> np.ndarray:
+    if not isinstance(value, tuple):
+        raise ValueError(f"{name} must be a numeric array")
+    try:
+        raw = np.asarray(value)
+        values = np.asarray(value, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a rectangular numeric array") from exc
+    if raw.dtype.kind not in "iuf" or values.ndim != ndim or not np.all(np.isfinite(values)):
+        raise ValueError(f"{name} must be a finite {ndim}D numeric array")
+    return values
+
+
+def _continuity_scalar(name: str, value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a finite number")
+    number = float(value)
+    if not np.isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    return number
+
+
+def _normalized_continuity_mode(value: object) -> str:
+    if not isinstance(value, str):
+        raise TypeError("continuity_diagnostics must be a string")
+    mode = value.strip().lower()
+    if mode not in {"off", "best-effort", "strict"}:
+        raise ValueError("continuity_diagnostics must be 'off', 'best-effort', or 'strict'")
+    return mode
 
 
 def warn_once(key: str, msg: str) -> None:
