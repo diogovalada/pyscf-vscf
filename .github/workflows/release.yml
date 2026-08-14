@@ -36,7 +36,9 @@ jobs:
       - run: uv build
       - run: uvx twine check dist/*
       - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.vscf_two_mode
+      - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.nmode_vci
       - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.vscf_two_mode
+      - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.nmode_vci
       - uses: actions/upload-artifact@v4
         with:
           name: distributions

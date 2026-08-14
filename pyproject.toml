@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyscf-vscf"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "PySCF-backed reduced-dimensional VSCF and DVR vibrational spectroscopy"
 authors = [
     { name = "Diogo Valada" }
@@ -15,7 +15,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["VSCF", "DVR", "PySCF", "vibrational spectroscopy", "quantum chemistry"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",

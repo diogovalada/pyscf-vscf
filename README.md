@@ -91,14 +91,14 @@ control reuse; isotope masses, labels, runtime versions, and vibrational
 analysis policy do not invalidate the same Born-Oppenheimer surface. Array
 checksums are always verified.
 
-See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/intensity-conventions.md),
-[installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/installation.md), and
-[validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.1.0/docs/running-validations.md)
+See the [intensity conventions](https://github.com/diogovalada/pyscf-vscf/blob/v0.2.0a1/docs/intensity-conventions.md),
+[installation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.2.0a1/docs/installation.md), and
+[validation guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.2.0a1/docs/running-validations.md)
 for details.
 
 The evolving coordinate, fitted n-mode, triatomic `J=0`, VCI, and vector-DMS
 interfaces are documented in the
-[advanced n-mode and VCI guide](https://github.com/diogovalada/pyscf-vscf/blob/main/docs/nmode-vci.md).
+[advanced n-mode and VCI guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.2.0a1/docs/nmode-vci.md).
 
 ## Validation
 

@@ -26,7 +26,7 @@ committed.
 5. Confirm that the sdist contains the scripts, geometries, and archived data
    needed for documented source-based validation.
 6. Install both the wheel and sdist into isolated environments and run the
-   packaged example.
+   packaged examples.
 7. Tag the reviewed commit as `vX.Y.Z` and push the tag.
 8. The release workflow creates a GitHub release, attaches the wheel and source
    distribution, and marks PEP 440 alpha, beta, and release-candidate versions

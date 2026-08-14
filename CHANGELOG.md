@@ -5,6 +5,8 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.2.0a1] - 2026-08-14
+
 ### Added
 
 - Optional raw-Mulliken and meta-Lowdin/ANO continuity descriptors for
@@ -156,7 +158,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.0a1...HEAD
+[0.2.0a1]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0...v0.2.0a1
 [0.1.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a7...v0.1.0
 [0.1.0a7]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a6...v0.1.0a7
 [0.1.0a6]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a5...v0.1.0a6
