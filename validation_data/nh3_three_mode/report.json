@@ -117,7 +117,7 @@
   },
   "exact_reference": "iterative exact 3D sinc-DVR diagonalization of the identical model",
   "kinetic_model": "separable constant local N-H reduced masses",
-  "package_version": "0.2.0",
+  "package_version": "0.2.1",
   "potential_model": "one-mode representation plus all three two-mode corrections",
   "schema_version": 1,
   "scope": "This validates the state-specific VSCF implementation on a non-water, three-mode molecular Hamiltonian. It does not establish full-dimensional NH3 spectroscopic accuracy or validate omitted bend, inversion, and kinetic-coupling terms.",

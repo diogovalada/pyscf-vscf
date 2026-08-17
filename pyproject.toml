@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyscf-vscf"
-version = "0.2.0"
-description = "PySCF-backed reduced-dimensional VSCF and DVR vibrational spectroscopy"
+version = "0.2.1"
+description = "Variational anharmonic vibrational calculations with PySCF"
 authors = [
     { name = "Diogo Valada" }
 ]

@@ -5,6 +5,14 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-17
+
+### Changed
+
+- Updated the distribution summary to describe the package as providing
+  variational anharmonic vibrational calculations with PySCF. The API,
+  numerical methods, and archived scientific results are unchanged.
+
 ## [0.2.0] - 2026-08-17
 
 ### Changed
@@ -165,7 +173,8 @@ once a public release is tagged.
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.0a1...v0.2.0
 [0.2.0a1]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0...v0.2.0a1
 [0.1.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.1.0a7...v0.1.0
