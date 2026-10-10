@@ -5,6 +5,78 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-10
+
+### Added
+
+- Command line: `--json` structured results, km/mol intensity columns,
+  grid-boundary flags (`*`, threshold `--boundary-warn`, default `1e-5`),
+  `--continue-on-error`, `--partial-out`, `--debug`, `--max-memory`, `--ri`,
+  `--rmin2/--rmax2/--npts2` for 2D scans, `--intensity isotropic`, and help
+  text that states every default.
+- Python: `ScanFailedError`, `PartialScanGrid`, and `ScanPointFailure` report
+  failed scan points with their grid index, coordinates, and traceback and
+  keep every completed point; scan functions accept `stop_on_error` and
+  `batch_size`; `dump_partial_scan_npz` writes a diagnostic (never reusable)
+  file of completed points.
+- `TransitionRecord.grid_boundary_weight`, `ground_grid_boundary_weight`, km/mol
+  intensity properties, and `as_dict(extended=True)`. The default `as_dict()`
+  output is unchanged.
+- `settings.resolve_scf_controls`, `available_cpu_count`, `available_memory_mb`,
+  and the per-process memory budget `PYSCF_VSCF_MAX_MEMORY_MB`.
+- `docs/caching.md`, issue templates, Python 3.14 support, and CI jobs for the
+  lowest supported dependency versions and a branch-coverage gate.
+
+### Changed
+
+- Scans run in parallel by default: up to one worker per available CPU,
+  limited by the number of points and by available memory, each with an
+  explicit PySCF memory budget; leftover CPUs become threads of the workers. `--max-parallel` now defaults to the available
+  CPU count instead of 8, which also sets the thread count of harmonic
+  analysis and optimization. An explicit `--pes-workers` keeps the previous
+  behaviour.
+- Unset SCF controls are applied explicitly as package defaults (convergence
+  `1e-10` Eh, 50 cycles, DFT grid level 3), so a PySCF configuration file can
+  no longer change them. New caches record the resolved values as provenance;
+  cache identities and existing caches are unchanged.
+- Exceptions raised while evaluating scan points now surface as
+  `ScanFailedError` (a `RuntimeError`) carrying the completed points; the
+  original exception type and message are kept in its failure records.
+- The command line reports errors as one line (exit code 1; argument errors
+  exit with 2) instead of a traceback, validates bonds, grids, normal-coordinate
+  bounds, and output paths before any calculation, and writes the runtime line
+  to standard error.
+- `--reuse-grid` takes omitted electronic and grid options from the verified
+  cache, and cache mismatches list each differing field.
+- The default optimization output follows the input format (`.xyz` for
+  `--xyz`). Optimization output suffixes are validated before optimizing.
+- Cache options are rejected for harmonic and optimization tasks, and `--scan`
+  is rejected for 2D scans, instead of being ignored.
+- SciPy 1.13 or newer is required.
+- `FUTURE WORK.md` is now `ROADMAP.md`; the README was rewritten.
+
+### Fixed
+
+- Signed transition dipoles and eigenvector phases could flip sign between
+  NumPy/LAPACK builds because the sign convention picked its pivot by exact
+  maximum, and symmetric problems have mirror components equal to roundoff.
+  Components within a relative `1e-8` of the maximum are now treated as tied
+  and resolved by a fixed order. Results without such near ties, including
+  the archived validation reports, are unchanged.
+- The n-mode, VCI, and transition-moment APIs failed with SciPy older than
+  1.13 on the package's read-only arrays; the dependency floor is corrected.
+- The analytic-Hessian fallback selected the Hartree-Fock Hessian for DFT
+  objects without a `Hessian` method, and reported an `AttributeError` raised
+  inside PySCF's Hessian code as a missing Hessian.
+- Python error messages no longer tell API users to pass command-line flags.
+
+### Known limitations
+
+- The default 1D/2D bond grid (0.75-1.25 A) is too narrow for converged O-H
+  states: for water at B3LYP/cc-pVDZ the fundamental is 76 cm^-1 too high.
+  Such states are now flagged; choose a wider `--rmin`/`--rmax`. The defaults
+  are planned to change in 0.3.
+
 ## [0.2.1] - 2026-08-17
 
 ### Changed

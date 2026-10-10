@@ -1,0 +1,33 @@
+name: Bug report
+description: Something fails, crashes, or produces a wrong result.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >-
+        The exact command or a minimal Python script, and the geometry file.
+        For failing commands, rerun with --debug.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      description: Output of `pyscf-vscf --version` and `python -c "import pyscf; print(pyscf.__version__)"`, plus your operating system.
+    validations:
+      required: true

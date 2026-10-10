@@ -11,6 +11,7 @@ import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigsh
 
 from ._arrays import immutable_array
+from ._phase import phase_canonical_columns
 from ._identity import (
     FrozenJSONMapping,
     array_identity,
@@ -783,13 +784,7 @@ def _jacobi_valence_grid(
 
 
 def _phase_canonical_columns(vectors: np.ndarray) -> np.ndarray:
-    canonical = np.array(vectors, dtype=float, copy=True)
-    for column in range(canonical.shape[1]):
-        absolute = np.abs(canonical[:, column])
-        pivot = int(np.flatnonzero(absolute == np.max(absolute))[0])
-        if canonical[pivot, column] < 0.0:
-            canonical[:, column] *= -1.0
-    return canonical
+    return phase_canonical_columns(vectors)
 
 
 def _deterministic_initial(dimension: int) -> np.ndarray:

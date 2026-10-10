@@ -140,7 +140,7 @@ def test_harmonic_analysis_non_strict_analytic_failure_still_blocks_fd_unless_al
 
     monkeypatch.setattr(workflow, "analytic_hessian", fail_hessian)
 
-    with pytest.raises(RuntimeError, match="blocked; pass --allow-fd-hessian"):
+    with pytest.raises(RuntimeError, match="blocked; pass allow_fd_hessian=True"):
         workflow.harmonic_analysis(
             _h2_molecule(), cfg, rtproj="none", strict=False, allow_fd_hessian=False
         )
@@ -253,3 +253,24 @@ def test_harmonic_workflow_real_pyscf_h2_hf_sto3g_smoke() -> None:
     assert np.all(np.isfinite(result.freqs_cm))
     assert np.all(np.isfinite(result.modes))
     assert result.zpe_cm > 0.0
+
+
+def test_analytic_hessian_returns_none_only_without_hessian_interface() -> None:
+    class NoHessian:
+        pass
+
+    assert workflow.analytic_hessian(NoHessian()) is None
+
+
+def test_analytic_hessian_does_not_mask_internal_attribute_errors() -> None:
+    class BrokenHessian:
+        def kernel(self) -> np.ndarray:
+            raise AttributeError("bug inside the Hessian implementation")
+
+    class MeanField:
+        def Hessian(self) -> BrokenHessian:
+            return BrokenHessian()
+
+    with pytest.raises(RuntimeError, match="Analytic Hessian computation failed") as excinfo:
+        workflow.analytic_hessian(MeanField())
+    assert isinstance(excinfo.value.__cause__, AttributeError)

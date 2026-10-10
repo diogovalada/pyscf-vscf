@@ -10,12 +10,22 @@ import numpy as np
 from .assignments import assign_product_states_2d
 from .constants import HARTREE_TO_CM
 from .dvr import product_dvr_2d, sinc_dvr_1d, trans_mu_1d, trans_mu_2d
-from .spectra import integrated_cross_section_omega
+from .spectra import (
+    integrated_cross_section_omega,
+    integrated_cross_section_omega_to_km_per_mol,
+)
 
 
 @dataclass(frozen=True)
 class TransitionRecord:
-    """One assigned vibrational transition with both intensity conventions."""
+    """One assigned vibrational transition with both intensity conventions.
+
+    ``grid_boundary_weight`` and ``ground_grid_boundary_weight`` are the
+    probabilities that the final and initial (ground) states place on the
+    outermost DVR grid points (the outer frame of a 2D grid). Large values mean
+    the state is squeezed by the finite grid. They are a heuristic warning
+    sign, not a convergence certificate. ``None`` means not computed.
+    """
 
     state_index: int
     quanta: tuple[int, ...]
@@ -31,9 +41,32 @@ class TransitionRecord:
     assignment_top_components: tuple[tuple[tuple[int, int], float, float], ...] | None = None
     assignment_method: str | None = None
     assignment_reference: str | None = None
+    grid_boundary_weight: float | None = None
+    ground_grid_boundary_weight: float | None = None
 
-    def as_dict(self) -> dict[str, Any]:
-        """Return a JSON-ready record without ambiguous intensity aliases."""
+    @property
+    def integrated_cross_section_axis_km_per_mol(self) -> float:
+        """Polarized-axis integrated absorption in km mol^-1."""
+
+        return integrated_cross_section_omega_to_km_per_mol(
+            self.integrated_cross_section_axis_omega_m2_per_s
+        )
+
+    @property
+    def integrated_cross_section_isotropic_km_per_mol(self) -> float:
+        """Isotropically averaged integrated absorption in km mol^-1."""
+
+        return integrated_cross_section_omega_to_km_per_mol(
+            self.integrated_cross_section_isotropic_omega_m2_per_s
+        )
+
+    def as_dict(self, *, extended: bool = False) -> dict[str, Any]:
+        """Return a JSON-ready record without ambiguous intensity aliases.
+
+        The default output is stable because archived validation reports
+        compare it exactly. ``extended=True`` adds km mol^-1 intensities and
+        the grid-boundary diagnostics.
+        """
 
         record: dict[str, Any] = {
             "state_index": self.state_index,
@@ -66,16 +99,55 @@ class TransitionRecord:
                     "assignment_reference": self.assignment_reference,
                 }
             )
+        if extended:
+            record.update(
+                {
+                    "integrated_cross_section_axis_km_per_mol": (
+                        self.integrated_cross_section_axis_km_per_mol
+                    ),
+                    "integrated_cross_section_isotropic_km_per_mol": (
+                        self.integrated_cross_section_isotropic_km_per_mol
+                    ),
+                    "grid_boundary_weight": self.grid_boundary_weight,
+                    "ground_grid_boundary_weight": self.ground_grid_boundary_weight,
+                }
+            )
         return record
 
 
 def parse_intensity_mode(mode: str | None) -> str:
-    """Normalize and validate a CLI intensity display mode."""
+    """Normalize and validate a CLI intensity display mode.
+
+    ``isotropic`` is accepted as the descriptive spelling of ``vector``: the
+    norm of the transition-dipole vector feeding an isotropically averaged
+    intensity. Both return ``"vector"``.
+    """
 
     parsed = (mode or "axis").lower()
+    if parsed == "isotropic":
+        return "vector"
     if parsed not in {"axis", "vector", "both"}:
-        raise ValueError(f"Unknown intensity mode '{mode}' (expected axis|vector|both)")
+        raise ValueError(f"Unknown intensity mode '{mode}' (expected axis|isotropic|vector|both)")
     return parsed
+
+
+def grid_boundary_weight_1d(vector: np.ndarray) -> float:
+    """Return the probability a normalized 1D DVR state places on the end points."""
+
+    values = np.asarray(vector, dtype=float)
+    return float(values[0] ** 2 + values[-1] ** 2)
+
+
+def grid_boundary_weight_2d(vector: np.ndarray, shape: tuple[int, int]) -> float:
+    """Return the probability a normalized 2D DVR state places on the outer frame."""
+
+    values = np.asarray(vector, dtype=float).reshape(shape)
+    mask = np.zeros(shape, dtype=bool)
+    mask[0, :] = True
+    mask[-1, :] = True
+    mask[:, 0] = True
+    mask[:, -1] = True
+    return float(np.sum(np.square(values[mask])))
 
 
 def _axis_unit(axis: Sequence[float] | np.ndarray | None) -> np.ndarray:
@@ -139,6 +211,7 @@ def variational_1d(
 
     out: list[TransitionRecord] = []
     e0 = dvr.evals[0]
+    ground_boundary = grid_boundary_weight_1d(dvr.evecs[:, 0])
     for v in range(1, min(int(vmax) + 1, len(dvr.evals))):
         nu_cm = float((dvr.evals[v] - e0) * HARTREE_TO_CM)
         mu_axis = trans_mu_1d(dvr, mu_axis_of_R, v)
@@ -159,6 +232,8 @@ def variational_1d(
                 integrated_cross_section_isotropic_omega_m2_per_s=(
                     integrated_cross_section_omega(mu_vec, nu_cm)
                 ),
+                grid_boundary_weight=grid_boundary_weight_1d(dvr.evecs[:, v]),
+                ground_grid_boundary_weight=ground_boundary,
             )
         )
     return out
@@ -216,6 +291,8 @@ def variational_2d(
 
     out: list[TransitionRecord] = []
     e0 = dvr.evals[0]
+    grid_shape = (R1_arr.size, R2_arr.size)
+    ground_boundary = grid_boundary_weight_2d(dvr.evecs[:, 0], grid_shape)
     for n in range(1, min(int(nmax) + 1, len(dvr.evals))):
         nu_cm = float((dvr.evals[n] - e0) * HARTREE_TO_CM)
         mu_axis = trans_mu_2d(dvr, mu_proj, n)
@@ -244,9 +321,18 @@ def variational_2d(
                 assignment_top_components=assignment.top_components,
                 assignment_method="phase-canonical-overlap-hungarian",
                 assignment_reference=assignment_reference,
+                grid_boundary_weight=grid_boundary_weight_2d(dvr.evecs[:, n], grid_shape),
+                ground_grid_boundary_weight=ground_boundary,
             )
         )
     return out
 
 
-__all__ = ["TransitionRecord", "parse_intensity_mode", "variational_1d", "variational_2d"]
+__all__ = [
+    "TransitionRecord",
+    "grid_boundary_weight_1d",
+    "grid_boundary_weight_2d",
+    "parse_intensity_mode",
+    "variational_1d",
+    "variational_2d",
+]

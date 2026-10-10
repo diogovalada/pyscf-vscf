@@ -461,6 +461,9 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
     class FakeMF:
         converged = True
 
+        def __init__(self):
+            self.grids = SimpleNamespace(level=None)
+
         def kernel(self):
             return 0.0
 
@@ -506,6 +509,73 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
     assert isinstance(mean_field, FakeMF)
     assert calls == ["UHF"]
     assert mean_field.max_cycle == 37
+    assert mean_field.conv_tol == pytest.approx(1e-9)
+    assert mean_field.grids.level == 3
+
+
+@pytest.mark.pyscf
+def test_make_mean_field_pins_scf_controls_independent_of_pyscf_defaults(monkeypatch) -> None:
+    _import_pyscf_or_skip()
+    backend = _import_backend_or_skip()
+    from pyscf.dft import gen_grid
+    from pyscf.scf import hf
+
+    from pyscf_vscf.molecule import Molecule
+    from pyscf_vscf.settings import (
+        DEFAULT_DFT_GRID_LEVEL,
+        DEFAULT_SCF_CONV_TOL,
+        DEFAULT_SCF_MAX_CYCLE,
+        ESSettings,
+    )
+
+    # A user PySCF configuration file changes these class-level defaults.
+    monkeypatch.setattr(hf.SCF, "max_cycle", 7)
+    monkeypatch.setattr(hf.SCF, "conv_tol", 1e-5)
+    monkeypatch.setattr(gen_grid.Grids, "level", 1)
+    water = Molecule.from_arrays(
+        ["O", "H", "H"],
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 0.9572], [0.9266, 0.0, -0.2396]],
+        label="water",
+    )
+    pmol = backend.molecule_to_pyscf(water, basis="sto-3g")
+    mean_field = backend.make_mean_field(
+        pmol, ESSettings(method="lda,vwn", basis="sto-3g", use_density_fit=False)
+    )
+
+    assert mean_field.max_cycle == DEFAULT_SCF_MAX_CYCLE
+    assert mean_field.conv_tol == DEFAULT_SCF_CONV_TOL
+    assert mean_field.grids.level == DEFAULT_DFT_GRID_LEVEL
+
+
+def test_make_mean_field_reports_nonconvergence_controls(monkeypatch) -> None:
+    backend = importlib.import_module(BACKEND_MODULE)
+
+    class FakeMF:
+        converged = False
+        cycles = 4
+
+        def kernel(self):
+            return 0.0
+
+    class FakeSCF:
+        @staticmethod
+        def RHF(pmol):
+            del pmol
+            return FakeMF()
+
+    monkeypatch.setattr(
+        backend,
+        "_require_pyscf",
+        lambda: (object(), FakeSCF, object(), object()),
+    )
+    with pytest.raises(
+        RuntimeError,
+        match=r"SCF did not converge \(method=hf, max_cycle=4, conv_tol=1e-10, cycles run=4\)",
+    ):
+        backend.make_mean_field(
+            SimpleNamespace(spin=0),
+            SimpleNamespace(method="hf", use_density_fit=False, scf_max_cycle=4),
+        )
 
 
 @pytest.mark.pyscf

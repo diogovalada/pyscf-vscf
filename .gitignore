@@ -1,8 +1,6 @@
 *.prof
 *.py[cod]
 *.egg-info/
-.aider*
-.agents/
 .coverage
 .DS_Store
 .idea/
@@ -10,7 +8,6 @@
 .ruff_cache/
 .venv/
 .vscode/
-/AGENTS.md
 __pycache__/
 build/
 coverage.xml

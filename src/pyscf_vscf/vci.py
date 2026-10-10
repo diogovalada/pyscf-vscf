@@ -14,6 +14,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.sparse.linalg import LinearOperator, eigsh
 
 from ._arrays import immutable_array
+from ._phase import phase_canonical_columns
 from ._artifacts import atomic_savez_compressed
 from ._identity import (
     FrozenJSONMapping,
@@ -1695,13 +1696,7 @@ def _normalized(vector: np.ndarray) -> np.ndarray:
 
 
 def _phase_canonical_columns(vectors: np.ndarray) -> np.ndarray:
-    canonical = np.array(vectors, dtype=float, copy=True)
-    for column in range(canonical.shape[1]):
-        absolute = np.abs(canonical[:, column])
-        pivot = int(np.flatnonzero(absolute == np.max(absolute))[0])
-        if canonical[pivot, column] < 0.0:
-            canonical[:, column] *= -1.0
-    return canonical
+    return phase_canonical_columns(vectors)
 
 
 def _phase_canonical_configurations(
@@ -1710,20 +1705,9 @@ def _phase_canonical_configurations(
 ) -> np.ndarray:
     """Canonicalize VCI signs with lexicographic configuration tie-breaking."""
 
-    canonical = np.array(vectors, dtype=float, copy=True)
-    if canonical.shape[0] != len(configurations):
+    if np.shape(vectors)[0] != len(configurations):
         raise ValueError("VCI vectors and configurations do not align")
-    for column in range(canonical.shape[1]):
-        absolute = np.abs(canonical[:, column])
-        maximum = float(np.max(absolute))
-        tied = np.flatnonzero(absolute == maximum)
-        pivot = min(
-            (int(index) for index in tied),
-            key=lambda index: configurations[index],
-        )
-        if canonical[pivot, column] < 0.0:
-            canonical[:, column] *= -1.0
-    return canonical
+    return phase_canonical_columns(vectors, order_key=lambda index: configurations[index])
 
 
 def _assignment_identity(

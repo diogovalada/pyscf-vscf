@@ -25,7 +25,13 @@ from ..electronic import (
 )
 from .._identity import immutable_json_mapping, to_jsonable
 from ..molecule import Molecule
-from ..settings import ESSettings, coerce_es_settings, default_auxbasis
+from ..settings import (
+    ESSettings,
+    coerce_es_settings,
+    default_auxbasis,
+    resolve_scf_controls,
+    runtime_max_memory_mb,
+)
 
 
 _WARNED_ONCE: set[str] = set()
@@ -85,19 +91,10 @@ class _MeanFieldSettings:
             auxbasis = str(auxbasis).strip()
             if not auxbasis:
                 raise ValueError("Density fitting requires a non-empty auxiliary basis")
-        tolerance = 1e-10 if settings.scf_conv_tol is None else float(settings.scf_conv_tol)
-        max_cycle = 50 if settings.scf_max_cycle is None else int(settings.scf_max_cycle)
-        if not np.isfinite(tolerance) or tolerance <= 0.0:
-            raise ValueError("scf_conv_tol must be finite and positive")
-        if max_cycle <= 0:
-            raise ValueError("scf_max_cycle must be positive")
-        grid_level = settings.dft_grid_level
-        if method.lower() == "hf":
-            grid_level = None
-        elif grid_level is None:
-            grid_level = 3
-        if grid_level is not None and int(grid_level) < 0:
-            raise ValueError("dft_grid_level must be non-negative")
+        controls = resolve_scf_controls(settings)
+        tolerance = controls.conv_tol
+        max_cycle = controls.max_cycle
+        grid_level = controls.dft_grid_level
         return cls(
             method=method,
             basis=basis,
@@ -481,6 +478,8 @@ def molecule_to_pyscf(molecule: Any, basis: str = "aug-cc-pVTZ"):
 
     Deuterium is mapped to hydrogen for electronic structure, while isotope
     masses are passed to PySCF through ``mol.nucprop`` for vibrational analysis.
+    When ``PYSCF_VSCF_MAX_MEMORY_MB`` is set, it becomes the molecule's
+    ``max_memory`` budget, overriding PySCF's configured default.
     """
 
     gto, _, _, elements = _require_pyscf()
@@ -495,6 +494,9 @@ def molecule_to_pyscf(molecule: Any, basis: str = "aug-cc-pVTZ"):
     pmol.spin = int(getattr(molecule, "spin", 0))
     pmol.verbose = 0
     pmol.atom = [(s, tuple(map(float, xyz))) for s, xyz in zip(sym_elec, coords)]
+    memory_budget = runtime_max_memory_mb()
+    if memory_budget is not None:
+        pmol.max_memory = memory_budget
 
     default_masses = _default_pyscf_masses(sym_elec, gto, elements)
     analysis_masses = _analysis_masses(molecule, symbols)
@@ -518,10 +520,16 @@ def make_mean_field(
     field_au: np.ndarray | None = None,
     field_origin_A: np.ndarray | None = None,
 ):
-    """Create and run a PySCF mean-field object from an ESSettings-like config."""
+    """Create and run a PySCF mean-field object from an ESSettings-like config.
+
+    Unset SCF controls resolve to the package defaults in
+    :mod:`pyscf_vscf.settings` rather than to PySCF's configurable defaults.
+    """
 
     _, scf, dft, _ = _require_pyscf()
-    method = str(_cfg_get(cfg, "method", "wb97x"))
+    settings = coerce_es_settings(cfg)
+    controls = resolve_scf_controls(settings)
+    method = str(settings.method)
     open_shell = int(getattr(pmol, "spin", 0)) != 0
     is_dft = method.lower() != "hf"
     if method.lower() == "hf":
@@ -529,9 +537,8 @@ def make_mean_field(
     else:
         mf = dft.UKS(pmol, xc=method) if open_shell else dft.RKS(pmol, xc=method)
 
-    if bool(_cfg_get(cfg, "use_density_fit", True)):
-        auxbasis = _cfg_get(cfg, "auxbasis", None)
-        aux = auxbasis if auxbasis else default_auxbasis(str(_cfg_get(cfg, "basis", "")))
+    if bool(settings.use_density_fit):
+        aux = settings.auxbasis if settings.auxbasis else default_auxbasis(str(settings.basis))
         try:
             mf = mf.density_fit(auxbasis=aux)
         except Exception as exc:
@@ -542,9 +549,8 @@ def make_mean_field(
             )
             raise RuntimeError(msg) from exc
 
-    dft_grid_level = _cfg_get(cfg, "dft_grid_level", None)
-    if dft_grid_level is not None and is_dft:
-        mf.grids.level = int(dft_grid_level)
+    if is_dft and controls.dft_grid_level is not None:
+        mf.grids.level = controls.dft_grid_level
 
     nuclear_field_energy = _apply_electric_field(
         mf,
@@ -554,20 +560,16 @@ def make_mean_field(
     )
     mf._pyscf_vscf_nuclear_field_energy_Eh = nuclear_field_energy
 
-    mf.conv_tol = 1e-10
-
-    scf_conv_tol = _cfg_get(cfg, "scf_conv_tol", None)
-    if scf_conv_tol is not None:
-        mf.conv_tol = float(scf_conv_tol)
-    scf_max_cycle = _cfg_get(cfg, "scf_max_cycle", None)
-    if scf_max_cycle is not None:
-        max_cycle = int(scf_max_cycle)
-        if max_cycle <= 0:
-            raise ValueError("scf_max_cycle must be positive")
-        mf.max_cycle = max_cycle
+    mf.conv_tol = controls.conv_tol
+    mf.max_cycle = controls.max_cycle
     mf.kernel()
     if not mf.converged:
-        raise RuntimeError("SCF did not converge")
+        cycles = getattr(mf, "cycles", None)
+        cycle_text = "" if cycles is None else f", cycles run={int(cycles)}"
+        raise RuntimeError(
+            f"SCF did not converge (method={method}, max_cycle={controls.max_cycle}, "
+            f"conv_tol={controls.conv_tol:g}{cycle_text})"
+        )
     return mf
 
 

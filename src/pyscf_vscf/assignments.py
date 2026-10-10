@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from ._phase import phase_canonical_columns
 from .dvr import DVR2D, sinc_dvr_1d
 
 
@@ -122,12 +123,7 @@ def assign_product_states_2d(
 
 
 def _phase_canonical_columns(vectors: np.ndarray) -> np.ndarray:
-    canonical = np.asarray(vectors, dtype=float).copy()
-    for column in range(canonical.shape[1]):
-        anchor = int(np.argmax(np.abs(canonical[:, column])))
-        if canonical[anchor, column] < 0.0:
-            canonical[:, column] *= -1.0
-    return canonical
+    return phase_canonical_columns(vectors)
 
 
 __all__ = ["ProductStateAssignment", "assign_product_states_2d"]

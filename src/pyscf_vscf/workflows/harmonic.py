@@ -73,8 +73,11 @@ def harmonic_analysis(
     if hessian is None:
         msg = "Analytic Hessian unavailable; would fall back to finite-difference Hessian"
         if not allow_fd_hessian:
-            raise RuntimeError(msg + " (blocked; pass --allow-fd-hessian to proceed)")
-        harmonic_helpers.warn_once("fd_hessian", msg + " (enabled by --allow-fd-hessian)")
+            raise RuntimeError(
+                msg + " (blocked; pass allow_fd_hessian=True, or --allow-fd-hessian on the "
+                "command line, to proceed)"
+            )
+        harmonic_helpers.warn_once("fd_hessian", msg + " (enabled by allow_fd_hessian)")
         x0_bohr = atom_coords_bohr(pmol).reshape(-1)
         hessian = finite_difference_hessian_from_gradients(molecule, cfg, x0_bohr)
         hessian_provenance = "finite-difference-analytic-gradients"
@@ -98,18 +101,19 @@ def harmonic_analysis(
 def analytic_hessian(mf: Any) -> np.ndarray | None:
     """Return an analytic Hessian from a converged PySCF mean-field object.
 
-    Missing APIs return ``None`` so the caller can decide whether finite
-    differences are allowed. Runtime failures are wrapped as
-    ``RuntimeError("Analytic Hessian computation failed")`` to preserve legacy
-    behavior.
+    Returns ``None`` only when the mean-field object offers no analytic Hessian
+    interface, so the caller can decide whether finite differences are allowed.
+    Any failure inside an available Hessian implementation, including an
+    ``AttributeError`` raised by PySCF itself, is wrapped as
+    ``RuntimeError("Analytic Hessian computation failed")``.
     """
 
-    try:
-        return mf.Hessian().kernel()
-    except AttributeError:
-        pass
-    except Exception as exc:
-        raise RuntimeError("Analytic Hessian computation failed") from exc
+    hessian_factory = getattr(mf, "Hessian", None)
+    if callable(hessian_factory):
+        try:
+            return hessian_factory().kernel()
+        except Exception as exc:
+            raise RuntimeError("Analytic Hessian computation failed") from exc
 
     try:
         from pyscf import dft, scf
@@ -118,16 +122,16 @@ def analytic_hessian(mf: Any) -> np.ndarray | None:
     except Exception:
         return None
 
-    try:
-        if isinstance(mf, scf.hf.RHF):
-            return h_rhf.Hessian(mf).kernel()
-        if isinstance(mf, dft.rks.RKS):
-            return h_rks.Hessian(mf).kernel()
-    except AttributeError:
+    if isinstance(mf, dft.rks.RKS):
+        hessian_class = h_rks.Hessian
+    elif isinstance(mf, scf.hf.RHF):
+        hessian_class = h_rhf.Hessian
+    else:
         return None
+    try:
+        return hessian_class(mf).kernel()
     except Exception as exc:
         raise RuntimeError("Analytic Hessian computation failed") from exc
-    return None
 
 
 def nuclear_gradient(

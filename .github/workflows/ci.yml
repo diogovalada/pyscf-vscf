@@ -12,7 +12,7 @@ jobs:
   pure:
     strategy:
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,8 @@ jobs:
       - run: uv run ruff format --check src tests scripts
       - run: uv run pytest -m "not pyscf and not slow and not cache" -q
 
-  pyscf:
+  full:
+    # Every test, including PySCF calculations, with a branch-coverage gate.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +33,25 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --extra dev
-      - run: uv run pytest -m pyscf -q
+      - run: >-
+          uv run pytest -q --cov=pyscf_vscf --cov-report=term
+          --cov-fail-under=78
+
+  minimum-dependencies:
+    # The declared lower bounds of the runtime dependencies, resolved without
+    # the lockfile and independently of current development tools.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.10"
+      - run: uv venv
+      - run: uv pip install --resolution lowest-direct .
+      - run: uv pip install pytest
+      - run: >-
+          uv pip list | grep -i -E '^(numpy|scipy|pyscf|geometric) '
+      - run: .venv/bin/python -m pytest -q -W ignore::DeprecationWarning
 
   archived-validation:
     runs-on: ubuntu-latest

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,16 @@ import pytest
 from pyscf_vscf import cli
 from pyscf_vscf.variational import TransitionRecord
 from pyscf_vscf.workflows import harmonic, optimization, scans
+
+
+@pytest.fixture(autouse=True)
+def _restore_process_environment():
+    """The CLI configures thread and memory variables for its own process."""
+
+    saved = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
 
 
 def _transition(frequency_cm: float, quanta: tuple[int, ...] = (1,)) -> TransitionRecord:
@@ -81,7 +92,7 @@ sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.2.1")):
+    for argv, expected in ((["--help"], "--task"), (["--version"], "0.2.2")):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],
@@ -437,6 +448,8 @@ def test_1d_normal_task_dispatches_executor_to_normal_grid(
                 "3",
                 "--vmax",
                 "1",
+                "--pes-workers",
+                "1",
             ]
         )
         == 0
@@ -445,6 +458,7 @@ def test_1d_normal_task_dispatches_executor_to_normal_grid(
     _molecule, _cfg, _u_dir, smin, smax, npts, kwargs = captured["grid"]
     assert (smin, smax, npts) == (-0.1, 0.1, 3)
     assert kwargs["executor_factory"] is cli._SequentialExecutor
+    assert kwargs["stop_on_error"] is True
     assert "2345.6" in capsys.readouterr().out
 
 
@@ -505,6 +519,8 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
                 "3",
                 "--vmax",
                 "1",
+                "--pes-workers",
+                "1",
             ]
         )
         == 0
@@ -521,6 +537,7 @@ def test_1d_normal_relaxed_task_wires_package_pyscf_optimizer(
 def test_1d_normal_relaxed_refuses_spectrum_when_any_point_failed(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     from pyscf_vscf import variational
 
@@ -554,20 +571,21 @@ def test_1d_normal_relaxed_refuses_spectrum_when_any_point_failed(
         lambda *args, **kwargs: pytest.fail("spectrum must not run"),
     )
 
+    argv = [
+        "--xyz",
+        str(input_path),
+        "--task",
+        "1d",
+        "--scan",
+        "normal-relaxed",
+        "--no-strict",
+        "--npts",
+        "3",
+    ]
+    assert cli.main(argv) == 1
+    assert re.search(r"failed at 1 point.*indices=\[1\].*refusing", capsys.readouterr().err)
     with pytest.raises(RuntimeError, match=r"failed at 1 point.*indices=\[1\].*refusing"):
-        cli.main(
-            [
-                "--xyz",
-                str(input_path),
-                "--task",
-                "1d",
-                "--scan",
-                "normal-relaxed",
-                "--no-strict",
-                "--npts",
-                "3",
-            ]
-        )
+        cli.main([*argv, "--debug"])
 
 
 def test_2d_task_dispatches_grid_and_variational_helpers(

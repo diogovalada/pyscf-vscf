@@ -16,7 +16,7 @@ from importlib.metadata import PackageNotFoundError, version
 import numpy as np
 
 from .io import dump_grid_npz, load_grid_npz
-from .settings import coerce_es_settings, default_auxbasis
+from .settings import coerce_es_settings, default_auxbasis, resolve_scf_controls
 
 CACHE_SCHEMA_VERSION = 3
 
@@ -100,12 +100,28 @@ def electronic_structure_identity(cfg, *, backend_identity: str = "pyscf") -> di
 
 
 def electronic_structure_provenance(cfg, *, backend_identity: str = "pyscf") -> dict:
-    """Return the electronic identity plus the runtime used to evaluate it."""
+    """Return the electronic identity plus the runtime used to evaluate it.
 
-    return {
-        "identity": electronic_structure_identity(cfg, backend_identity=backend_identity),
+    For the built-in PySCF backend the provenance also records the SCF
+    controls actually applied after resolving unset fields to the package
+    defaults. They are provenance rather than identity: caches written before
+    0.2.2 recorded ``None`` for unset controls, and those calculations used
+    PySCF's then-configurable defaults, which cannot be recovered afterwards.
+    """
+
+    identity = electronic_structure_identity(cfg, backend_identity=backend_identity)
+    provenance = {
+        "identity": identity,
         "software_versions": runtime_provenance()["distributions"],
     }
+    if identity["backend"] == "pyscf":
+        controls = resolve_scf_controls(coerce_es_settings(cfg))
+        provenance["resolved_scf_controls"] = {
+            "conv_tol": controls.conv_tol,
+            "max_cycle": controls.max_cycle,
+            "dft_grid_level": controls.dft_grid_level,
+        }
+    return provenance
 
 
 def runtime_provenance() -> dict:
@@ -185,11 +201,18 @@ def validate_scientific_cache_metadata(actual: dict, expected: dict) -> None:
     expected_fingerprint = expected.get("cache_identity_sha256")
     if expected_fingerprint != scientific_fingerprint(expected_embedded):
         raise ValueError("Expected grid cache identity fingerprint is corrupt")
-    assert_meta_equal(
-        "cache_identity_sha256",
-        embedded_fingerprint,
-        expected_fingerprint,
-    )
+    if embedded_fingerprint != expected_fingerprint:
+        differences = identity_differences(embedded, expected_embedded)
+        shown = differences[:_MAX_REPORTED_DIFFERENCES]
+        hidden = len(differences) - len(shown)
+        lines = [
+            "Grid cache mismatch for cache_identity_sha256: the cached grid was computed "
+            "for a different calculation than the one requested"
+        ]
+        lines.extend(f"  {line}" for line in shown)
+        if hidden > 0:
+            lines.append(f"  ... and {hidden} more difference(s)")
+        raise ValueError("\n".join(lines))
     actual_runtime = actual.get("provenance", {}).get("runtime", {})
     expected_runtime = expected.get("provenance", {}).get("runtime", {})
     if actual_runtime != expected_runtime:
@@ -199,6 +222,71 @@ def validate_scientific_cache_metadata(actual: dict, expected: dict) -> None:
             RuntimeWarning,
             stacklevel=2,
         )
+
+
+_MAX_REPORTED_DIFFERENCES = 12
+
+
+def identity_differences(cached, requested, path: str = "") -> list[str]:
+    """Describe every field where a cached identity differs from a requested one.
+
+    Numeric lists are summarized by shape and range, with the first differing
+    index and the largest absolute difference when the shapes agree.
+    """
+
+    if isinstance(cached, dict) and isinstance(requested, dict):
+        differences = []
+        for key in sorted(set(cached) | set(requested), key=str):
+            child = f"{path}.{key}" if path else str(key)
+            if key not in cached:
+                differences.append(
+                    f"{child}: absent from the cache, requested {_summarize(requested[key])}"
+                )
+            elif key not in requested:
+                differences.append(
+                    f"{child}: cache has {_summarize(cached[key])}, absent from the request"
+                )
+            else:
+                differences.extend(identity_differences(cached[key], requested[key], child))
+        return differences
+    if cached == requested:
+        return []
+    label = path or "<root>"
+    left = _numeric_array(cached)
+    right = _numeric_array(requested)
+    if left is not None and right is not None:
+        if left.shape != right.shape:
+            return [f"{label}: cache has {_summarize(cached)}, requested {_summarize(requested)}"]
+        delta = np.abs(left - right)
+        first = tuple(int(value) for value in np.argwhere(left != right)[0])
+        return [
+            f"{label}: first difference at index {list(first)} "
+            f"(cache {float(left[first])!r}, requested {float(right[first])!r}); "
+            f"max |difference| {float(np.max(delta)):.3g}"
+        ]
+    return [f"{label}: cache={_summarize(cached)}, requested={_summarize(requested)}"]
+
+
+def _numeric_array(value) -> np.ndarray | None:
+    if not isinstance(value, (list, tuple)) or not value:
+        return None
+    try:
+        array = np.asarray(value, dtype=float)
+    except (TypeError, ValueError):
+        return None
+    if array.dtype == object:
+        return None
+    return array
+
+
+def _summarize(value) -> str:
+    array = _numeric_array(value)
+    if array is not None and array.size > 6:
+        return (
+            f"{array.size} values with shape {list(array.shape)} in "
+            f"[{float(np.min(array)):.6g}, {float(np.max(array)):.6g}]"
+        )
+    return repr(value)
 
 
 def _validate_schema3_metadata_integrity(metadata: dict, label: str) -> None:
@@ -322,6 +410,7 @@ __all__ = [
     "dump_grid_npz",
     "electronic_structure_provenance",
     "electronic_structure_identity",
+    "identity_differences",
     "load_grid_npz",
     "molecule_provenance",
     "molecule_electronic_identity",

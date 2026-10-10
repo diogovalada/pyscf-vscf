@@ -25,7 +25,9 @@ def test_pure_imports_do_not_request_pyscf(monkeypatch):
         "pyscf_vscf.cache",
         "pyscf_vscf.coordinates",
     ]:
-        sys.modules.pop(module_name, None)
+        # monkeypatch restores the original module objects afterwards, so later
+        # tests do not see two different class objects with the same name.
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
         importlib.import_module(module_name)
 
 

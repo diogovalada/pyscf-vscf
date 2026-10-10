@@ -242,7 +242,7 @@ def test_1d_normal_grid_and_displacement_validation() -> None:
     ],
 )
 def test_scan_rejects_nonfinite_evaluator_results(result, message) -> None:
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(scans.ScanFailedError, match=message) as excinfo:
         scans.grid_1d_pes_dms(
             _water(),
             _cfg(),
@@ -252,6 +252,9 @@ def test_scan_rejects_nonfinite_evaluator_results(result, message) -> None:
             2,
             energy_dipole_fn=lambda molecule, cfg: result,
         )
+    failure = excinfo.value.partial.failures[0]
+    assert failure.error_type == "ValueError"
+    assert message in failure.message
 
 
 def test_2d_lbs_grid_realizes_both_frozen_bond_lengths() -> None:

@@ -58,6 +58,8 @@ def run_opt(
 
     emit_log = log_fn or _noop_log
     emit_warning = warn_fn or pyscf_backend.warn_once
+    if opt_out is not None:
+        _validate_output_suffix(Path(opt_out))
 
     emit_log("Geometry optimization: setting up PySCF molecule and mean-field")
     basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
@@ -144,15 +146,22 @@ def _write_optimized_geometry(
     if opt_out is None:
         opt_out = Path(f"{mol_opt.label}.pyscf_opt.mmol")
     output_path = Path(opt_out)
-    suffix = output_path.suffix.lower()
+    suffix = _validate_output_suffix(output_path)
     source_label = str(_mol_get(source_mol, "label", mol_opt.label))
     if suffix == ".xyz":
         write_xyz(output_path, mol_opt, comment=f"{source_label} (PySCF optimized)")
-    elif suffix == ".mmol":
-        write_midas_mmol(output_path, mol_opt, title=f"{source_label} (PySCF optimized)")
     else:
-        raise ValueError(f"--opt-out must end with .xyz or .mmol (got '{output_path.name}')")
+        write_midas_mmol(output_path, mol_opt, title=f"{source_label} (PySCF optimized)")
     return output_path
+
+
+def _validate_output_suffix(output_path: Path) -> str:
+    suffix = output_path.suffix.lower()
+    if suffix not in {".xyz", ".mmol"}:
+        raise ValueError(
+            f"Optimized-geometry output must end with .xyz or .mmol (got '{output_path.name}')"
+        )
+    return suffix
 
 
 def _optimized_molecule_from_pyscf(source_mol: Any, optmol: Any) -> Molecule:

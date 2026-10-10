@@ -1,0 +1,17 @@
+name: Question
+description: Ask about using pyscf-vscf or interpreting its results.
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: >-
+        Molecule, coordinates, electronic-structure settings, grids, and any
+        reference values you are comparing against.

@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use pyscf-vscf in research, cite this software using the metadata below."
-title: "pyscf-vscf: PySCF-backed reduced-dimensional vibrational spectroscopy"
+title: "pyscf-vscf: variational anharmonic vibrational spectroscopy on PySCF potential and dipole surfaces"
 type: software
 authors:
   - family-names: Valada
     given-names: Diogo
-version: 0.2.1
-date-released: 2026-08-17
+version: 0.2.2
+date-released: 2026-10-10
 license: MIT
 repository-code: "https://github.com/diogovalada/pyscf-vscf"
 url: "https://github.com/diogovalada/pyscf-vscf"
