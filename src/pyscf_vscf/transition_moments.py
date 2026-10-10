@@ -121,12 +121,16 @@ class GridDipoleExpansion:
 
     @property
     def dipole_grid_au(self) -> np.ndarray:
+        """Total body-frame dipole (atomic units) on the solver grid, shape ``(*shape, 3)``."""
+
         total = np.broadcast_to(self.reference_dipole_body_au, (*self.shape, 3)).copy()
         for values in self.increment_grids_au.values():
             total += values
         return _readonly(total)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the expansion, for its fingerprint."""
+
         return {
             "kind": "solver-grid-vector-dms-expansion",
             "schema_version": 1,
@@ -144,6 +148,8 @@ class GridDipoleExpansion:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the expansion, its source surface, and its Hamiltonian."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -232,12 +238,16 @@ class ConfigurationDipoleOperator:
 
     @property
     def matrices_au(self) -> np.ndarray:
+        """Total dipole matrices in the configuration basis, shape ``(3, n, n)`` (atomic units)."""
+
         total = np.array(self.reference_matrices_au, copy=True)
         for values in self.increment_matrices_au.values():
             total += values
         return _readonly(total)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the operator, for its fingerprint."""
+
         return {
             "kind": "vci-configuration-vector-dipole-operator",
             "schema_version": 1,
@@ -253,6 +263,8 @@ class ConfigurationDipoleOperator:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the operator and the bases it was projected into."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -371,6 +383,16 @@ def load_vci_dipole_projection(
 
 @dataclass(frozen=True)
 class VCITransitionMoment:
+    """Signed transition dipole between two VCI states, with derived intensities.
+
+    ``transition_dipole_body_au`` is the signed vector in the coordinate map's
+    fixed body frame. The derived fields give the Debye vector, the polarized
+    integrated cross section along each body axis, the isotropic average (factor
+    1/3), and the Einstein A coefficient. ``manual_review`` is true when the
+    assignment of either state is marked for manual review, for example because
+    it touches a near-degenerate or cutoff-crossing block.
+    """
+
     lower_state: int
     upper_state: int
     frequency_Eh: float
@@ -443,6 +465,8 @@ class VCITransitionMoment:
         )
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the transition, for its fingerprint."""
+
         return {
             "kind": "vci-transition-moment",
             "schema_version": 1,
@@ -456,6 +480,8 @@ class VCITransitionMoment:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the transition, its dipole operator, and its VCI result."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 

@@ -257,11 +257,17 @@ class ElectronicResult:
 class ElectronicProvider(Protocol):
     """Protocol implemented by electronic-structure point evaluators."""
 
-    def scientific_settings_payload(self) -> Mapping[str, object]: ...
+    def scientific_settings_payload(self) -> Mapping[str, object]:
+        """Return every setting that can change a computed energy or dipole."""
+        ...
 
-    def execution_provenance(self) -> Mapping[str, object]: ...
+    def execution_provenance(self) -> Mapping[str, object]:
+        """Return resources, host, and versions; excluded from scientific identity."""
+        ...
 
-    def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult: ...
+    def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult:
+        """Evaluate one point; dipoles in atomic units in the input Cartesian frame."""
+        ...
 
 
 def provider_scientific_fingerprint(provider: ElectronicProvider) -> str:

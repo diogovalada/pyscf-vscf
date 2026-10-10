@@ -21,6 +21,13 @@ def _normalize_symbol(symbol: str) -> str:
 
 @dataclass
 class Molecule:
+    """Atoms, Cartesian coordinates in angstrom, charge, spin, and isotope masses.
+
+    ``spin`` is the number of unpaired electrons (N(alpha) - N(beta)). The symbol
+    ``D`` denotes deuterium; ``mass_overrides_amu`` replaces the default isotope
+    masses for every atom.
+    """
+
     symbols: list[str]
     coords: np.ndarray
     charge: int = 0
@@ -53,6 +60,8 @@ class Molecule:
 
     @property
     def masses(self) -> np.ndarray:
+        """Per-atom masses in atomic mass units (overrides first, then isotope defaults)."""
+
         if self.mass_overrides_amu is not None:
             return self.mass_overrides_amu.copy()
         return np.array([atomic_mass_amu(symbol) for symbol in self.symbols], dtype=float)
@@ -73,6 +82,8 @@ class Molecule:
         label: str = "mol",
         masses_amu: Sequence[float] | None = None,
     ) -> "Molecule":
+        """Build a molecule from symbols and an ``(n_atoms, 3)`` angstrom array."""
+
         return cls(
             symbols=list(symbols),
             coords=np.asarray(coords, dtype=float),

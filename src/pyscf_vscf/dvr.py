@@ -15,6 +15,13 @@ from .constants import AMU, ANG_TO_BOHR
 
 @dataclass
 class DVR1D:
+    """Eigenpairs of a 1D sinc-DVR Hamiltonian.
+
+    ``R`` is the uniform grid in angstrom, ``evals`` the energies in Hartree in
+    ascending order, and ``evecs`` the normalized grid-point coefficients (one
+    column per state).
+    """
+
     R: np.ndarray
     evals: np.ndarray
     evecs: np.ndarray
@@ -105,6 +112,8 @@ def _sinc_derivatives_1d(R: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def sinc_dvr_1d(R: np.ndarray, mu_red_amu: float, V_Eh: np.ndarray) -> DVR1D:
+    """Solve a 1D Colbert-Miller sinc DVR for potential ``V_Eh`` on grid ``R`` (angstrom)."""
+
     R = _as_uniform_grid("R", R)
     V_Eh = _as_grid_values("V_Eh", V_Eh, R.shape)
     T = _sinc_kinetic_1d(R, mu_red_amu)
@@ -118,6 +127,8 @@ def trans_mu_1d(
     mu_of_R: Callable[[np.ndarray], np.ndarray],
     v: int,
 ) -> float:
+    """Return the transition moment ``<0|mu|v>`` for a dipole function of ``R``."""
+
     v_idx = _state_index(v, dvr.evecs.shape[1], "v")
     mu = _as_grid_values("mu_of_R(dvr.R)", mu_of_R(dvr.R), dvr.R.shape)
     return float(np.dot(dvr.evecs[:, 0] * mu, dvr.evecs[:, v_idx]))
@@ -125,6 +136,12 @@ def trans_mu_1d(
 
 @dataclass
 class DVR2D:
+    """Lowest eigenpairs of a 2D product sinc-DVR Hamiltonian.
+
+    Eigenvector columns are flattened with the second coordinate varying fastest
+    (shape ``(R1.size, R2.size)`` in C order).
+    """
+
     R1: np.ndarray
     R2: np.ndarray
     evals: np.ndarray
@@ -188,6 +205,8 @@ def product_dvr_2d(
 
 
 def trans_mu_2d(dvr: DVR2D, mu_proj_grid: np.ndarray, n: int) -> float:
+    """Return ``<0|mu|n>`` for a dipole component tabulated on the 2D grid."""
+
     n_idx = _state_index(n, dvr.evecs.shape[1], "n")
     mu = _as_grid_values(
         "mu_proj_grid",

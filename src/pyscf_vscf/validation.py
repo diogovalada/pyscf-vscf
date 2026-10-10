@@ -42,6 +42,8 @@ class ConvergenceReport:
     unmatched: Mapping[str, tuple[StateLabel, ...]]
 
     def as_dict(self) -> dict:
+        """Return the report as nested JSON-ready dictionaries."""
+
         return asdict(self)
 
 

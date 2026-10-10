@@ -71,6 +71,8 @@ class ObservableCompositionDiagnostics:
         object.__setattr__(self, "delta_surface_fingerprint", delta)
 
     def payload(self) -> dict[str, object]:
+        """Return the diagnostics of one observable as a JSON-ready mapping."""
+
         return {
             "status": self.status,
             "low_surface_fingerprint": self.low_surface_fingerprint,
@@ -104,6 +106,8 @@ class IncrementCompositionDiagnostics:
         object.__setattr__(self, "subset", subset)
 
     def payload(self) -> dict[str, object]:
+        """Return the energy and dipole diagnostics of one increment as a mapping."""
+
         return {
             "subset": list(self.subset),
             "energy": self.energy.payload(),
@@ -196,6 +200,8 @@ class MultilevelCompositionDiagnostics:
         }
 
     def scientific_fingerprint(self) -> str:
+        """Fingerprint the composition policy and diagnostics."""
+
         return payload_fingerprint(self.scientific_payload())
 
 

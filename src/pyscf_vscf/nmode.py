@@ -519,14 +519,20 @@ class NModeSampleSet:
 
     @property
     def coordinate_ids(self) -> tuple[str, ...]:
+        """Coordinate names in mode order."""
+
         return tuple(self.coordinate_map.coordinate_ids)
 
     @property
     def coordinate_units(self) -> tuple[str, ...]:
+        """Coordinate units in mode order."""
+
         return tuple(self.coordinate_map.units)
 
     @property
     def reference_values(self) -> np.ndarray:
+        """Coordinate values of the common reference (anchor) geometry."""
+
         return self.coordinate_map.reference_values
 
 
@@ -761,6 +767,8 @@ class TensorProductSurface:
 
     @property
     def rank(self) -> int:
+        """Number of coordinates the increment depends on."""
+
         return len(self.axes)
 
     def evaluate(self, points: np.ndarray) -> np.ndarray:
@@ -905,13 +913,24 @@ class NModeSurfaceModel:
 
     @property
     def n_modes(self) -> int:
+        """Number of coordinates."""
+
         return len(self.coordinate_ids)
 
     @property
     def subsets(self) -> tuple[ModeSubset, ...]:
+        """Mode subsets with fitted energy increments, by rank then index."""
+
         return tuple(self.energy_increments)
 
     def energy_Eh(self, q: np.ndarray, *, max_rank: int | None = None) -> float:
+        """Return the absolute fitted energy (Hartree) at coordinate values ``q``.
+
+        Sums the reference energy and every increment up to ``max_rank``.
+        Increments whose subset touches the reference value are zero by
+        construction. Evaluation outside the training axes raises ``ValueError``.
+        """
+
         values = _validated_shape("q", q, (self.n_modes,))
         if np.array_equal(values, self.reference_values):
             return self.reference_energy_Eh
@@ -925,9 +944,13 @@ class NModeSurfaceModel:
         return float(total)
 
     def potential_Eh(self, q: np.ndarray, *, max_rank: int | None = None) -> float:
+        """Return the fitted energy relative to the reference geometry (Hartree)."""
+
         return self.energy_Eh(q, max_rank=max_rank) - self.reference_energy_Eh
 
     def dipole_body_au(self, q: np.ndarray, *, max_rank: int | None = None) -> np.ndarray:
+        """Return the fitted dipole (atomic units) in the coordinate map's body frame."""
+
         values = _validated_shape("q", q, (self.n_modes,))
         if np.array_equal(values, self.reference_values):
             return np.array(self.reference_dipole_body_au, copy=True)
@@ -941,6 +964,8 @@ class NModeSurfaceModel:
         return total
 
     def pes_numerical_payload(self) -> dict[str, object]:
+        """Return the numerical content of the potential surface for fingerprinting."""
+
         return {
             "schema": "pyscf-vscf-nmode-pes",
             "schema_version": self.schema_version,
@@ -956,6 +981,8 @@ class NModeSurfaceModel:
         }
 
     def dms_numerical_payload(self) -> dict[str, object]:
+        """Return the numerical content of the dipole surface for fingerprinting."""
+
         return {
             "schema": "pyscf-vscf-nmode-dms",
             "schema_version": self.schema_version,
@@ -971,14 +998,20 @@ class NModeSurfaceModel:
         }
 
     def numerical_surface_fingerprint(self) -> str:
+        """Fingerprint the numerical potential and dipole surfaces."""
+
         return payload_fingerprint(
             {"pes": self.pes_numerical_payload(), "dms": self.dms_numerical_payload()}
         )
 
     def source_lineage_fingerprint(self) -> str:
+        """Fingerprint the electronic source lineage of the samples."""
+
         return payload_fingerprint(to_jsonable(self.source_lineage))
 
     def artifact_payload(self) -> dict[str, object]:
+        """Return every retained field, including diagnostics and annotations."""
+
         return {
             "schema": "pyscf-vscf-nmode-surface-artifact",
             "schema_version": self.schema_version,
@@ -999,6 +1032,8 @@ class NModeSurfaceModel:
         }
 
     def artifact_integrity_fingerprint(self) -> str:
+        """Fingerprint the complete retained artifact."""
+
         return payload_fingerprint(self.artifact_payload())
 
     def fingerprint(self) -> str:

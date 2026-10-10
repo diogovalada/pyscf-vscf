@@ -31,15 +31,25 @@ class KineticOperator(Protocol):
     coordinate_ids: tuple[str, ...]
 
     @property
-    def shape(self) -> tuple[int, ...]: ...
+    def shape(self) -> tuple[int, ...]:
+        """Grid shape of the representation the operator acts on."""
+        ...
 
-    def validate_grid(self, representation: object) -> None: ...
+    def validate_grid(self, representation: object) -> None:
+        """Raise ``ValueError`` unless ``representation`` matches this operator's grid."""
+        ...
 
-    def apply(self, vector: np.ndarray) -> np.ndarray: ...
+    def apply(self, vector: np.ndarray) -> np.ndarray:
+        """Apply the kinetic operator (Hartree) to a grid vector."""
+        ...
 
-    def matrix_elements(self, modal_bases: Sequence[np.ndarray]) -> ProjectedKineticTerms: ...
+    def matrix_elements(self, modal_bases: Sequence[np.ndarray]) -> ProjectedKineticTerms:
+        """Project the operator's factors into per-coordinate modal bases."""
+        ...
 
-    def fingerprint_payload(self) -> Mapping[str, object]: ...
+    def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the operator, for its fingerprint."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -98,10 +108,18 @@ class TriatomicJacobiTransform:
 
     @property
     def lambda_outer2(self) -> float:
+        """Mass fraction ``m_outer2 / (m_center + m_outer2)`` locating the diatom's center of mass."""
+
         _, center, outer2 = self.masses_amu
         return outer2 / (center + outer2)
 
     def valence_to_jacobi(self, values: np.ndarray) -> np.ndarray:
+        """Convert valence ``(a, b, gamma)`` to Jacobi ``(r, R, x)``; works on ``(..., 3)`` arrays.
+
+        ``r = b`` is the center-outer2 distance, ``R`` the distance from that diatom's
+        center of mass to outer1, and ``x`` the cosine of the angle between them.
+        """
+
         q = _coordinate_array("valence coordinates", values)
         a, b, gamma = (q[..., index] for index in range(3))
         if np.any(a <= 0.0) or np.any(b <= 0.0):
@@ -118,6 +136,8 @@ class TriatomicJacobiTransform:
         return np.stack((b, radial_R, cosine), axis=-1)
 
     def jacobi_to_valence(self, values: np.ndarray) -> np.ndarray:
+        """Convert Jacobi ``(r, R, x)`` back to valence ``(a, b, gamma)``; works on ``(..., 3)`` arrays."""
+
         q = _coordinate_array("Jacobi coordinates", values)
         radial_r, radial_R, cosine = (q[..., index] for index in range(3))
         if np.any(radial_r <= 0.0) or np.any(radial_R <= 0.0):
@@ -137,6 +157,8 @@ class TriatomicJacobiTransform:
         return np.stack((a, radial_r, np.arccos(gamma_cosine)), axis=-1)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return the masses, atom order, and tolerance that define the transform."""
+
         return {
             "kind": "ordered-triatomic-jacobi-transform",
             "schema_version": 1,
@@ -148,6 +170,8 @@ class TriatomicJacobiTransform:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the mass-dependent transform."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -209,17 +233,25 @@ class TriatomicJ0KineticOperator:
 
     @property
     def shape(self) -> tuple[int, int, int]:
+        """Grid shape ``(len(radial_r_A), len(radial_R_A), angular_order)``."""
+
         return (self.radial_r_A.size, self.radial_R_A.size, self.angular_order)
 
     @property
     def dimension(self) -> int:
+        """Total number of grid points."""
+
         return int(np.prod(self.shape, dtype=np.int64))
 
     @property
     def coordinate_grids(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """The ``r`` and ``R`` grids (angstrom) and the Gauss-Legendre ``x`` nodes."""
+
         return self.radial_r_A, self.radial_R_A, self.angular_x
 
     def validate_grid(self, representation: object) -> None:
+        """Raise ``ValueError`` unless ``representation`` has this operator's grid shape."""
+
         shape = getattr(representation, "shape", None)
         if shape is None:
             try:
@@ -230,6 +262,8 @@ class TriatomicJ0KineticOperator:
             raise ValueError(f"representation shape must be {self.shape}, got {tuple(shape)}")
 
     def apply(self, vector: np.ndarray) -> np.ndarray:
+        """Apply the ``J=0`` kinetic operator (Hartree) to a flat or grid-shaped vector."""
+
         values = np.asarray(vector, dtype=float)
         if values.shape == (self.dimension,):
             wavefunction = values.reshape(self.shape)
@@ -249,6 +283,8 @@ class TriatomicJ0KineticOperator:
         return result.reshape(-1) if flattened else result
 
     def as_linear_operator(self) -> LinearOperator:
+        """Return the operator as a symmetric SciPy ``LinearOperator`` on flat vectors."""
+
         return LinearOperator(
             (self.dimension, self.dimension),
             matvec=self.apply,
@@ -257,6 +293,8 @@ class TriatomicJ0KineticOperator:
         )
 
     def matrix_elements(self, modal_bases: Sequence[np.ndarray]) -> ProjectedKineticTerms:
+        """Project the radial, inverse-square, and angular factors into modal bases."""
+
         bases = _validated_modal_bases(modal_bases, self.shape)
         radial_r, radial_R, angular = bases
         return ProjectedKineticTerms(
@@ -268,6 +306,8 @@ class TriatomicJ0KineticOperator:
         )
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return the grids, masses, and atom order that define the operator."""
+
         return {
             "kind": "triatomic-j0-jacobi-kinetic",
             "schema_version": 1,
@@ -287,6 +327,8 @@ class TriatomicJ0KineticOperator:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the kinetic operator."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -345,10 +387,14 @@ class TriatomicJ0Hamiltonian:
 
     @property
     def source_projection_fingerprint(self) -> str | None:
+        """Fingerprint of the potential projection, or ``None`` for a direct potential array."""
+
         return None if self._source_projection is None else self._source_projection.fingerprint()
 
     @property
     def source_pes_fingerprint(self) -> str | None:
+        """Fingerprint of the projected surface, or ``None`` for a direct potential array."""
+
         return (
             None
             if self._source_projection is None
@@ -357,6 +403,8 @@ class TriatomicJ0Hamiltonian:
 
     @property
     def source_coordinate_map_fingerprint(self) -> str | None:
+        """Fingerprint of the projection's coordinate map, or ``None``."""
+
         return (
             None
             if self._source_projection is None
@@ -365,6 +413,8 @@ class TriatomicJ0Hamiltonian:
 
     @property
     def source_transform_fingerprint(self) -> str | None:
+        """Fingerprint of the projection's Jacobi transform, or ``None``."""
+
         return (
             None
             if self._source_projection is None
@@ -373,27 +423,39 @@ class TriatomicJ0Hamiltonian:
 
     @property
     def kinetic_fingerprint(self) -> str:
+        """Fingerprint of the kinetic operator."""
+
         return self.kinetic.fingerprint()
 
     @property
     def shape(self) -> tuple[int, int, int]:
+        """Grid shape of the Hamiltonian."""
+
         return self.kinetic.shape
 
     @property
     def dimension(self) -> int:
+        """Total number of grid points."""
+
         return self.kinetic.dimension
 
     @property
     def coordinate_ids(self) -> tuple[str, str, str]:
+        """Coordinate names ``(r, R, x)``."""
+
         return self.kinetic.coordinate_ids
 
     def apply(self, vector: np.ndarray) -> np.ndarray:
+        """Apply ``T + V`` (Hartree) to a flat grid vector."""
+
         values = np.asarray(vector, dtype=float)
         if values.shape != (self.dimension,):
             raise ValueError(f"Hamiltonian vector must have shape {(self.dimension,)}")
         return self.kinetic.apply(values) + self.potential_Eh.reshape(-1) * values
 
     def as_linear_operator(self) -> LinearOperator:
+        """Return ``T + V`` as a symmetric SciPy ``LinearOperator``."""
+
         return LinearOperator(
             (self.dimension, self.dimension),
             matvec=self.apply,
@@ -402,6 +464,8 @@ class TriatomicJ0Hamiltonian:
         )
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return the kinetic fingerprint, potential, and source projection identity."""
+
         return {
             "kind": "triatomic-j0-grid-hamiltonian",
             "schema_version": 1,
@@ -412,6 +476,8 @@ class TriatomicJ0Hamiltonian:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the Hamiltonian."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -489,6 +555,8 @@ class JacobiGridProjection:
         object.__setattr__(self, "atom_indices", indices)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the projection, for its fingerprint."""
+
         return {
             "kind": "valence-to-jacobi-grid-projection",
             "schema_version": 1,
@@ -502,6 +570,8 @@ class JacobiGridProjection:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the projected potential and its sources."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 

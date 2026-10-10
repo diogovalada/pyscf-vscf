@@ -37,18 +37,30 @@ Configuration = tuple[int, ...]
 
 @runtime_checkable
 class ProductGridHamiltonian(Protocol):
-    @property
-    def coordinate_ids(self) -> tuple[str, ...]: ...
+    """Hamiltonian acting on vectors over a direct-product coordinate grid."""
 
     @property
-    def shape(self) -> tuple[int, ...]: ...
+    def coordinate_ids(self) -> tuple[str, ...]:
+        """Coordinate names in grid-axis order."""
+        ...
 
     @property
-    def dimension(self) -> int: ...
+    def shape(self) -> tuple[int, ...]:
+        """Grid shape; vectors are flattened in C order."""
+        ...
 
-    def apply(self, vector: np.ndarray) -> np.ndarray: ...
+    @property
+    def dimension(self) -> int:
+        """Total number of grid points."""
+        ...
 
-    def fingerprint(self) -> str: ...
+    def apply(self, vector: np.ndarray) -> np.ndarray:
+        """Apply the Hamiltonian (Hartree) to a flat grid vector."""
+        ...
+
+    def fingerprint(self) -> str:
+        """Return the scientific identity of the Hamiltonian."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -84,17 +96,25 @@ class NModeGridHamiltonian:
 
     @property
     def shape(self) -> tuple[int, ...]:
+        """Grid shape of the n-mode model's coordinates."""
+
         return tuple(grid.size for grid in self.model.coordinates)
 
     @property
     def dimension(self) -> int:
+        """Total number of grid points."""
+
         return int(np.prod(self.shape, dtype=np.int64))
 
     @property
     def coordinate_ids(self) -> tuple[str, ...]:
+        """Mode labels in grid-axis order."""
+
         return tuple(self.model.mode_labels or ())
 
     def apply(self, vector: np.ndarray) -> np.ndarray:
+        """Apply the kinetic energy plus one- and two-mode potentials (Hartree) to a flat vector."""
+
         values = np.asarray(vector, dtype=float)
         if values.shape != (self.dimension,):
             raise ValueError(f"Hamiltonian vector must have shape {(self.dimension,)}")
@@ -105,6 +125,8 @@ class NModeGridHamiltonian:
         return result.reshape(-1)
 
     def fingerprint(self) -> str:
+        """Fingerprint the underlying n-mode model."""
+
         return payload_fingerprint(
             {
                 "kind": "nmode-direct-product-grid-hamiltonian",
@@ -237,13 +259,19 @@ class GroundModalBasis:
 
     @property
     def n_modes(self) -> int:
+        """Number of vibrational coordinates."""
+
         return len(self.coordinate_ids)
 
     @property
     def n_modals_per_mode(self) -> tuple[int, ...]:
+        """Number of retained modals for each coordinate."""
+
         return tuple(basis.shape[1] for basis in self.modals)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return the modals, energies, and source identities that define the basis."""
+
         return {
             "kind": "ground-vscf-modal-basis",
             "schema_version": 1,
@@ -273,6 +301,8 @@ class GroundModalBasis:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the modal basis."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 
@@ -400,6 +430,19 @@ def validate_ground_modal_basis_against_hamiltonian(
 
 @dataclass(frozen=True)
 class VCISettings:
+    """Configuration selection, eigensolver, and assignment policy for VCI.
+
+    ``nstates`` roots are reported; ``extra_eigenstates`` additional roots are
+    solved to measure the state cutoff margin and resolve degenerate blocks.
+    Configurations are pruned by ``max_quanta_per_mode`` (one limit or one per
+    mode), ``max_total_quanta``, and ``max_modal_energy_Eh`` (uncoupled modal
+    excitation energy). Problems up to ``dense_dimension_threshold``
+    configurations are diagonalized densely, larger ones iteratively to
+    ``eigensolver_tolerance``. States closer than ``degeneracy_tolerance_Eh`` form
+    a degenerate block; ``leading_configuration_count`` configurations are kept
+    per state for assignment.
+    """
+
     nstates: int = 12
     max_quanta_per_mode: int | tuple[int, ...] | None = None
     max_total_quanta: int | None = None
@@ -433,6 +476,18 @@ class VCISettings:
 
 @dataclass(frozen=True)
 class VCIStateAssignment:
+    """Assignment of one VCI state to modal configurations.
+
+    Non-degenerate states receive a unique ``configuration`` from a Hungarian
+    match on configuration weights, with that weight as ``overlap``. States in a
+    near-degenerate ``degenerate_block`` get no single label (``configuration``
+    and ``overlap`` are ``None``) and are always flagged ``manual_review``; their
+    block is compared with the ``reference_subspace`` of dominant configurations
+    through ``principal_cosines``, and ``subspace_overlap`` is the squared
+    smallest cosine. ``leading_configurations`` lists the largest weights and
+    ``participation_ratio`` the effective number of contributing configurations.
+    """
+
     state_index: int
     configuration: Configuration | None
     overlap: float | None
@@ -535,6 +590,15 @@ class VCIDegenerateBlock:
 
 @dataclass(frozen=True)
 class VCIResult:
+    """Converged VCI roots with assignments and solver diagnostics.
+
+    ``coefficients`` columns are phase-canonical eigenvectors over
+    ``configurations``. ``diagnostic_*`` arrays include the extra roots.
+    ``state_cutoff_margin_Eh`` is the gap between the last reported root and the
+    next computed root; a small margin means the reported set may cut through a
+    near-degenerate group.
+    """
+
     configurations: tuple[Configuration, ...]
     energies_Eh: np.ndarray
     coefficients: np.ndarray
@@ -672,6 +736,8 @@ class VCIResult:
         object.__setattr__(self, "modal_counts", counts)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the result, for its fingerprint."""
+
         return {
             "kind": "vci-result",
             "schema_version": 1,
@@ -725,6 +791,8 @@ class VCIResult:
         }
 
     def fingerprint(self) -> str:
+        """Fingerprint the VCI result, its modal basis, and its Hamiltonian."""
+
         return payload_fingerprint(self.fingerprint_payload())
 
 

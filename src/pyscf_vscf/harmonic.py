@@ -26,6 +26,13 @@ _WARNED_ONCE: set[str] = set()
 
 @dataclass
 class HarmonicResult:
+    """Harmonic frequencies, normal modes, and zero-point energy.
+
+    ``freqs_cm`` holds wavenumbers in cm^-1 (imaginary modes as negative values),
+    ``modes`` the mass-weighted normal-mode columns, and ``hessian_provenance``
+    whether the Hessian was analytic or a finite difference of gradients.
+    """
+
     freqs_cm: np.ndarray
     modes: np.ndarray
     zpe_cm: float

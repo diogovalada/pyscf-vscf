@@ -30,6 +30,8 @@ def build_model() -> NModePotential:
 
 
 def main() -> None:
+    """Build VSCF modals, solve VCI, and print convergence checks and frequencies as JSON."""
+
     hamiltonian, modal_basis = build_nmode_vscf_modal_basis(build_model(), 6)
     result = solve_vci(
         hamiltonian,

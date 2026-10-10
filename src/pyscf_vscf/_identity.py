@@ -19,6 +19,8 @@ class FrozenJSONMapping(Mapping[str, Any]):
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, Any]) -> FrozenJSONMapping:
+        """Return a deeply frozen copy of a JSON-compatible mapping with string keys."""
+
         if not isinstance(values, Mapping):
             raise TypeError("Expected a mapping")
         items = []
