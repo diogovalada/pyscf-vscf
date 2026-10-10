@@ -28,15 +28,25 @@ class CoordinateMap(Protocol):
     inactive_atoms: tuple[int, ...]
     frame_to_lab: np.ndarray
 
-    def to_cartesian(self, q: np.ndarray) -> np.ndarray: ...
+    def to_cartesian(self, q: np.ndarray) -> np.ndarray:
+        """Return the ``(n_atoms, 3)`` geometry in angstrom for coordinate values ``q``."""
+        ...
 
-    def values_from_cartesian(self, xyz: np.ndarray) -> np.ndarray: ...
+    def values_from_cartesian(self, xyz: np.ndarray) -> np.ndarray:
+        """Return the coordinate values of a Cartesian geometry in angstrom."""
+        ...
 
-    def vector_to_body(self, vector_lab: np.ndarray) -> np.ndarray: ...
+    def vector_to_body(self, vector_lab: np.ndarray) -> np.ndarray:
+        """Rotate lab-frame vectors (last axis of length 3) into the fixed body frame."""
+        ...
 
-    def vector_to_lab(self, vector_body: np.ndarray) -> np.ndarray: ...
+    def vector_to_lab(self, vector_body: np.ndarray) -> np.ndarray:
+        """Rotate body-frame vectors (last axis of length 3) into the lab frame."""
+        ...
 
-    def fingerprint_payload(self) -> Mapping[str, object]: ...
+    def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the map, for its scientific fingerprint."""
+        ...
 
 
 def coordinate_map_fingerprint(coordinate_map: CoordinateMap) -> str:
@@ -54,10 +64,14 @@ class Bond:
 
     @property
     def O(self) -> int:  # noqa: E743 - retained compatibility spelling
+        """First atom index (compatibility spelling from the water-specific API)."""
+
         return self.i
 
     @property
     def H(self) -> int:
+        """Second atom index (compatibility spelling from the water-specific API)."""
+
         return self.j
 
 
@@ -107,6 +121,8 @@ class BondLengthCoordinateMap:
         object.__setattr__(self, "frame_to_lab", immutable_array(frame))
 
     def to_cartesian(self, q: np.ndarray) -> np.ndarray:
+        """Move the second bond atom along the reference bond direction to length ``q[0]`` (angstrom)."""
+
         values = _validated_values(q, 1)
         length = _validated_length(values[0])
         reference = self.reference_geometry_A
@@ -117,6 +133,8 @@ class BondLengthCoordinateMap:
         return out
 
     def values_from_cartesian(self, xyz: np.ndarray) -> np.ndarray:
+        """Return the bond length of a Cartesian geometry in angstrom."""
+
         coordinates = _validated_coordinates_for_map(xyz, self.reference_geometry_A.shape)
         length = float(np.linalg.norm(coordinates[self.bond.j] - coordinates[self.bond.i]))
         if length <= 0.0:
@@ -124,12 +142,18 @@ class BondLengthCoordinateMap:
         return np.array([length], dtype=float)
 
     def vector_to_body(self, vector_lab: np.ndarray) -> np.ndarray:
+        """Rotate lab-frame vectors (last axis of length 3) into the fixed body frame."""
+
         return _transform_vectors(vector_lab, self.frame_to_lab, to_body=True)
 
     def vector_to_lab(self, vector_body: np.ndarray) -> np.ndarray:
+        """Rotate body-frame vectors (last axis of length 3) into the lab frame."""
+
         return _transform_vectors(vector_body, self.frame_to_lab, to_body=False)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the map, for its scientific fingerprint."""
+
         return {
             "schema": "pyscf-vscf-coordinate-map",
             "schema_version": COORDINATE_MAP_SCHEMA_VERSION,
@@ -212,6 +236,12 @@ class TriatomicValenceCoordinateMap:
         object.__setattr__(self, "frame_to_lab", immutable_array(frame))
 
     def to_cartesian(self, q: np.ndarray) -> np.ndarray:
+        """Place both outer atoms for ``(r1, r2, theta)`` (angstrom, angstrom, radian).
+
+        The center atom and all inactive atoms stay at the reference geometry; the
+        outer atoms lie in the fixed reference plane.
+        """
+
         values = _validated_values(q, 3)
         r1 = _validated_length(values[0])
         r2 = _validated_length(values[1])
@@ -227,6 +257,8 @@ class TriatomicValenceCoordinateMap:
         return out
 
     def values_from_cartesian(self, xyz: np.ndarray) -> np.ndarray:
+        """Return ``(r1, r2, theta)`` of a Cartesian geometry (angstrom, angstrom, radian)."""
+
         coordinates = _validated_coordinates_for_map(xyz, self.reference_geometry_A.shape)
         center = coordinates[self.center_atom]
         vector1 = coordinates[self.outer_atom_1] - center
@@ -238,12 +270,18 @@ class TriatomicValenceCoordinateMap:
         return np.array([r1, r2, _angle_between(vector1, vector2)], dtype=float)
 
     def vector_to_body(self, vector_lab: np.ndarray) -> np.ndarray:
+        """Rotate lab-frame vectors (last axis of length 3) into the fixed body frame."""
+
         return _transform_vectors(vector_lab, self.frame_to_lab, to_body=True)
 
     def vector_to_lab(self, vector_body: np.ndarray) -> np.ndarray:
+        """Rotate body-frame vectors (last axis of length 3) into the lab frame."""
+
         return _transform_vectors(vector_body, self.frame_to_lab, to_body=False)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the map, for its scientific fingerprint."""
+
         return {
             "schema": "pyscf-vscf-coordinate-map",
             "schema_version": COORDINATE_MAP_SCHEMA_VERSION,
@@ -316,6 +354,8 @@ class LinearDisplacementCoordinateMap:
         object.__setattr__(self, "frame_to_lab", immutable_array(frame))
 
     def to_cartesian(self, q: np.ndarray) -> np.ndarray:
+        """Return the reference geometry plus ``(q - reference_values)`` times the displacement vectors."""
+
         values = _validated_values(q, len(self.coordinate_ids))
         offsets = values - self.reference_values
         return np.asarray(
@@ -325,6 +365,11 @@ class LinearDisplacementCoordinateMap:
         )
 
     def values_from_cartesian(self, xyz: np.ndarray) -> np.ndarray:
+        """Recover coordinate values from a geometry in the span of the displacement vectors.
+
+        Raises ``ValueError`` if the geometry lies outside that linear subspace.
+        """
+
         coordinates = _validated_coordinates_for_map(xyz, self.reference_geometry_A.shape)
         matrix = self.displacements_A_per_unit.reshape((len(self.coordinate_ids), -1)).T
         delta = (coordinates - self.reference_geometry_A).reshape(-1)
@@ -334,12 +379,18 @@ class LinearDisplacementCoordinateMap:
         return np.asarray(self.reference_values + offsets, dtype=float)
 
     def vector_to_body(self, vector_lab: np.ndarray) -> np.ndarray:
+        """Rotate lab-frame vectors (last axis of length 3) into the fixed body frame."""
+
         return _transform_vectors(vector_lab, self.frame_to_lab, to_body=True)
 
     def vector_to_lab(self, vector_body: np.ndarray) -> np.ndarray:
+        """Rotate body-frame vectors (last axis of length 3) into the lab frame."""
+
         return _transform_vectors(vector_body, self.frame_to_lab, to_body=False)
 
     def fingerprint_payload(self) -> Mapping[str, object]:
+        """Return every field that defines the map, for its scientific fingerprint."""
+
         return {
             "schema": "pyscf-vscf-coordinate-map",
             "schema_version": COORDINATE_MAP_SCHEMA_VERSION,
@@ -422,6 +473,8 @@ def parse_bond(s: str) -> Bond:
 
 
 def stretch_along_bond(coords: np.ndarray, bond: Bond, new_len_A: float) -> np.ndarray:
+    """Return coordinates with atom ``bond.j`` moved along the bond to ``new_len_A`` (angstrom)."""
+
     out = _validated_coordinates(coords)
     i, j = int(bond.i), int(bond.j)
     _validate_bond(bond, out.shape[0])

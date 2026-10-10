@@ -121,9 +121,13 @@ class NModePotential:
 
     @property
     def n_modes(self) -> int:
+        """Number of vibrational coordinates."""
+
         return len(self.coordinates)
 
     def one_mode_hamiltonians(self) -> tuple[np.ndarray, ...]:
+        """Return the sinc-DVR one-mode Hamiltonians ``T_i + V_i`` in Hartree."""
+
         return tuple(
             sinc_kinetic_1d(q, mass) + np.diag(potential)
             for q, mass, potential in zip(
@@ -257,6 +261,8 @@ class VSCFSettings:
 
 @dataclass(frozen=True)
 class VSCFIteration:
+    """Energy and density change after one VSCF iteration."""
+
     iteration: int
     energy_Eh: float
     delta_energy_Eh: float
@@ -265,6 +271,13 @@ class VSCFIteration:
 
 @dataclass(frozen=True)
 class VSCFStateResult:
+    """A converged (or last-iterate) state-specific VSCF product state.
+
+    ``modals`` are the normalized one-mode functions on each DVR grid,
+    ``modal_eigenvalues_Eh`` their effective one-mode energies, and ``history``
+    the per-iteration record.
+    """
+
     quanta: tuple[int, ...]
     energy_Eh: float
     modal_eigenvalues_Eh: tuple[float, ...]
@@ -276,6 +289,8 @@ class VSCFStateResult:
 
 @dataclass(frozen=True)
 class VSCFTransition:
+    """Transition from the VSCF ground state to one excited product state."""
+
     quanta: tuple[int, ...]
     energy_Eh: float
     frequency_cm: float
@@ -283,6 +298,8 @@ class VSCFTransition:
 
 @dataclass(frozen=True)
 class VSCFSpectrum:
+    """VSCF ground state, excited states sorted by energy, and their transitions."""
+
     ground: VSCFStateResult
     excited_states: tuple[VSCFStateResult, ...]
     transitions: tuple[VSCFTransition, ...]

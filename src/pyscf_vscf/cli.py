@@ -122,6 +122,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``pyscf-vscf`` command line and return its exit code."""
+
     parser = _build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 

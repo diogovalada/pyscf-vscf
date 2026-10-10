@@ -13,6 +13,8 @@ from .molecule import Molecule
 
 
 class MolLike(Protocol):
+    """Structural type accepted by the geometry writers: symbols, coordinates in angstrom, and a label."""
+
     symbols: Sequence[str]
     coords: Sequence[Sequence[float]]
     label: str
@@ -45,6 +47,14 @@ def _atom_symbol_from_mmol(sym: str, attrs: Sequence[str], *, path: Path, line_n
 
 
 def read_midas_mmol(path: Path) -> Molecule:
+    """Read the ``#1 Xyz`` block of a Midas MMOL file into a :class:`Molecule`.
+
+    Coordinates in angstrom (``AA``) or bohr (``AU``) are converted to angstrom.
+    Hydrogen atoms marked ``ISO=2`` and ``D`` symbols become deuterium. Charge and
+    spin are not stored in MMOL files and default to zero; the label is the file
+    stem.
+    """
+
     path = Path(path)
     lines = path.read_text().splitlines()
     xyz_idx = next(
@@ -104,6 +114,12 @@ def read_midas_mmol(path: Path) -> Molecule:
 
 
 def read_xyz(path: Path) -> Molecule:
+    """Read an XYZ file (atom count, comment line, ``symbol x y z`` in angstrom).
+
+    A ``D`` symbol denotes deuterium. Charge and spin default to zero; the label
+    is the file stem.
+    """
+
     path = Path(path)
     lines = path.read_text().splitlines()
     if not lines:
@@ -135,6 +151,8 @@ def read_xyz(path: Path) -> Molecule:
 
 
 def write_xyz(path: Path, mol: MolLike, comment: Optional[str] = None) -> None:
+    """Write ``mol`` as an XYZ file in angstrom; ``comment`` defaults to the label."""
+
     path = Path(path)
     n = len(mol.symbols)
     lines = [str(n), (comment if comment is not None else mol.label)]
@@ -146,6 +164,8 @@ def write_xyz(path: Path, mol: MolLike, comment: Optional[str] = None) -> None:
 
 
 def write_midas_mmol(path: Path, mol: MolLike, title: Optional[str] = None) -> None:
+    """Write ``mol`` as a Midas MMOL file in angstrom; deuterium becomes ``H ... ISO=2``."""
+
     path = Path(path)
     n = len(mol.symbols)
     lines = [
@@ -176,6 +196,12 @@ def _json_default(obj):
 
 
 def dump_grid_npz(path: Path, *, meta: dict, arrays: dict[str, np.ndarray]) -> None:
+    """Write arrays and JSON metadata to a compressed NPZ grid file.
+
+    The metadata gains a SHA-256 checksum of every array, which
+    :func:`load_grid_npz` verifies.
+    """
+
     from .cache import array_sha256
 
     path = Path(path)
@@ -193,6 +219,12 @@ def dump_grid_npz(path: Path, *, meta: dict, arrays: dict[str, np.ndarray]) -> N
 
 
 def load_grid_npz(path: Path) -> tuple[dict, dict[str, np.ndarray]]:
+    """Load an NPZ grid file and verify its array checksums.
+
+    Returns ``(metadata, arrays)``. Scientific identity is validated by the scan
+    workflow loaders, not here.
+    """
+
     from .cache import array_sha256
 
     path = Path(path)

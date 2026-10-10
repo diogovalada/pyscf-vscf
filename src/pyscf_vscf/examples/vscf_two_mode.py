@@ -31,6 +31,8 @@ def build_model() -> NModePotential:
 
 
 def main() -> None:
+    """Solve the coupled two-mode model and print its VSCF transitions as JSON."""
+
     spectrum = vscf_spectrum(
         build_model(),
         max_quanta_per_mode=2,
