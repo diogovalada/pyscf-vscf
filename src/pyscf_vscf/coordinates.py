@@ -471,7 +471,7 @@ def parse_bond(s: str) -> Bond:
     left, right = spec.split("-", 1)
     if not (left.isdigit() and right.isdigit()):
         raise ValueError(
-            f"Invalid bond specification {s!r}; expected two zero-based atom indices such as 0-1"
+            f"Invalid bond specification {s!r}; expected 0-1 (two zero-based atom indices)"
         )
     return Bond(int(left), int(right))
 

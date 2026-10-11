@@ -276,12 +276,14 @@ def compose_multilevel_surface(
             low.energy_increments[subset],
             high.energy_increments.get(subset),
             selected=subset in energy_selected,
+            reference=tuple(float(low.reference_values[mode]) for mode in subset),
         )
         final_dipole, dipole_record = _compose_observable(
             subset,
             low.dipole_increments[subset],
             high.dipole_increments.get(subset),
             selected=subset in dipole_selected,
+            reference=tuple(float(low.reference_values[mode]) for mode in subset),
         )
         energy_surfaces[subset] = final_energy
         dipole_surfaces[subset] = final_dipole
@@ -345,6 +347,7 @@ def _compose_observable(
     high: TensorProductSurface | None,
     *,
     selected: bool,
+    reference: tuple[float, ...],
 ) -> tuple[TensorProductSurface, ObservableCompositionDiagnostics]:
     low_fingerprint = _surface_fingerprint(low)
     component_count = 1 if low.node_values.ndim == len(subset) else 3
@@ -361,7 +364,7 @@ def _compose_observable(
     _require_common_domain(low.axes, high.axes, subset)
     points = _mesh_points(low.axes)
     high_on_low = np.asarray(high.evaluate(points), dtype=float).reshape(low.node_values.shape)
-    delta_values = high_on_low - low.node_values
+    delta_values = _exactly_anchored(high_on_low - low.node_values, low.axes, reference)
     delta_surface = _fit_tensor_surface(
         low.axes,
         delta_values,
@@ -375,7 +378,7 @@ def _compose_observable(
     )
     final_surface = _fit_tensor_surface(
         low.axes,
-        low.node_values + fitted_delta,
+        _exactly_anchored(low.node_values + fitted_delta, low.axes, reference),
         method=low.method,
         held_out_points=None,
         held_out_values=None,
@@ -391,6 +394,23 @@ def _compose_observable(
         delta_fit=delta_surface.diagnostics,
         final_fit=final_surface.diagnostics,
     )
+
+
+def _exactly_anchored(
+    values: np.ndarray, axes: Sequence[np.ndarray], reference: Sequence[float]
+) -> np.ndarray:
+    """Return ``values`` with every anchor slice set to exactly zero.
+
+    Anchored increments vanish on their reference nodes; interpolation and
+    subtraction leave roundoff there that the composer's exact check rejects.
+    """
+
+    anchored = np.array(values, dtype=float, copy=True)
+    for position, (axis, value) in enumerate(zip(axes, reference)):
+        selector: list[int | slice] = [slice(None)] * len(axes)
+        selector[position] = int(np.flatnonzero(np.asarray(axis) == value)[0])
+        anchored[tuple(selector)] = 0.0
+    return anchored
 
 
 def _validate_model_compatibility(low: NModeSurfaceModel, high: NModeSurfaceModel) -> None:
@@ -522,6 +542,11 @@ def _composite_source_lineage(
         "provider_scientific_fingerprint": provider,
         "point_causal_fingerprints": list(points),
     }
+    # Compatibility has already required matching systems when both are recorded.
+    if low_source.get("electronic_system") is not None and high_source.get(
+        "electronic_system"
+    ) == low_source.get("electronic_system"):
+        source["electronic_system"] = low_source["electronic_system"]
     low_results = low_source.get("result_scientific_fingerprints")
     high_results = high_source.get("result_scientific_fingerprints")
     if isinstance(low_results, Mapping) and isinstance(high_results, Mapping):

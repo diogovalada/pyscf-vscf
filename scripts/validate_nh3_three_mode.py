@@ -304,8 +304,9 @@ def _verify_archive(data_root: Path) -> None:
         raise ValueError(f"Archived NH3 inputs differ from manifest.json: {', '.join(changed)}")
 
 
-def analyze(data_root: Path, *, exact_states: int) -> dict:
-    _verify_archive(data_root)
+def analyze(data_root: Path, *, exact_states: int, verify_archive: bool = True) -> dict:
+    if verify_archive:
+        _verify_archive(data_root)
     summary25, pair_data25, scientific25 = _load_pair_data(data_root, 25)
     summary31, pair_data31, scientific31 = _load_pair_data(data_root, 31)
     summary_wide, pair_data_wide, scientific_wide = _load_pair_data(data_root, 31, tag="wide")
@@ -445,7 +446,13 @@ def main() -> int:
     output = args.output or args.data_root / "report.json"
     if args.update_manifest and output.resolve() != (args.data_root / "report.json").resolve():
         parser.error("--update-manifest records the archive's own report.json; omit --output")
-    report = analyze(args.data_root, exact_states=args.exact_states)
+    # After a regeneration the inputs legitimately differ from the old manifest;
+    # the cache, geometry, and provenance checks below still apply.
+    report = analyze(
+        args.data_root,
+        exact_states=args.exact_states,
+        verify_archive=not args.update_manifest,
+    )
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if args.update_manifest:
         _write_manifest(args.data_root, output)

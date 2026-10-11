@@ -175,8 +175,8 @@ def read_geometry(
     return Molecule.from_arrays(
         molecule.symbols,
         molecule.coords,
-        charge=molecule.charge if charge is None else int(charge),
-        spin=molecule.spin if spin is None else int(spin),
+        charge=molecule.charge if charge is None else charge,
+        spin=molecule.spin if spin is None else spin,
         label=molecule.label,
         masses_amu=molecule.analysis_masses(),
     )

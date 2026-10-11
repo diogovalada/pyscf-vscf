@@ -54,7 +54,9 @@ class RunnerSettings:
     PySCF memory budget ``max_memory_mb`` at start-up. ``stop_on_error`` stops
     scheduling new points after the first failure; points whose latest stored
     attempt failed are retried only with ``retry_failed``. ``max_in_flight``
-    bounds submitted work (default: twice the worker count).
+    bounds submitted work (default: twice the worker count). Thread limits
+    need the default ``spawn`` start method, because forked workers inherit
+    the parent's already-started thread pools.
     """
 
     workers: int | None = None
@@ -72,6 +74,11 @@ class RunnerSettings:
                 raise ValueError(f"{name} must be at least 1")
         if self.start_method not in mp.get_all_start_methods():
             raise ValueError(f"Unsupported multiprocessing start method {self.start_method!r}")
+        if self.threads_per_worker is not None and self.start_method != "spawn":
+            raise ValueError(
+                "threads_per_worker requires start_method='spawn': forked workers inherit "
+                "the parent's already-started thread pools"
+            )
 
 
 @dataclass(frozen=True)
@@ -423,10 +430,12 @@ def _run_parallel(
             if executor_error is not None:
                 break
     finally:
-        for future in list(in_flight):
-            future.cancel()
-        executor.shutdown(wait=True, cancel_futures=True)
-        environment.restore()
+        try:
+            for future in list(in_flight):
+                future.cancel()
+            executor.shutdown(wait=True, cancel_futures=True)
+        finally:
+            environment.restore()
         # Account for every point still in flight: finished during shutdown, or cancelled.
         for future in list(in_flight):
             collect(future)

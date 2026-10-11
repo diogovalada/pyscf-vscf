@@ -533,8 +533,9 @@ def _prepare_method(context: _Context) -> None:
     )
     context.parallel = parallel
     apply_thread_env_updates(parallel.threads_per_worker, os.environ)
-    if not (parallel.workers and parallel.workers > 1):
-        _limit_process_threads(parallel.threads_per_worker)
+    # In-process work (harmonic analysis, optimization, serial points, and the
+    # normal-mode selection before parallel scans) may use every thread.
+    _limit_process_threads(int(max_parallel))
     if parallel.max_memory_mb is not None:
         os.environ[MAX_MEMORY_ENV_VAR] = str(parallel.max_memory_mb)
     provider_kwargs = {"threads": parallel.threads_per_worker or 1}

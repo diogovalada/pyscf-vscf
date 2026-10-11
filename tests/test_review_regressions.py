@@ -110,6 +110,13 @@ def test_cubic_fits_compose_and_foreign_systems_are_rejected() -> None:
     with pytest.raises(ValueError, match="different electronic systems"):
         compose_multilevel_surface(low, cation, energy_corrected_subsets=[(0,)])
 
+    # A composed model keeps its system record and exact anchors, so it composes again.
+    assert model.source_lineage["electronic_system"] == low.source_lineage["electronic_system"]
+    again, _ = compose_multilevel_surface(model, high, energy_corrected_subsets=[(1,), (0, 1)])
+    assert again.reference_energy_Eh == low.reference_energy_Eh
+    with pytest.raises(ValueError, match="different electronic systems"):
+        compose_multilevel_surface(model, cation, energy_corrected_subsets=[(0,)])
+
 
 def test_scan_definition_must_agree_with_its_axes_and_points() -> None:
     from pyscf_vscf.scans import ScanAxis, plan_bond_scan, run_scan
@@ -407,3 +414,19 @@ def test_nh3_analysis_refuses_changed_inputs(tmp_path: Path) -> None:
     (tmp_path / "manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="differ from manifest.json"):
         module._verify_archive(tmp_path)
+
+
+def test_geometry_overrides_are_validated(tmp_path: Path) -> None:
+    from pyscf_vscf.io import read_geometry
+
+    path = tmp_path / "h2.xyz"
+    path.write_text("2\nh2\nH 0 0 0\nH 0 0 0.74\n")
+    with pytest.raises(ValueError, match="charge must be an integer"):
+        read_geometry(path, charge=0.9, spin=1)
+
+
+def test_thread_limits_require_spawned_workers() -> None:
+    from pyscf_vscf.runner import RunnerSettings
+
+    with pytest.raises(ValueError, match="start_method='spawn'"):
+        RunnerSettings(workers=2, threads_per_worker=1, start_method="fork")
