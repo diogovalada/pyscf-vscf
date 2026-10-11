@@ -1,17 +1,32 @@
-# Grid caches
+# Reusing electronic points and scans
 
-PES/DMS scans are the expensive part of a calculation. Frozen local-bond 1D
-and 2D grids can be written to a checksummed NPZ cache and reused for any
-later spectrum, including other isotopologues on the same Born-Oppenheimer
-surface.
+Electronic points are the expensive part of a calculation. 0.3 keeps them in
+two complementary ways:
+
+- a **point store** (`--store points.sqlite`, `PointStore`) keeps every
+  evaluated point, resumes interrupted scans, and shares points between
+  scans; see [scans](scans.md);
+- a **scan file** (`--output scan.npz`, `dump_scan`) keeps one finished scan,
+  from which spectra for any isotopologue on the same surface can be
+  recomputed without electronic-structure calculations.
 
 ```bash
-pyscf-vscf --xyz water.xyz --task 1d --bond 0-1 --rmin 0.65 --rmax 1.6 \
-    --npts 41 --method b3lyp --basis cc-pvdz --dump-grid oh.npz
-pyscf-vscf --xyz water.xyz --task 1d --reuse-grid oh.npz --vmax 4
+pyscf-vscf scan1d water-opt.xyz --bond 0-1 --method b3lyp --basis cc-pvdz \
+    --store water.sqlite --output oh.npz
+pyscf-vscf scan1d d2o-opt.xyz --bond 0-1 --reuse oh.npz --states 6
 ```
 
-## What makes a cache reusable
+A point's identity combines its exact geometry, charge, spin, requested
+properties, and the provider's scientific fingerprint (every setting that
+can change the result). Scan files additionally record the axes and the
+sampling definition, and are verified by array checksums and a content
+fingerprint when loaded.
+
+The rest of this page describes the schema-3 grid caches written by 0.1 and
+0.2 (`--dump-grid`), which 0.3 still reads (`--reuse`, `load_legacy_grid`,
+and the deprecated flag-style CLI).
+
+## What makes a 0.2 cache reusable
 
 Schema-v3 caches separate the causal identity of the electronic points from
 recorded provenance:
@@ -27,7 +42,7 @@ therefore do not invalidate the same surface: an `H2O` grid can be reused for
 `D2O` by supplying a geometry file with `D` atoms. Array checksums are always
 verified when a cache is loaded.
 
-## Reusing a cache from the command line
+## Reusing a 0.2 cache with the flag-style command line
 
 With `--reuse-grid`, every electronic and grid option you omit is taken from
 the cache, after its checksums and fingerprints have been verified. Options

@@ -5,6 +5,74 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-11
+
+0.3 replaces the two parallel electronic-structure paths of 0.2 with one. See
+the [migration guide](docs/migration-0.3.md); everything removed in 0.4 still
+works in 0.3 with a `PyscfVscfDeprecationWarning`.
+
+### Added
+
+- One construction seam for every PySCF calculation
+  (`backends/_pyscf_factory.py`): `SettingsFactory` for the built-in method and
+  `MethodRecipe` for any user-supplied PySCF method (functional, dispersion,
+  solvent, ECP, ...), identified by a declared manifest. A canonical snapshot of
+  the configured mean field is recorded as provenance, and undeclared
+  geometry-dependent configuration is rejected.
+  `PySCFMeanFieldProvider(factory=...)`, `harmonic_analysis`, and
+  `optimize_geometry` accept recipes.
+- `contracts.py`: backend-independent point requests, results, and the provider
+  protocol.
+- `PointStore` (SQLite): resumable, shared storage of electronic points with
+  attempt history, explicit retry of failed points, and conflict detection.
+- `run_plan` / `RunnerSettings`: evaluates any plan (scans and n-mode plans)
+  serially or in spawned workers, with completion-driven submission,
+  provider-identity checks, and fail-fast or continue policies.
+- Typed scans (`pyscf_vscf.scans`): `plan_bond_scan`, `plan_normal_scan`,
+  `run_scan`, `ScanResult` (absolute energies, atomic-unit dipoles),
+  `bond_spectrum`, `normal_coordinate_spectrum`, and equilibrium-relative
+  default grids.
+- Schema-4 scan files (`artifacts.scans.dump_scan` / `load_scan`) and
+  `load_legacy_grid` for 0.1/0.2 caches.
+- Subcommand command line: `pyscf-vscf harmonic|opt|scan1d|scan2d|inspect`
+  with `--store`, `--output`, `--reuse`, `--recipe`, and `--workers`.
+- VSCF intensities: `NModeDipole` and `vscf_spectrum(dipole=...)` attach a
+  `VSCFTransitionMoment` (with state overlap and an `approximate` flag) to each
+  transition.
+- `optimize_geometry`, which writes a file only when asked and rebuilds the
+  method at every step.
+- A packaged water example from PySCF surfaces to VSCF and VCI with
+  intensities (`python -m pyscf_vscf.examples.water_vscf_vci`).
+- `read_geometry` and top-level exports of the readers and the new API;
+  `py.typed` and strict mypy checking of the new core modules; docstrings for
+  every public function and class; `docs/scans.md` and
+  `docs/migration-0.3.md`.
+
+### Changed
+
+- Python 3.11 or newer is required; NumPy 1.23.2 or newer.
+- Flag-style command lines (`--xyz ... --task ...`) run unchanged through the
+  0.2 interface and print a deprecation notice.
+- `PySCFMeanFieldProvider.evaluate` no longer changes PySCF's process-wide
+  thread count; dipoles are computed from the density with CPU integrals (the
+  same formula as PySCF's `dip_moment`). Built-in provider fingerprints are
+  unchanged.
+- The correlated CCSD(T) provider builds its RHF reference through the seam
+  (still conventional, without density fitting).
+- Library diagnostics use the `pyscf_vscf` logger and `RuntimeWarning`
+  instead of printing; the command lines show them with `-v`.
+- Final VSCF modals follow the package's deterministic sign convention.
+- Duplicated private validators are shared through one module.
+
+### Deprecated
+
+- `grid_1d_pes_dms`, `grid_1d_pes_dms_normal`, `grid_2d_pes_dms`, schema-3 cache
+  writers and loaders, custom `energy_dipole_fn` evaluators, `make_mean_field`,
+  `run_opt`, `harmonic_analysis(cfg=...)`, `ElectronicResult.provider_fingerprint`
+  and `.point_fingerprint`, `ElectronicPointRequest.fingerprint()`,
+  `provider_fingerprint()`, `NModeSurfaceModel.fingerprint()`, `Bond.O`,
+  `Bond.H`, and the flag-style command line. All are removed in 0.4.
+
 ## [0.2.2] - 2026-10-10
 
 ### Added

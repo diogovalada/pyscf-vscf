@@ -37,15 +37,24 @@ plan = plan_nmode_points(
 )
 ```
 
-Evaluate `plan.requests` with the same provider, then assemble and fit the
-complete anchored cuts:
+Evaluate the plan with the runner (in parallel, resumable through a point
+store), then assemble and fit the complete anchored cuts:
 
 ```python
+from pyscf_vscf import PointStore, RunnerSettings, run_plan
 from pyscf_vscf.nmode import assemble_nmode_samples, fit_nmode_surface
 
-samples = assemble_nmode_samples(plan, results_by_point_fingerprint)
+with PointStore("points.sqlite") as store:
+    run = run_plan(plan, provider, store=store, settings=RunnerSettings(workers=8))
+samples = assemble_nmode_samples(plan, run.results)
 surface = fit_nmode_surface(samples, method="cubic")
 ```
+
+`provider` is any `ElectronicProvider`; `PySCFMeanFieldProvider(settings)`
+uses the built-in method and `PySCFMeanFieldProvider(factory=recipe)` any
+PySCF method described by a `MethodRecipe` (see the
+[migration guide](migration-0.3.md)). `python -m
+pyscf_vscf.examples.water_vscf_vci` runs the complete workflow for water.
 
 `ElectronicResult` dipoles must be in the input Cartesian frame. Assembly
 retains those vectors and transforms them to the coordinate map's fixed body
@@ -94,7 +103,27 @@ potential = nmode_potential_from_surface(
 ```
 
 The adapter rejects rank-3 energy increments because the separable
-`NModePotential` contract cannot represent them. Triatomic valence surfaces
+`NModePotential` contract cannot represent them.
+
+VSCF intensities need the dipole surface on the same grids:
+
+```python
+from pyscf_vscf.vscf import NModeDipole, vscf_spectrum
+
+dipole = NModeDipole.from_surface(surface, solver_grids)
+spectrum = vscf_spectrum(potential, dipole=dipole)
+for transition in spectrum.transitions:
+    moment = transition.transition_moment
+    print(transition.quanta, transition.frequency_cm,
+          moment.integrated_cross_section_isotropic_km_per_mol, moment.approximate)
+```
+
+State-specific VSCF optimizes the ground and each excited state separately,
+so their product wavefunctions need not be orthogonal. The transition moment
+includes the spectator-mode overlaps; `state_overlap` reports `<0|n>` and
+`approximate` flags transitions where it exceeds `overlap_tolerance`
+(default 0.05). VCI states are orthogonal and are the better choice when
+the flag is set. Triatomic valence surfaces
 instead use `TriatomicJacobiTransform`, `TriatomicJ0KineticOperator`, and
 `potential_on_jacobi_grid` from `pyscf_vscf.kinetic`.
 

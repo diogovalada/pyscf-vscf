@@ -7,7 +7,24 @@ coordinate maps, a complete triatomic Jacobi `J=0` kinetic operator, VCI on
 converged VSCF modals, and signed vector-DMS transition moments. These advanced
 interfaces remain evolving alpha APIs.
 
-The following capabilities can wait for later releases:
+0.3 added one PySCF construction seam with user-supplied method recipes, a
+resumable point store and plan runner, typed scans with schema-4 files, a
+subcommand command line, and VSCF intensities. Planned for 0.4:
+
+- Remove the APIs deprecated in 0.3 (the 0.2 tuple scan functions, schema-3
+  writers, the flag-style command line, compatibility spellings).
+- Move constrained relaxed scans onto the plan runner and point store.
+- Optional GPU4PySCF execution (`device="gpu"`) once a benchmark on supported
+  hardware shows a worthwhile speed-up and CPU/GPU parity tests pass; the
+  construction seam already converts arrays to NumPy at its boundary.
+- Unify the two atomic-unit-to-Debye constants (2.541746 for scans,
+  2.541746473 for VCI/VSCF moments).
+- A documentation site generated from the docstrings (every public object
+  is documented as of 0.3).
+- Shorter dataclass validators and save/load code split out of `vci.py` and
+  `nmode.py`.
+
+Later:
 
 - Backend-neutral VPT2/GVPT2 support, staged from a solver that consumes
   user-supplied harmonic, cubic, and semi-diagonal quartic force fields to
@@ -15,15 +32,12 @@ The following capabilities can wait for later releases:
   resonance detection, deperturbation, and polyad diagonalization require
   independent reference benchmarks before being exposed as supported features.
 - Automated PySCF generation of general n-mode PES/DMS expansions.
-- GPU4PySCF acceleration for electronic surface generation, after persistent
-  GPU-worker execution, CPU/GPU parity, and CUDA CI can be tested on supported
-  NVIDIA hardware.
 - General polyatomic curvilinear, rovibrational, and coordinate-dependent
   kinetic-energy operators beyond the current triatomic `J=0` implementation.
 - Full-dimensional workflows and broader chemical-coordinate support.
 - Exactly constrained relaxed local-bond (`lbs-relaxed`) scans.
 - DIIS or quasi-Newton acceleration for difficult VSCF iterations.
-- Larger-system sparse modal solvers and restart/checkpoint support.
+- Larger-system sparse modal solvers.
 
 ## Validation
 
