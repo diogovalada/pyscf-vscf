@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import warnings
 import argparse
 import contextlib
 import json
@@ -19,6 +18,7 @@ from pathlib import Path
 from typing import TextIO
 
 import numpy as np
+import warnings
 
 from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
 from pyscf_vscf import Bond, ESSettings, __version__

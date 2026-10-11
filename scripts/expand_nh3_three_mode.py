@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import warnings
 import argparse
 import contextlib
 import json
@@ -14,6 +13,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
+import warnings
 
 from generate_nh3_three_mode import PAIRS, _Tee, _cpu_model, _executor_factory, _settings
 from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
