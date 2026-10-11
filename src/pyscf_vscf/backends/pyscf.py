@@ -28,7 +28,13 @@ from ..contracts import (
     provider_scientific_fingerprint,
 )
 from ..molecule import Molecule
-from ..settings import ESSettings, coerce_es_settings, default_auxbasis, runtime_max_memory_mb
+from ..settings import (
+    DEFAULT_PROVIDER_MAX_MEMORY_MB,
+    ESSettings,
+    coerce_es_settings,
+    default_auxbasis,
+    runtime_max_memory_mb,
+)
 from ._pyscf_factory import (
     BackendUnavailableError,
     ElectronicSystem,
@@ -79,12 +85,13 @@ class PySCFMeanFieldProvider:
     :class:`MeanFieldFactory`) for a user-supplied PySCF method. ``threads``
     is advisory: worker processes apply it at start-up, and :meth:`evaluate`
     never changes PySCF's process-wide thread count. ``max_memory_mb`` is the
-    PySCF memory budget of each calculation.
+    PySCF memory budget of each calculation; by default the runner's worker
+    budget (``RunnerSettings.max_memory_mb``) applies, else 4000 MB.
     """
 
     settings: object = None
     threads: int = 1
-    max_memory_mb: int = 4000
+    max_memory_mb: int | None = None
     user_annotations: Mapping[str, Any] = field(default_factory=dict)
     retain_occupied_mo_coefficients: bool = False
     continuity_diagnostics: str = "off"
@@ -106,8 +113,8 @@ class PySCFMeanFieldProvider:
                     "and build_mean_field()"
                 )
         threads = int(self.threads)
-        memory = int(self.max_memory_mb)
-        if threads <= 0 or memory <= 0:
+        memory = None if self.max_memory_mb is None else int(self.max_memory_mb)
+        if threads <= 0 or (memory is not None and memory <= 0):
             raise ValueError("threads and max_memory_mb must be positive")
         object.__setattr__(self, "threads", threads)
         object.__setattr__(self, "max_memory_mb", memory)
@@ -176,12 +183,20 @@ class PySCFMeanFieldProvider:
             },
         }
 
+    def memory_budget_mb(self) -> int:
+        """Return the PySCF memory budget: ``max_memory_mb``, else the
+        ``PYSCF_VSCF_MAX_MEMORY_MB`` worker setting, else 4000 MB."""
+
+        if self.max_memory_mb is not None:
+            return int(self.max_memory_mb)
+        return runtime_max_memory_mb() or DEFAULT_PROVIDER_MAX_MEMORY_MB
+
     def execution_provenance(self) -> Mapping[str, object]:
         """Return runtime resources and software versions outside causal identity."""
 
         return {
             "threads_requested": self.threads,
-            "max_memory_mb": self.max_memory_mb,
+            "max_memory_mb": self.memory_budget_mb(),
             "host": gethostname(),
             "user_annotations": to_jsonable(self.user_annotations),
             "runtime": runtime_provenance(),
@@ -204,7 +219,7 @@ class PySCFMeanFieldProvider:
         build = build_mean_field(
             ElectronicSystem.from_request(request),
             self.factory,
-            resources=PySCFResources(max_memory_mb=self.max_memory_mb),
+            resources=PySCFResources(max_memory_mb=self.memory_budget_mb()),
         )
         converged = converge(
             build,
@@ -249,7 +264,7 @@ class PySCFMeanFieldProvider:
                 "runtime_seconds": time.perf_counter() - started,
                 "max_rss_mb": max_rss_mb(),
                 "threads_actual": current_pyscf_threads(),
-                "max_memory_mb": self.max_memory_mb,
+                "max_memory_mb": self.memory_budget_mb(),
                 "warnings": [],
             },
             provenance=provenance,

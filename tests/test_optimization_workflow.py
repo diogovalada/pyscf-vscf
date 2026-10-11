@@ -99,9 +99,13 @@ def _patch_engine(monkeypatch, *, converged: bool, opt_coords, stationarity_erro
         captured["stationarity_factory"] = factory
         if stationarity_error is not None:
             raise stationarity_error
-        return SimpleNamespace(mean_field=_FakeMeanField())
+        return SimpleNamespace(
+            mean_field=_FakeMeanField(), build=SimpleNamespace(configuration_snapshot={})
+        )
 
-    monkeypatch.setattr(workflow, "_factory_gradient_scanner", lambda mol, factory: scanner)
+    monkeypatch.setattr(
+        workflow, "_factory_gradient_scanner", lambda mol, factory, guard=None: scanner
+    )
     monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
     monkeypatch.setattr(workflow.pyscf_backend, "converged_mean_field", fake_converged)
     return captured, scanner

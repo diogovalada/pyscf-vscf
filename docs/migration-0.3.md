@@ -17,7 +17,7 @@ Python 3.11 or newer is required.
 | `pyscf-vscf --xyz w.xyz --task 1d --bond 0-1 --rmin A --rmax B --npts N` | `pyscf-vscf scan1d w.xyz --bond 0-1 --range A B N` |
 | `--scan normal` / `--scan normal-relaxed` | `scan1d ... --coordinate normal` / `normal-relaxed` |
 | `pyscf-vscf --xyz w.xyz --task 2d --bond 0-1 --bond2 0-2` | `pyscf-vscf scan2d w.xyz --bond 0-1 --bond 0-2` |
-| `--dump-grid g.npz` / `--reuse-grid g.npz` | `--output s.npz` / `--reuse s.npz` (reads 0.2 caches too) |
+| `--dump-grid g.npz` / `--reuse-grid g.npz` | `--output s.npz` / `--reuse s.npz` (reads 0.2 caches too; the file supplies the method) |
 | `--vmax N` | `--states N` (default 4) |
 | `--pes-workers N` | `--workers N` |
 | (none) | `--store points.sqlite` keeps every point and resumes interrupted scans |
@@ -105,7 +105,9 @@ and `optimize_geometry` (which rebuilds the method at every step).
 - Built-in provider fingerprints are unchanged, so stored 0.2 n-mode results
   remain valid.
 - `PySCFMeanFieldProvider.evaluate` no longer changes PySCF's process-wide
-  thread count; worker processes set it at start-up.
+  thread count; worker processes set it at start-up. Without an explicit
+  `max_memory_mb`, the provider uses `RunnerSettings.max_memory_mb` in workers,
+  else 4000 MB as before.
 - Library code logs through the `pyscf_vscf` logger and warns with
   `RuntimeWarning` instead of printing.
 - `read_xyz`, `read_midas_mmol`, and `read_geometry` are available from the

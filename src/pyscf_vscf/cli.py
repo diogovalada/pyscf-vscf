@@ -21,7 +21,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 from ._cli_common import (
     CLI_RESULT_SCHEMA,
@@ -396,8 +396,7 @@ def _prepare(args: argparse.Namespace, parser: argparse.ArgumentParser, log) -> 
     if args.json_out is not None and args.json_out.suffix.lower() != ".json":
         parser.error("--json must end with .json")
     if args.recipe is not None and any(
-        getattr(args, name) is not None
-        for name in ("method", "basis", "use_ri", "ri_aux", "scf_conv_tol", "scf_max_cycle")
+        getattr(args, name) is not None for flag, name in _METHOD_OPTIONS[:-1]
     ):
         parser.error("--recipe replaces --method/--basis/--ri/... ; do not combine them")
 
@@ -473,6 +472,11 @@ def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
             parser.error(
                 "--reuse reads a finished scan; it cannot be combined with --store/--output"
             )
+        explicit = [flag for flag, name in _METHOD_OPTIONS if getattr(args, name) is not None]
+        if explicit:
+            parser.error(
+                f"--reuse takes the method from the scan file; remove {', '.join(explicit)}"
+            )
         if not args.reuse.is_file():
             parser.error(f"scan file not found: {args.reuse}")
 
@@ -535,6 +539,19 @@ def _prepare_method(context: _Context) -> None:
         context.provider = PySCFMeanFieldProvider(factory=context.factory, **provider_kwargs)
     else:
         context.provider = PySCFMeanFieldProvider(context.settings, **provider_kwargs)
+
+
+# Electronic-structure options, as (flag, argparse destination); --recipe last.
+_METHOD_OPTIONS = (
+    ("--method", "method"),
+    ("--basis", "basis"),
+    ("--ri/--no-ri", "use_ri"),
+    ("--ri-aux", "ri_aux"),
+    ("--scf-conv-tol", "scf_conv_tol"),
+    ("--scf-max-cycle", "scf_max_cycle"),
+    ("--dft-grid-level", "dft_grid_level"),
+    ("--recipe", "recipe"),
+)
 
 
 def _load_recipe(spec: str) -> Any:
@@ -690,6 +707,8 @@ def _run_scan(context: _Context) -> dict[str, Any]:
     )
     _warn_boundary(records, args.boundary_warn, "--range" if not normal else "--range (normal)")
     payload = _base_payload(context)
+    if args.reuse is not None:
+        payload["method"], payload["provider_scientific_fingerprint"] = _scan_method(scan)
     axes = getattr(scan, "axes", ())
     payload["scan"] = {
         "kind": getattr(scan, "scan_kind", "legacy"),
@@ -857,7 +876,15 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
 
     args = context.args
     molecule = context.molecule
+    coordinate = getattr(args, "coordinate", "bond")
     if isinstance(scan, scans.ScanResult):
+        expected = "normal-1d" if coordinate == "normal" else f"bond-{args.dimension}d"
+        if scan.scan_kind != expected:
+            raise _CLIError(f"the scan file holds a {scan.scan_kind} scan, not {expected}")
+        try:
+            scans._check_same_system(scan, molecule)
+        except ValueError as exc:
+            raise _CLIError(str(exc)) from exc
         if scan.scan_kind == "normal-1d":
             bond = context.bonds[0]
             axis = np.asarray(molecule.coords[bond.j]) - np.asarray(molecule.coords[bond.i])
@@ -875,17 +902,31 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
     from .variational import variational_1d, variational_2d
     from .workflows.scans import bond_bond_g12_inv_amu, local_bond_reduced_mass_amu
 
+    if coordinate != "bond" or scan.scan_kind != f"legacy-{args.dimension}d":
+        raise _CLIError(
+            f"the 0.2 grid cache holds a {scan.scan_kind} bond scan, not a "
+            f"{args.dimension}D {coordinate} scan"
+        )
     identity = scan.metadata["identity"]
-    reference = np.asarray(identity["molecule"]["coordinates_A"], dtype=float)
-    if reference.shape != np.asarray(molecule.coords).shape or not np.allclose(
-        reference, molecule.coords, rtol=0.0, atol=1e-10
+    stored_molecule = identity["molecule"]
+    reference = np.asarray(stored_molecule["coordinates_A"], dtype=float)
+    if (
+        list(stored_molecule["symbols"]) != list(molecule.symbols)
+        or reference.shape != np.asarray(molecule.coords).shape
+        or not np.allclose(reference, molecule.coords, rtol=0.0, atol=1e-10)
     ):
         raise _CLIError("the grid cache was computed for a different geometry")
+    if (int(stored_molecule.get("charge", 0)), int(stored_molecule.get("spin", 0))) != (
+        molecule.charge,
+        molecule.spin,
+    ):
+        raise _CLIError("the grid cache was computed for a different charge or spin")
     stored = identity["scan"]
     keys = ["bond_zero_based"] if args.dimension == 1 else ["bond1_zero_based", "bond2_zero_based"]
     for key, bond in zip(keys, context.bonds):
-        if stored.get(key) != [bond.i, bond.j]:
-            raise _CLIError(f"the grid cache scans bond {stored.get(key)}, not {bond.i}-{bond.j}")
+        stored_bond = stored.get(key)
+        if stored_bond is None or tuple(stored_bond) != (bond.i, bond.j):
+            raise _CLIError(f"the grid cache scans bond {stored_bond}, not {bond.i}-{bond.j}")
     bond0 = context.bonds[0]
     axis = np.asarray(molecule.coords[bond0.j]) - np.asarray(molecule.coords[bond0.i])
     if args.dimension == 1:
@@ -913,6 +954,20 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
         nmax=args.states,
         g12_inv_amu=g12,
     )
+
+
+def _scan_method(scan: Any) -> tuple[dict[str, Any], str | None]:
+    """Return the method payload and provider fingerprint recorded in a reused scan."""
+
+    from ._identity import to_jsonable
+
+    if hasattr(scan, "provider_payload"):
+        return (
+            cast(dict[str, Any], to_jsonable(scan.provider_payload)),
+            scan.provider_scientific_fingerprint,
+        )
+    electronic = scan.metadata["identity"]["electronic_structure"]
+    return cast(dict[str, Any], to_jsonable(electronic)), None
 
 
 def _check_scan_bonds(scan: Any, bonds: Sequence[Any]) -> None:

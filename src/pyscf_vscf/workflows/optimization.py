@@ -17,6 +17,7 @@ import numpy as np
 
 from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
+from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
 from pyscf_vscf.io import write_midas_mmol, write_xyz
 from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.settings import ESSettings
@@ -69,7 +70,8 @@ def optimize_geometry(
     factory = pyscf_backend.method_factory(settings)
     maxsteps = None if max_steps is None else int(max_steps)
     _LOG.info("Starting geometry optimization (backend=geomeTRIC; maxsteps=%s)", maxsteps)
-    scanner = _factory_gradient_scanner(molecule, factory)
+    guard = ConfigurationGuard(factory)
+    scanner = _factory_gradient_scanner(molecule, factory, guard)
     converged, optmol, backend = _run_geometric(scanner, maxsteps)
     if not converged:
         message = "Geometry optimization did not converge within the allowed steps"
@@ -78,7 +80,7 @@ def optimize_geometry(
         warnings.warn(message, RuntimeWarning, stacklevel=2)
 
     mol_opt = _optimized_molecule_from_pyscf(molecule, optmol)
-    stationarity = _post_optimization_stationarity(mol_opt, factory)
+    stationarity = _post_optimization_stationarity(mol_opt, factory, guard)
     written = None
     if output_path is not None:
         written = _write_optimized_geometry(mol_opt, molecule, output_path)
@@ -121,12 +123,15 @@ def run_opt(
     return result
 
 
-def _factory_gradient_scanner(molecule: Any, factory: Any) -> Any:
+def _factory_gradient_scanner(
+    molecule: Any, factory: Any, guard: ConfigurationGuard | None = None
+) -> Any:
     """Return a geomeTRIC-compatible gradient scanner that rebuilds the method.
 
     PySCF's own scanners reuse one mean-field object across geometries; this
     one builds the molecule and mean field through the seam at every step, so
-    every setting of a user recipe applies at every geometry.
+    every setting of a user recipe applies at every geometry. ``guard``
+    rejects builds whose method configuration changes between steps.
     """
 
     import sys
@@ -137,7 +142,9 @@ def _factory_gradient_scanner(molecule: Any, factory: Any) -> Any:
     from pyscf_vscf.backends._pyscf_properties import converge, nuclear_gradient
 
     system = ElectronicSystem.from_molecule(molecule)
+    guard = guard or ConfigurationGuard(factory)
     initial = build_mean_field(system, factory)
+    guard.check(initial.configuration_snapshot)
 
     class _State:
         converged = False
@@ -158,7 +165,9 @@ def _factory_gradient_scanner(molecule: Any, factory: Any) -> Any:
                 charge=system.charge,
                 spin=system.spin,
             )
-            converged = converge(build_mean_field(point, factory))
+            build = build_mean_field(point, factory)
+            guard.check(build.configuration_snapshot)
+            converged = converge(build)
             self.base.e_tot = converged.total_energy_Eh
             self.base.converged = True
             self.mol = mol
@@ -182,9 +191,17 @@ def _run_geometric(
 def _post_optimization_stationarity(
     mol_opt: Molecule,
     factory: Any,
+    guard: ConfigurationGuard,
 ) -> StationarityDiagnostic | None:
     try:
         converged = pyscf_backend.converged_mean_field(mol_opt, factory)
+    except Exception as exc:
+        warnings.warn(
+            f"Post-optimization gradient check failed: {exc}", RuntimeWarning, stacklevel=3
+        )
+        return None
+    guard.check(converged.build.configuration_snapshot)
+    try:
         return stationarity_diagnostic(converged.mean_field)
     except Exception as exc:
         warnings.warn(

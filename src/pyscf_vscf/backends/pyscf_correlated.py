@@ -20,7 +20,7 @@ from ..electronic import (
     ElectronicResult,
     provider_scientific_fingerprint,
 )
-from ..settings import ESSettings
+from ..settings import DEFAULT_PROVIDER_MAX_MEMORY_MB, ESSettings, runtime_max_memory_mb
 from ._pyscf_factory import (
     ElectronicSystem,
     PySCFResources,
@@ -114,15 +114,15 @@ class PySCFCCSDPerturbativeTriplesProvider:
 
     settings: CCSDPerturbativeTriplesSettings
     threads: int = 1
-    max_memory_mb: int = 4000
+    max_memory_mb: int | None = None
     user_annotations: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.settings, CCSDPerturbativeTriplesSettings):
             raise TypeError("settings must be CCSDPerturbativeTriplesSettings")
         threads = operator.index(self.threads)
-        memory = operator.index(self.max_memory_mb)
-        if threads < 1 or memory < 1:
+        memory = None if self.max_memory_mb is None else operator.index(self.max_memory_mb)
+        if threads < 1 or (memory is not None and memory < 1):
             raise ValueError("threads and max_memory_mb must be positive")
         object.__setattr__(self, "threads", threads)
         object.__setattr__(self, "max_memory_mb", memory)
@@ -148,12 +148,20 @@ class PySCFCCSDPerturbativeTriplesProvider:
             "field_convention": dict(_FIELD_CAPABILITY),
         }
 
+    def memory_budget_mb(self) -> int:
+        """Return the PySCF memory budget: ``max_memory_mb``, else the
+        ``PYSCF_VSCF_MAX_MEMORY_MB`` worker setting, else 4000 MB."""
+
+        if self.max_memory_mb is not None:
+            return int(self.max_memory_mb)
+        return runtime_max_memory_mb() or DEFAULT_PROVIDER_MAX_MEMORY_MB
+
     def execution_provenance(self) -> Mapping[str, object]:
         """Return resources and software versions outside scientific identity."""
 
         return {
             "threads_requested": self.threads,
-            "max_memory_mb": self.max_memory_mb,
+            "max_memory_mb": self.memory_budget_mb(),
             "host": gethostname(),
             "user_annotations": to_jsonable(self.user_annotations),
             "runtime": runtime_provenance(),
@@ -187,7 +195,7 @@ class PySCFCCSDPerturbativeTriplesProvider:
         build = build_mean_field(
             ElectronicSystem.from_request(request),
             reference,
-            resources=PySCFResources(max_memory_mb=self.max_memory_mb),
+            resources=PySCFResources(max_memory_mb=self.memory_budget_mb()),
         )
         pmol = build.molecule
         if pmol.nelectron % 2:
@@ -209,7 +217,7 @@ class PySCFCCSDPerturbativeTriplesProvider:
                 mean_field,
                 pmol,
                 policy=self.settings.integral_policy,
-                max_memory_mb=self.max_memory_mb,
+                max_memory_mb=self.memory_budget_mb(),
             )
 
         frozen = self.settings.frozen_orbitals or None
@@ -219,7 +227,7 @@ class PySCFCCSDPerturbativeTriplesProvider:
         coupled_cluster.conv_tol = self.settings.cc_conv_tol
         coupled_cluster.max_cycle = self.settings.cc_max_cycle
         coupled_cluster.direct = self.settings.direct
-        coupled_cluster.max_memory = self.max_memory_mb
+        coupled_cluster.max_memory = self.memory_budget_mb()
         if self.settings.integral_policy == "incore":
             coupled_cluster.incore_complete = True
 
@@ -299,7 +307,7 @@ class PySCFCCSDPerturbativeTriplesProvider:
                 "runtime_seconds": time.perf_counter() - started,
                 "max_rss_mb": max_rss_mb(),
                 "threads_actual": actual_threads,
-                "max_memory_mb": self.max_memory_mb,
+                "max_memory_mb": self.memory_budget_mb(),
                 "warnings": [],
             },
             provenance=self.execution_provenance(),

@@ -41,7 +41,10 @@ class _FakeMeanField:
 
 
 def _converged(mean_field: object, pmol: object) -> SimpleNamespace:
-    return SimpleNamespace(mean_field=mean_field, build=SimpleNamespace(molecule=pmol))
+    return SimpleNamespace(
+        mean_field=mean_field,
+        build=SimpleNamespace(molecule=pmol, configuration_snapshot={}),
+    )
 
 
 def _h2_molecule() -> Molecule:
@@ -169,7 +172,7 @@ def test_harmonic_analysis_uses_fd_hessian_when_allowed(
     )
     monkeypatch.setattr(workflow, "analytic_hessian", lambda mf: None)
 
-    def fake_fd(mol: object, cfg_arg: object, x0_bohr: np.ndarray) -> np.ndarray:
+    def fake_fd(mol: object, cfg_arg: object, x0_bohr: np.ndarray, **kwargs: object) -> np.ndarray:
         captured_x0.append(np.asarray(x0_bohr, dtype=float))
         return hessian
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -81,6 +83,17 @@ class DriftingProvider(FakeProvider):
             point_causal_fingerprint=request.causal_fingerprint(provider_id),
             provider_scientific_fingerprint=provider_id,
         )
+
+
+@dataclass(frozen=True)
+class CrashingProvider(FakeProvider):
+    """Kills its worker process on points whose first bond exceeds ``fail_above_A``."""
+
+    def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult:
+        coordinates = np.asarray(request.coordinates_A, dtype=float)
+        if np.linalg.norm(coordinates[1] - coordinates[0]) > self.fail_above_A:
+            os._exit(1)
+        return super().evaluate(request)
 
 
 def _water() -> Molecule:
@@ -292,3 +305,36 @@ def test_legacy_v3_cache_loads_as_relative_scan(tmp_path: Path) -> None:
     np.testing.assert_array_equal(loaded.axes[0], R)
     with pytest.raises(ValueError, match="load_legacy_grid"):
         load_scan(path)
+
+
+def test_worker_crash_accounts_for_every_point(tmp_path: Path) -> None:
+    provider = CrashingProvider(fail_above_A=1.05)
+    plan = plan_bond_scan(_water(), provider, ["0-1"], [np.linspace(0.8, 1.2, 9)])
+    settings = RunnerSettings(workers=1, max_in_flight=3, stop_on_error=False)
+
+    with PointStore(tmp_path / "points.sqlite") as store:
+        run = run_plan(plan, provider, store=store, settings=settings)
+        statuses = [store.latest_attempt(key) for key in plan.requests]
+
+    assert run.executor_error is not None
+    outcomes = [set(run.results), set(run.failures), set(run.not_attempted)]
+    assert sum(len(group) for group in outcomes) == len(plan.requests)
+    assert set().union(*outcomes) == set(plan.requests)
+    assert all(record is None or record.status != "in_progress" for record in statuses)
+
+
+def test_assembly_rejects_unconverged_and_foreign_results() -> None:
+    provider = FakeProvider()
+    plan = plan_bond_scan(_water(), provider, ["0-1"], [np.linspace(0.9, 1.1, 3)])
+    results = dict(run_plan(plan, provider).results)
+    key = next(iter(results))
+
+    unconverged = dict(results)
+    unconverged[key] = dataclasses.replace(results[key], converged=False)
+    with pytest.raises(ValueError, match="not converged"):
+        assemble_scan(plan, unconverged)
+
+    foreign = dict(results)
+    foreign[key] = FakeProvider(offset=1.0).evaluate(plan.requests[key])
+    with pytest.raises(ValueError, match="different provider"):
+        assemble_scan(plan, foreign)

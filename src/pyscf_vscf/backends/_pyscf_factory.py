@@ -469,6 +469,40 @@ def invariant_snapshot(snapshot: Mapping[str, object], variable_fields: tuple[st
     return {key: value for key, value in snapshot.items() if key not in set(variable_fields)}
 
 
+class ConfigurationGuard:
+    """Require one invariant method configuration across the builds of a calculation.
+
+    The first checked snapshot becomes the reference; later snapshots must
+    agree on every field except the factory's ``variable_snapshot_fields``.
+    """
+
+    def __init__(self, factory: Any) -> None:
+        self._variable_fields = tuple(getattr(factory, "variable_snapshot_fields", ()) or ())
+        self._reference: dict[str, object] | None = None
+
+    def check(self, snapshot: Mapping[str, object] | None) -> None:
+        """Raise ``ValueError`` if ``snapshot`` differs from the reference."""
+
+        if snapshot is None:
+            return
+        invariant = invariant_snapshot(snapshot, self._variable_fields)
+        if self._reference is None:
+            self._reference = invariant
+            return
+        if invariant != self._reference:
+            reference = self._reference
+            changed = sorted(
+                key
+                for key in set(invariant) | set(reference)
+                if invariant.get(key) != reference.get(key)
+            )
+            raise ValueError(
+                "The method configuration differs between geometries "
+                f"(fields: {', '.join(changed)}); declare legitimately geometry-dependent "
+                "fields in the recipe's variable_snapshot_fields"
+            )
+
+
 def require_pyscf() -> tuple[Any, Any, Any, Any]:
     """Import PySCF lazily; raise :class:`BackendUnavailableError` if it is missing."""
 

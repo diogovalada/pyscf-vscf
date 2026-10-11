@@ -30,7 +30,14 @@ from .contracts import (
 )
 from .coordinates import Bond, parse_bond, stretch_along_bond, stretch_two_bonds
 from .point_store import PointStore
-from .runner import PlanIncompleteError, PlanRun, ProgressEvent, RunnerSettings, run_plan
+from .runner import (
+    PlanIncompleteError,
+    PlanRun,
+    ProgressEvent,
+    RunnerSettings,
+    run_plan,
+    validate_result,
+)
 
 SCAN_PLAN_SCHEMA = "pyscf-vscf-scan-plan"
 SCAN_PLAN_SCHEMA_VERSION = 1
@@ -314,7 +321,11 @@ def assemble_scan(
     *,
     provenance: Mapping[str, Any] | None = None,
 ) -> ScanResult:
-    """Place the results of every planned point on the scan grid."""
+    """Place the results of every planned point on the scan grid.
+
+    Every result must be converged, come from the plan's provider, and belong
+    to its grid point.
+    """
 
     energies = np.empty(plan.shape, dtype=float)
     dipoles = np.empty(plan.shape + (3,), dtype=float)
@@ -323,8 +334,10 @@ def assemble_scan(
         if key not in results:
             raise ValueError(f"Missing result for grid point {list(index)}")
         result = results[key]
-        if result.point_causal_fingerprint != key:
-            raise ValueError("A result does not belong to its grid point")
+        try:
+            validate_result(result, plan.requests[key], plan.provider_scientific_fingerprint)
+        except ValueError as exc:
+            raise ValueError(f"Grid point {list(index)}: {exc}") from exc
         if result.dipole_au is None:
             raise ValueError("Scan results need dipoles")
         energies[index] = result.total_energy_Eh
@@ -466,15 +479,23 @@ def normal_coordinate_spectrum(
 
 
 def _check_same_system(scan: ScanResult, molecule: Any) -> None:
+    """Require ``molecule`` to be the scan's reference system (isotopes may differ)."""
+
     charges = [atomic_number(symbol) for symbol in molecule.symbols]
     reference = scan.reference_geometry
-    if list(reference["nuclear_charges"]) != charges or not np.allclose(
-        np.asarray(reference["coordinates_A"], dtype=float),
-        np.asarray(molecule.coords, dtype=float),
-        rtol=0.0,
-        atol=1e-10,
+    coordinates = np.asarray(molecule.coords, dtype=float)
+    stored = np.asarray(reference["coordinates_A"], dtype=float)
+    if (
+        list(reference["nuclear_charges"]) != charges
+        or stored.shape != coordinates.shape
+        or not np.allclose(stored, coordinates, rtol=0.0, atol=1e-10)
     ):
         raise ValueError("The molecule does not match the scan's reference geometry")
+    if (int(reference["charge"]), int(reference["spin"])) != (
+        int(getattr(molecule, "charge", 0)),
+        int(getattr(molecule, "spin", 0)),
+    ):
+        raise ValueError("The molecule's charge or spin differs from the scan's")
 
 
 def _plan(

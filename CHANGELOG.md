@@ -18,7 +18,8 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   `MethodRecipe` for any user-supplied PySCF method (functional, dispersion,
   solvent, ECP, ...), identified by a declared manifest. A canonical snapshot of
   the configured mean field is recorded as provenance, and undeclared
-  geometry-dependent configuration is rejected.
+  geometry-dependent configuration is rejected in plan runs, optimizations,
+  and finite-difference Hessians.
   `PySCFMeanFieldProvider(factory=...)`, `harmonic_analysis`, and
   `optimize_geometry` accept recipes.
 - `contracts.py`: backend-independent point requests, results, and the provider
@@ -35,7 +36,9 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
 - Schema-4 scan files (`artifacts.scans.dump_scan` / `load_scan`) and
   `load_legacy_grid` for 0.1/0.2 caches.
 - Subcommand command line: `pyscf-vscf harmonic|opt|scan1d|scan2d|inspect`
-  with `--store`, `--output`, `--reuse`, `--recipe`, and `--workers`.
+  with `--store`, `--output`, `--reuse`, `--recipe`, and `--workers`. `--reuse`
+  takes the method from the scan file (method options are refused) and checks
+  the geometry, charge, spin, bonds, and coordinate kind.
 - VSCF intensities: `NModeDipole` and `vscf_spectrum(dipole=...)` attach a
   `VSCFTransitionMoment` (with state overlap and an `approximate` flag) to each
   transition.
@@ -56,7 +59,8 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
 - `PySCFMeanFieldProvider.evaluate` no longer changes PySCF's process-wide
   thread count; dipoles are computed from the density with CPU integrals (the
   same formula as PySCF's `dip_moment`). Built-in provider fingerprints are
-  unchanged.
+  unchanged. Its `max_memory_mb` (and the CCSD(T) provider's) now defaults to
+  the runner's per-worker budget, else 4000 MB.
 - The correlated CCSD(T) provider builds its RHF reference through the seam
   (still conventional, without density fitting).
 - Library diagnostics use the `pyscf_vscf` logger and `RuntimeWarning`

@@ -17,6 +17,8 @@ import numpy as np
 from pyscf_vscf import harmonic as harmonic_helpers
 from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
+from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
+from pyscf_vscf.backends._pyscf_properties import nuclear_gradient as _converged_gradient
 from pyscf_vscf.backends._pyscf_properties import to_numpy
 from pyscf_vscf.constants import ANG_TO_BOHR, atomic_mass_amu
 from pyscf_vscf.settings import ESSettings
@@ -94,7 +96,9 @@ def harmonic_analysis(
             )
         harmonic_helpers.warn_once("fd_hessian", msg + " (enabled by allow_fd_hessian)")
         x0_bohr = atom_coords_bohr(pmol).reshape(-1)
-        hessian = finite_difference_hessian_from_gradients(molecule, cfg, x0_bohr)
+        hessian = finite_difference_hessian_from_gradients(
+            molecule, cfg, x0_bohr, gradient_fn=_guarded_gradient(cfg, converged)
+        )
         hessian_provenance = "finite-difference-analytic-gradients"
 
     freqs_cm, modes = harmonic_helpers.mass_weighted_freqs_modes(
@@ -214,6 +218,24 @@ def gradient_at(molecule: Any, cfg: Any, xflat_bohr: np.ndarray) -> np.ndarray:
     """Return the flattened nuclear gradient at displaced Bohr coordinates."""
 
     return pyscf_backend.energy_gradient_at_coords_bohr(molecule, cfg, xflat_bohr)[1]
+
+
+def _guarded_gradient(cfg: Any, reference: Any) -> Callable[[Any, Any, np.ndarray], np.ndarray]:
+    """Return a gradient function that rejects method-configuration changes."""
+
+    factory = pyscf_backend.method_factory(cfg)
+    guard = ConfigurationGuard(factory)
+    guard.check(reference.build.configuration_snapshot)
+
+    def gradient(molecule: Any, settings: Any, xflat_bohr: np.ndarray) -> np.ndarray:
+        coords = pyscf_backend._coords_from_flat_bohr(molecule, xflat_bohr)
+        converged = pyscf_backend.converged_mean_field(
+            pyscf_backend._molecule_with_coords(molecule, coords), factory
+        )
+        guard.check(converged.build.configuration_snapshot)
+        return np.asarray(_converged_gradient(converged), dtype=float).reshape(-1)
+
+    return gradient
 
 
 def finite_difference_hessian_from_gradients(

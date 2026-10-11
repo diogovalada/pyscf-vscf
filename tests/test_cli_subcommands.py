@@ -210,3 +210,106 @@ def test_reuse_rejects_a_scan_of_another_bond(monkeypatch, tmp_path, capsys) -> 
 
     assert cli.main(["scan1d", geometry, "--bond", "0-2", "--reuse", str(output)]) == 1
     assert "covers bonds" in capsys.readouterr().err
+
+
+def _write_v4_scan(tmp_path: Path, geometry: str, capsys) -> Path:
+    output = tmp_path / "oh.npz"
+    argv = ["scan1d", geometry, "--bond", "0-1", "--range", "0.6", "1.9", "31"]
+    assert cli.main([*argv, "--workers", "1", "--output", str(output)]) == 0
+    capsys.readouterr()
+    return output
+
+
+def test_reuse_takes_the_method_from_the_file(monkeypatch, tmp_path, capsys) -> None:
+    _use_morse(monkeypatch, MorseProvider())
+    geometry = str(_water(tmp_path / "w.xyz"))
+    output = _write_v4_scan(tmp_path, geometry, capsys)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["scan1d", geometry, "--bond", "0-1", "--reuse", str(output), "--method", "hf"])
+    assert excinfo.value.code == 2
+    assert "takes the method from the scan file" in capsys.readouterr().err
+
+    report = tmp_path / "reuse.json"
+    argv = ["scan1d", geometry, "--bond", "0-1", "--reuse", str(output), "--json", str(report)]
+    assert cli.main(argv) == 0
+    payload = json.loads(report.read_text())
+    assert payload["method"]["schema"] == "test-morse"
+    assert payload["provider_scientific_fingerprint"] == provider_scientific_fingerprint(
+        MorseProvider()
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        (["--charge", "1", "--spin", "1"], "charge or spin"),
+        (["--coordinate", "normal"], "not normal-1d"),
+    ],
+)
+def test_reuse_rejects_another_system_or_coordinate(
+    monkeypatch, tmp_path, capsys, extra, message
+) -> None:
+    _use_morse(monkeypatch, MorseProvider())
+    geometry = str(_water(tmp_path / "w.xyz"))
+    output = _write_v4_scan(tmp_path, geometry, capsys)
+
+    assert cli.main(["scan1d", geometry, "--bond", "0-1", "--reuse", str(output), *extra]) == 1
+    assert message in capsys.readouterr().err
+
+
+def _legacy_cache(tmp_path: Path, geometry: str, dimension: int) -> Path:
+    import warnings
+
+    from pyscf_vscf.cache import dump_grid_npz
+    from pyscf_vscf.io import read_xyz
+    from pyscf_vscf.settings import ESSettings
+    from pyscf_vscf.workflows import scans as legacy
+
+    molecule = read_xyz(geometry)
+    settings = ESSettings(method="hf", basis="sto-3g")
+    R = np.linspace(0.7, 1.6, 31)
+    morse = 0.18 * (1.0 - np.exp(-2.2 * (R - 0.96))) ** 2
+    path = tmp_path / f"legacy{dimension}d.npz"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if dimension == 1:
+            dipoles = np.stack([np.zeros_like(R), 0.3 * R, np.full_like(R, 0.1)], axis=-1)
+            legacy.dump_lbs_frozen_1d_grid_cache(
+                path, molecule, settings, "0-1", R[0], R[-1], R.size, R, morse, dipoles
+            )
+        else:
+            spec = (R[0], R[-1], R.size)
+            meta = legacy.lbs_frozen_2d_cache_metadata(
+                molecule, settings, "0-1", "0-2", spec, spec
+            )
+            energy = morse[:, None] + morse[None, :]
+            dipoles = np.zeros((R.size, R.size, 3))
+            dipoles[..., 1] = 0.3 * (R[:, None] - R[None, :])
+            dump_grid_npz(
+                path,
+                meta=meta,
+                arrays={"R1_A": R, "R2_A": R, "E_Eh": energy, "MU_Debye": dipoles},
+            )
+    return path
+
+
+@pytest.mark.parametrize("dimension", [1, 2])
+def test_reuse_reads_matching_legacy_caches(tmp_path, capsys, dimension) -> None:
+    geometry = str(_water(tmp_path / "w.xyz"))
+    cache = _legacy_cache(tmp_path, geometry, dimension)
+    bonds = ["--bond", "0-1"] if dimension == 1 else ["--bond", "0-1", "--bond", "0-2"]
+    command = f"scan{dimension}d"
+    report = tmp_path / "legacy.json"
+
+    argv = [command, geometry, *bonds, "--reuse", str(cache), "--json", str(report)]
+    assert cli.main(argv) == 0
+    payload = json.loads(report.read_text())
+    assert payload["method"]["method"] == "hf"
+    assert payload["provider_scientific_fingerprint"] is None
+    assert payload["transitions"]
+    capsys.readouterr()
+
+    wrong = ["--bond", "0-2"] if dimension == 1 else ["--bond", "0-2", "--bond", "0-1"]
+    assert cli.main([command, geometry, *wrong, "--reuse", str(cache)]) == 1
+    assert "scans bond" in capsys.readouterr().err

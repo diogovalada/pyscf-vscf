@@ -32,6 +32,8 @@ DEFAULT_DFT_GRID_LEVEL = 3
 
 # Automatic scan parallelism and per-process memory budgets.
 MAX_MEMORY_ENV_VAR = "PYSCF_VSCF_MAX_MEMORY_MB"
+# PySCF memory budget of a provider when neither it nor the worker sets one.
+DEFAULT_PROVIDER_MAX_MEMORY_MB = 4000
 AUTO_MEMORY_FRACTION = 0.75
 AUTO_WORKER_MIN_MEMORY_MB = 1024
 AUTO_WORKER_MAX_MEMORY_MB = 4000

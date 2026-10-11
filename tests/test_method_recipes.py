@@ -125,3 +125,41 @@ def test_recipe_factories_must_not_run_the_scf() -> None:
     system = ElectronicSystem(nuclear_charges=(1, 1), coordinates_A=_h2().coords)
     with pytest.raises(ValueError, match="must not run the SCF"):
         build_mean_field(system, recipe)
+
+
+def test_optimization_and_finite_difference_hessians_reject_configuration_drift() -> None:
+    pytest.importorskip("pyscf")
+    from pyscf import gto
+
+    from pyscf_vscf.backends.pyscf import converged_mean_field
+    from pyscf_vscf.workflows import harmonic, optimization
+
+    recipe = _recipe(lda_grid_by_length)
+    stretched = gto.M(atom="H 0 0 0; H 0 0 1.0", basis="sto-3g", unit="Angstrom", verbose=0)
+    scanner = optimization._factory_gradient_scanner(_h2(), recipe)
+    with pytest.raises(ValueError, match="grids_level"):
+        scanner(stretched)
+
+    reference = converged_mean_field(_h2(), recipe)
+    displaced = reference.build.molecule.atom_coords().reshape(-1).copy()
+    displaced[5] += 0.3
+    gradient = harmonic._guarded_gradient(recipe, reference)
+    with pytest.raises(ValueError, match="grids_level"):
+        gradient(_h2(), recipe, displaced)
+
+    declared = _recipe(lda_grid_by_length, variable_snapshot_fields=("grids_level",))
+    tolerant = harmonic._guarded_gradient(declared, converged_mean_field(_h2(), declared))
+    assert np.all(np.isfinite(tolerant(_h2(), declared, displaced)))
+
+
+def test_runner_memory_budget_reaches_the_calculation(monkeypatch) -> None:
+    from pyscf_vscf.settings import MAX_MEMORY_ENV_VAR
+
+    provider = PySCFMeanFieldProvider(ESSettings(method="hf", basis="sto-3g"))
+    monkeypatch.delenv(MAX_MEMORY_ENV_VAR, raising=False)
+    assert provider.memory_budget_mb() == 4000
+    monkeypatch.setenv(MAX_MEMORY_ENV_VAR, "128")
+    assert provider.memory_budget_mb() == 128
+    assert provider.execution_provenance()["max_memory_mb"] == 128
+    explicit = PySCFMeanFieldProvider(ESSettings(method="hf", basis="sto-3g"), max_memory_mb=512)
+    assert explicit.memory_budget_mb() == 512

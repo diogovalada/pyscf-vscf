@@ -20,6 +20,7 @@ from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wai
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from .backends._pyscf_factory import ConfigurationGuard
 from .contracts import (
     ElectronicPointRequest,
     ElectronicProvider,
@@ -184,7 +185,7 @@ def run_plan(
     for key in requests:
         stored = store.get_result(key) if store is not None else None
         if stored is not None:
-            _validate_result(stored, requests[key], provider_id)
+            validate_result(stored, requests[key], provider_id)
             results[key] = stored
             reused.add(key)
             continue
@@ -200,34 +201,13 @@ def run_plan(
             continue
         pending.append(key)
 
-    variable_fields = frozenset(
-        getattr(getattr(provider, "factory", None), "variable_snapshot_fields", ()) or ()
-    )
-    snapshot_reference: dict[str, Any] = {}
+    guard = ConfigurationGuard(getattr(provider, "factory", None))
 
     def check_configuration(result: ElectronicResult) -> None:
         """Require the same invariant method configuration for every point."""
 
         snapshot = result.provenance.get("configuration_snapshot")
-        if snapshot is None:
-            return
-        invariant = {
-            key: value for key, value in dict(snapshot).items() if key not in variable_fields
-        }
-        if not snapshot_reference:
-            snapshot_reference.update(invariant)
-            return
-        if invariant != snapshot_reference:
-            changed = sorted(
-                key
-                for key in set(invariant) | set(snapshot_reference)
-                if invariant.get(key) != snapshot_reference.get(key)
-            )
-            raise ValueError(
-                "The method configuration differs between points "
-                f"(fields: {', '.join(changed)}); declare legitimately geometry-dependent "
-                "fields in the recipe's variable_snapshot_fields"
-            )
+        guard.check(None if snapshot is None else dict(snapshot))
 
     for key in sorted(reused):
         check_configuration(results[key])
@@ -250,7 +230,7 @@ def run_plan(
         if outcome["ok"]:
             result = outcome["result"]
             try:
-                _validate_result(result, requests[key], provider_id)
+                validate_result(result, requests[key], provider_id)
                 check_configuration(result)
                 if store is not None:
                     assert attempt_id is not None
@@ -290,6 +270,18 @@ def run_plan(
         assert run_id is not None
         return store.begin_attempt(run_id, key)
 
+    def abandon(key: str, attempt_id: int | None) -> None:
+        """Close an attempt whose evaluation never ran (cancelled before it started)."""
+
+        attempted.discard(key)
+        if store is not None and attempt_id is not None:
+            store.record_failure(
+                attempt_id,
+                error_type="Cancelled",
+                message="cancelled before evaluation",
+                status="interrupted",
+            )
+
     executor_error = None
     interrupted = False
     attempted: set[str] = set()
@@ -310,6 +302,7 @@ def run_plan(
                 policy,
                 begin,
                 finish,
+                abandon,
                 failures,
                 attempted,
             )
@@ -347,9 +340,17 @@ def _run_parallel(
     policy: RunnerSettings,
     begin: Callable[[str], int | None],
     finish: Callable[[str, int | None, dict[str, Any]], None],
+    abandon: Callable[[str, int | None], None],
     failures: Mapping[str, PointFailure],
     attempted: set[str],
 ) -> str | None:
+    """Evaluate ``pending`` in worker processes; return an executor error, if any.
+
+    Every submitted point ends up finished (result or failure) or abandoned
+    (cancelled before it ran, so it counts as not attempted), including when
+    the pool breaks or the run is interrupted.
+    """
+
     try:
         pickle.dumps(provider)
     except Exception as exc:
@@ -361,48 +362,67 @@ def _run_parallel(
     limit = int(policy.max_in_flight or 2 * workers)
     queue = list(pending)
     in_flight: dict[Future, tuple[str, int | None]] = {}
-    executor = ProcessPoolExecutor(
-        max_workers=workers,
-        mp_context=mp.get_context(policy.start_method),
-        initializer=_worker_init,
-        initargs=(policy.threads_per_worker, policy.max_memory_mb),
-    )
-    executor_error = None
+    executor_error: str | None = None
+
+    def collect(future: Future) -> None:
+        nonlocal executor_error
+        key, attempt_id = in_flight.pop(future)
+        if future.cancelled():
+            abandon(key, attempt_id)
+            return
+        try:
+            outcome = future.result()
+        except BaseException as exc:  # the worker's exception, e.g. a broken pool
+            if executor_error is None:
+                executor_error = f"{_type_name(exc)}: {exc}"
+            outcome = {
+                "ok": False,
+                "error_type": _type_name(exc),
+                "message": f"worker process failed: {exc}",
+                "traceback": "".join(traceback.format_exception(exc)),
+            }
+        finish(key, attempt_id, outcome)
+
+    try:
+        executor = ProcessPoolExecutor(
+            max_workers=workers,
+            mp_context=mp.get_context(policy.start_method),
+            initializer=_worker_init,
+            initargs=(policy.threads_per_worker, policy.max_memory_mb),
+        )
+    except Exception as exc:
+        return f"{_type_name(exc)}: {exc}"
     try:
         while queue or in_flight:
-            while queue and len(in_flight) < limit and not (failures and policy.stop_on_error):
-                key = queue.pop(0)
+            while (
+                executor_error is None
+                and queue
+                and len(in_flight) < limit
+                and not (failures and policy.stop_on_error)
+            ):
+                key = queue[0]
+                try:
+                    future = executor.submit(_evaluate_point, provider, requests[key], provider_id)
+                except Exception as exc:
+                    executor_error = f"{_type_name(exc)}: {exc}"
+                    break
+                queue.pop(0)
                 attempted.add(key)
-                attempt_id = begin(key)
-                future = executor.submit(_evaluate_point, provider, requests[key], provider_id)
-                in_flight[future] = (key, attempt_id)
+                in_flight[future] = (key, begin(key))
             if not in_flight:
                 break
             done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
             for future in done:
-                key, attempt_id = in_flight.pop(future)
-                try:
-                    outcome = future.result()
-                except Exception as exc:
-                    executor_error = f"{_type_name(exc)}: {exc}"
-                    finish(
-                        key,
-                        attempt_id,
-                        {
-                            "ok": False,
-                            "error_type": _type_name(exc),
-                            "message": f"worker process failed: {exc}",
-                            "traceback": traceback.format_exc(),
-                        },
-                    )
-                    continue
-                finish(key, attempt_id, outcome)
+                collect(future)
             if executor_error is not None:
                 break
     finally:
         for future in list(in_flight):
             future.cancel()
         executor.shutdown(wait=True, cancel_futures=True)
+        # Account for every point still in flight: finished during shutdown, or cancelled.
+        for future in list(in_flight):
+            collect(future)
     return executor_error
 
 
@@ -427,11 +447,13 @@ def _evaluate_point(
         }
 
 
-def _validate_result(
+def validate_result(
     result: ElectronicResult,
     request: ElectronicPointRequest,
     provider_id: str,
 ) -> None:
+    """Raise ``ValueError`` unless ``result`` is a converged answer to ``request``."""
+
     if result.provider_scientific_fingerprint != provider_id:
         raise ValueError("Result was produced by a different provider")
     if result.point_causal_fingerprint != request.causal_fingerprint(provider_id):
