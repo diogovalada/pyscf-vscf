@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from pyscf_vscf.report_compare import assert_reports_close
+from pyscf_vscf.report_compare import WAVENUMBER_ABSOLUTE_TOLERANCE_CM, assert_reports_close
 
 
 def main() -> None:
@@ -16,7 +16,9 @@ def main() -> None:
     parser.add_argument("actual", type=Path)
     parser.add_argument("--relative-tolerance", type=float, default=1e-9)
     parser.add_argument("--absolute-tolerance", type=float, default=1e-15)
-    parser.add_argument("--wavenumber-absolute-tolerance", type=float, default=1e-9)
+    parser.add_argument(
+        "--wavenumber-absolute-tolerance", type=float, default=WAVENUMBER_ABSOLUTE_TOLERANCE_CM
+    )
     parser.add_argument("--intensity-absolute-tolerance", type=float, default=1e-24)
     args = parser.parse_args()
 

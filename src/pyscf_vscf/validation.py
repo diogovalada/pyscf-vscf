@@ -103,8 +103,19 @@ def exact_nmode_dvr(model: NModePotential, *, nstates: int = 12) -> ExactProduct
         eigenvalues, eigenvectors = all_values[:count], all_vectors[:, :count]
     else:
         # Deflated solves recover every copy of a degenerate level.
+        # Shift by the smallest diagonal element, close to the lowest roots.
+        diagonal = potential.copy()
+        for mode, matrix in enumerate(kinetic):
+            view = [1] * model.n_modes
+            view[mode] = shape[mode]
+            diagonal = diagonal + np.diag(matrix).reshape(view)
         eigenvalues, eigenvectors = lowest_eigenpairs(
-            matvec, dimension=dimension, count=count, tolerance=1e-11, degeneracy_tolerance=1e-10
+            matvec,
+            dimension=dimension,
+            count=count,
+            tolerance=1e-11,
+            degeneracy_tolerance=1e-10,
+            shift=float(np.min(diagonal)),
         )
     evals = np.asarray(eigenvalues[:count], dtype=float).copy()
     evecs = np.asarray(eigenvectors[:, :count], dtype=float).copy()

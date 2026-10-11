@@ -27,7 +27,8 @@ def lowest_eigenpairs(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return at least the ``count`` lowest eigenpairs, in ascending order.
 
-    The operator is shifted by ``shift`` (default: its first diagonal element)
+    The operator is shifted by ``shift`` (default: its first diagonal element;
+    pass a value near the lowest roots, such as the smallest diagonal element)
     so that ARPACK's relative tolerance acts on energies near zero. Lanczos
     finds one vector per degenerate eigenvalue in exact arithmetic, so after
     the first solve the operator is deflated against the vectors found and

@@ -447,3 +447,49 @@ def test_thread_environment_is_restored_if_the_pool_cannot_start(monkeypatch) ->
     with pytest.raises(KeyboardInterrupt):
         runner.run_plan(plan, QuarticProvider(), settings=settings)
     assert os.environ["OPENBLAS_NUM_THREADS"] == "8"
+
+
+@pytest.mark.parametrize("mixing", [1.0, 0.3, 0.2, 0.15])
+def test_damped_modal_bases_pass_their_own_validation(mixing: float) -> None:
+    from pyscf_vscf.vci import (
+        build_nmode_vscf_modal_basis,
+        validate_ground_modal_basis_against_hamiltonian,
+    )
+    from pyscf_vscf.vscf import NModePotential, VSCFSettings
+
+    q = np.linspace(-0.45, 0.45, 31)
+    model = NModePotential(
+        coordinates=(q, q),
+        masses_amu=(1.0, 1.4),
+        one_mode_potentials_Eh=(0.08 * q**2, 0.11 * q**2),
+        two_mode_couplings_Eh={(0, 1): 2.0 * q[:, None] ** 2 * q[None, :] ** 2},
+    )
+    settings = VSCFSettings(modal_mixing=mixing, max_iterations=500)
+    hamiltonian, basis = build_nmode_vscf_modal_basis(model, 6, settings=settings)
+    assert basis.converged
+    validate_ground_modal_basis_against_hamiltonian(basis, hamiltonian)
+
+
+@pytest.mark.parametrize(("mu2", "g12"), [(1.0, 1.0), (1.0, -1.0), (4.0, 0.5)])
+def test_singular_g_matrices_are_refused_at_the_boundary(mu2: float, g12: float) -> None:
+    from pyscf_vscf.dvr import product_dvr_2d
+
+    grid = np.linspace(-0.5, 0.5, 15)
+    potential = 0.5 * np.add.outer(grid**2, grid**2)
+    with pytest.raises(ValueError, match="positive definite"):
+        product_dvr_2d(grid, grid, 1.0, mu2, potential, nmax=3, g12_inv_amu=g12)
+    product_dvr_2d(grid, grid, 1.0, mu2, potential, nmax=3, g12_inv_amu=0.999 * g12)
+
+
+def test_report_comparison_tolerates_measured_solver_roundoff() -> None:
+    from pyscf_vscf.report_compare import ReportComparisonError, assert_reports_close
+
+    # Values observed between two thread counts on the NH3 archive.
+    expected = {"vscf_minus_exact_centroid_cm": 0.018088242324211024, "iterations": 11}
+    assert_reports_close(
+        expected, {**expected, "vscf_minus_exact_centroid_cm": 0.018088219322180522}
+    )
+    with pytest.raises(ReportComparisonError):
+        assert_reports_close(expected, {**expected, "vscf_minus_exact_centroid_cm": 0.0180885})
+    with pytest.raises(ReportComparisonError):
+        assert_reports_close(expected, {**expected, "iterations": 12})

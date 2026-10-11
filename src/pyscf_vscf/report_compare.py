@@ -7,6 +7,12 @@ from collections.abc import Mapping, Sequence
 from numbers import Integral, Real
 
 
+# Iterative exact-DVR references (eigensolver tolerance 1e-11) reproduce to
+# about 2.3e-8 cm^-1 between thread counts on one machine (measured on the NH3
+# archive); 1e-7 cm^-1 leaves a factor of four for other platforms.
+WAVENUMBER_ABSOLUTE_TOLERANCE_CM = 1e-7
+
+
 class ReportComparisonError(AssertionError):
     """Raised when regenerated validation data differ materially."""
 
@@ -17,7 +23,7 @@ def assert_reports_close(
     *,
     relative_tolerance: float = 1e-9,
     absolute_tolerance: float = 1e-15,
-    wavenumber_absolute_tolerance: float = 1e-9,
+    wavenumber_absolute_tolerance: float = WAVENUMBER_ABSOLUTE_TOLERANCE_CM,
     intensity_absolute_tolerance: float = 1e-24,
 ) -> None:
     """Require identical JSON structure and tightly matching floating-point values."""

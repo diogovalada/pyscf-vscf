@@ -24,29 +24,29 @@
     },
     "grid_spreads_by_manifold": {
       "binary_combination": {
-        "exact_centroid_spread_cm": 11.326206309632653,
+        "exact_centroid_spread_cm": 11.326206314360206,
         "vscf_centroid_spread_cm": 9.878111601688943
       },
       "first_overtone": {
-        "exact_centroid_spread_cm": 66.46784121501969,
+        "exact_centroid_spread_cm": 66.467841223076,
         "vscf_centroid_spread_cm": 67.90511851047995
       },
       "fundamental": {
-        "exact_centroid_spread_cm": 4.892780401714845,
+        "exact_centroid_spread_cm": 4.892780405857138,
         "vscf_centroid_spread_cm": 4.891903073912545
       },
       "triple_combination": {
-        "exact_centroid_spread_cm": 15.316561227153215,
+        "exact_centroid_spread_cm": 15.316561221643497,
         "vscf_centroid_spread_cm": 14.960303900506915
       }
     },
     "manifold_policy": "All target manifolds are reported. A manifold enters the converged molecular error budget only when both exact and VSCF centroid spreads across the final three window variants do not exceed 25 cm^-1; the fundamental must pass.",
     "observed": {
       "all_vscf_states_converged": true,
-      "maximum_converged_manifold_grid_spread_cm": 15.316561227153215,
+      "maximum_converged_manifold_grid_spread_cm": 15.316561221643497,
       "maximum_equivalent_vscf_state_spread_cm": 0.09325443046873261,
-      "maximum_vscf_exact_centroid_error_cm": 4.428617425166522,
-      "minimum_exact_manifold_weight": 0.8193933721624032
+      "maximum_vscf_exact_centroid_error_cm": 4.4286174263834255,
+      "minimum_exact_manifold_weight": 0.8193933721820617
     },
     "passed": true
   },
@@ -124,7 +124,7 @@
   "system": "NH3",
   "variants": {
     "coarse_13x13_from_25": {
-      "exact_ground_energy_Eh": 0.024727027763389975,
+      "exact_ground_energy_Eh": 0.024727027763390863,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -147,23 +147,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 7296.169514372698,
+          "exact_centroid_cm": 7296.169514371802,
           "exact_frequencies_cm": [
-            7283.189119471741,
-            7302.656752676025,
-            7302.6626709703305
+            7283.189119470449,
+            7302.656752675135,
+            7302.6626709698185
           ],
           "exact_manifold_weights": [
-            0.9981315751246055,
-            0.9994844615919043,
-            0.9994830270584902
+            0.9981315751246087,
+            0.9994844615919078,
+            0.9994830270584993
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9981315751246055,
+          "minimum_exact_manifold_weight": 0.9981315751246087,
           "product_states": [
             [
               1,
@@ -194,26 +194,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.4083387705268251
+          "vscf_minus_exact_centroid_cm": 0.4083387714235869
         },
         "first_overtone": {
-          "exact_centroid_cm": 7698.8096125134425,
+          "exact_centroid_cm": 7698.809612513694,
           "exact_frequencies_cm": [
-            7698.668235042724,
-            7698.69699457509,
-            7699.063607922513
+            7698.668235042078,
+            7698.69699457537,
+            7699.063607923634
           ],
           "exact_manifold_weights": [
-            0.9994851134545804,
-            0.9994819386184908,
-            0.9981553277885948
+            0.999485113454588,
+            0.9994819386184823,
+            0.9981553277885828
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9981553277885948,
+          "minimum_exact_manifold_weight": 0.9981553277885828,
           "product_states": [
             [
               2,
@@ -244,26 +244,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -0.3742180026774804
+          "vscf_minus_exact_centroid_cm": -0.37421800292941043
         },
         "fundamental": {
-          "exact_centroid_cm": 3648.505649821967,
+          "exact_centroid_cm": 3648.505649822015,
           "exact_frequencies_cm": [
-            3635.9032750757915,
-            3654.7848605052773,
-            3654.828813884831
+            3635.903275075816,
+            3654.7848605051554,
+            3654.828813885075
           ],
           "exact_manifold_weights": [
-            0.9999884467730746,
-            0.9999952446832683,
-            0.99999524760312
+            0.9999884467730749,
+            0.9999952446832636,
+            0.9999952476031182
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999884467730746,
+          "minimum_exact_manifold_weight": 0.9999884467730749,
           "product_states": [
             [
               1,
@@ -294,20 +294,20 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.009976373962672369
+          "vscf_minus_exact_centroid_cm": 0.00997637391446915
         },
         "triple_combination": {
-          "exact_centroid_cm": 10942.920387081942,
+          "exact_centroid_cm": 10942.920387082575,
           "exact_frequencies_cm": [
-            10942.920387081942
+            10942.920387082575
           ],
           "exact_manifold_weights": [
-            0.9967559810273415
+            0.9967559810273384
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.9967559810273415,
+          "minimum_exact_manifold_weight": 0.9967559810273384,
           "product_states": [
             [
               1,
@@ -324,7 +324,7 @@
           "vscf_iterations": [
             13
           ],
-          "vscf_minus_exact_centroid_cm": 1.2675342983275186
+          "vscf_minus_exact_centroid_cm": 1.2675342976945103
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -332,10 +332,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.024727102749655696,
       "vscf_ground_iterations": 12,
-      "vscf_ground_minus_exact_cm": 0.016457583026985082
+      "vscf_ground_minus_exact_cm": 0.01645758283205245
     },
     "converged_49x49": {
-      "exact_ground_energy_Eh": 0.024578209286190145,
+      "exact_ground_energy_Eh": 0.024578209286178154,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -358,23 +358,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 6985.534962088758,
+          "exact_centroid_cm": 6985.534962091617,
           "exact_frequencies_cm": [
-            6974.210207507894,
-            6991.188879124289,
-            6991.205799634091
+            6974.210207512279,
+            6991.188879126482,
+            6991.205799636089
           ],
           "exact_manifold_weights": [
-            0.9694996283812214,
-            0.9940464471803334,
-            0.9940371587343628
+            0.9694996283759643,
+            0.9940464471729973,
+            0.9940371587308797
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9694996283812214,
+          "minimum_exact_manifold_weight": 0.9694996283759643,
           "product_states": [
             [
               1,
@@ -405,26 +405,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -1.6799890946895175
+          "vscf_minus_exact_centroid_cm": -1.6799890975480594
         },
         "first_overtone": {
-          "exact_centroid_cm": 6858.007487718417,
+          "exact_centroid_cm": 6858.007487717703,
           "exact_frequencies_cm": [
             6856.021951337865,
-            6858.967688991624,
-            6859.032822825763
+            6858.967688990454,
+            6859.032822824789
           ],
           "exact_manifold_weights": [
-            0.9695332170361186,
-            0.9940308828689457,
-            0.9940351396695759
+            0.9695332170310365,
+            0.9940308828654677,
+            0.9940351396620674
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9695332170361186,
+          "minimum_exact_manifold_weight": 0.9695332170310365,
           "product_states": [
             [
               2,
@@ -455,26 +455,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.76460741930714
+          "vscf_minus_exact_centroid_cm": 1.7646074200210933
         },
         "fundamental": {
-          "exact_centroid_cm": 3492.7013785640193,
+          "exact_centroid_cm": 3492.7013785673494,
           "exact_frequencies_cm": [
-            3479.5137686211733,
-            3499.26820227062,
-            3499.3221648002645
+            3479.5137686245844,
+            3499.26820227408,
+            3499.322164803383
           ],
           "exact_manifold_weights": [
-            0.9999784968961591,
-            0.9999904173681149,
-            0.9999904240452413
+            0.999978496896155,
+            0.999990417368114,
+            0.9999904240452469
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999784968961591,
+          "minimum_exact_manifold_weight": 0.999978496896155,
           "product_states": [
             [
               1,
@@ -505,20 +505,20 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.018088242324211024
+          "vscf_minus_exact_centroid_cm": 0.018088238994096173
         },
         "triple_combination": {
-          "exact_centroid_cm": 10477.472896970346,
+          "exact_centroid_cm": 10477.472896977073,
           "exact_frequencies_cm": [
-            10477.472896970346
+            10477.472896977073
           ],
           "exact_manifold_weights": [
-            0.9728747771600458
+            0.9728747771586822
           ],
           "exact_state_indices": [
             19
           ],
-          "minimum_exact_manifold_weight": 0.9728747771600458,
+          "minimum_exact_manifold_weight": 0.9728747771586822,
           "product_states": [
             [
               1,
@@ -535,7 +535,7 @@
           "vscf_iterations": [
             13
           ],
-          "vscf_minus_exact_centroid_cm": -4.072360098520221
+          "vscf_minus_exact_centroid_cm": -4.072360105246844
         }
       },
       "maximum_shared_cut_disagreement_Eh": 2.0605739337042905e-13,
@@ -543,10 +543,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.024578295464141184,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018913874036583966
+      "vscf_ground_minus_exact_cm": 0.018913876668174488
     },
     "dense_31x31": {
-      "exact_ground_energy_Eh": 0.02490627454917549,
+      "exact_ground_energy_Eh": 0.024906274549231444,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -569,23 +569,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 7523.279322613987,
+          "exact_centroid_cm": 7523.279322596344,
           "exact_frequencies_cm": [
-            7510.889602833439,
-            7529.472908112397,
-            7529.475456896122
+            7510.889602817844,
+            7529.472908089395,
+            7529.475456881794
           ],
           "exact_manifold_weights": [
-            0.999208621968297,
-            0.9997885096317773,
-            0.9997879478915909
+            0.9992086219682753,
+            0.999788509631795,
+            0.9997879478915996
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.999208621968297,
+          "minimum_exact_manifold_weight": 0.9992086219682753,
           "product_states": [
             [
               1,
@@ -616,26 +616,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.24915955161304737
+          "vscf_minus_exact_centroid_cm": 0.2491595692554256
         },
         "first_overtone": {
-          "exact_centroid_cm": 8112.882362148454,
+          "exact_centroid_cm": 8112.882362135556,
           "exact_frequencies_cm": [
-            8112.815001999811,
-            8112.8369796904335,
-            8112.9951047551185
+            8112.81500199026,
+            8112.836979671232,
+            8112.995104745177
           ],
           "exact_manifold_weights": [
-            0.9997890538795853,
-            0.9997829018334606,
-            0.9992271276928817
+            0.9997890538796004,
+            0.9997829018335987,
+            0.9992271276927145
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9992271276928817,
+          "minimum_exact_manifold_weight": 0.9992271276927145,
           "product_states": [
             [
               2,
@@ -666,26 +666,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": -0.22506079422237235
+          "vscf_minus_exact_centroid_cm": -0.2250607813239185
         },
         "fundamental": {
-          "exact_centroid_cm": 3761.866999337486,
+          "exact_centroid_cm": 3761.8669993249455,
           "exact_frequencies_cm": [
-            3749.7068852853367,
-            3767.9272868940548,
-            3767.9668258330667
+            3749.7068852696448,
+            3767.9272868818716,
+            3767.96682582332
           ],
           "exact_manifold_weights": [
-            0.9999918152600376,
-            0.9999966598093519,
-            0.9999966611684722
+            0.9999918152600317,
+            0.9999966598093495,
+            0.9999966611684727
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999918152600376,
+          "minimum_exact_manifold_weight": 0.9999918152600317,
           "product_states": [
             [
               1,
@@ -716,20 +716,20 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.007630977688222629
+          "vscf_minus_exact_centroid_cm": 0.007630990228790324
         },
         "triple_combination": {
-          "exact_centroid_cm": 11284.209584723574,
+          "exact_centroid_cm": 11284.209584710221,
           "exact_frequencies_cm": [
-            11284.209584723574
+            11284.209584710221
           ],
           "exact_manifold_weights": [
-            0.9987007668355051
+            0.9987007668354929
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.9987007668355051,
+          "minimum_exact_manifold_weight": 0.9987007668354929,
           "product_states": [
             [
               1,
@@ -746,7 +746,7 @@
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.7526883512400673
+          "vscf_minus_exact_centroid_cm": 0.7526883645932685
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -754,10 +754,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.024906342191226182,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.014845714141054397
+      "vscf_ground_minus_exact_cm": 0.014845701860298627
     },
     "full_25x25": {
-      "exact_ground_energy_Eh": 0.02486666206125454,
+      "exact_ground_energy_Eh": 0.02486666206126964,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -780,23 +780,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 7477.712950055655,
+          "exact_centroid_cm": 7477.712950053331,
           "exact_frequencies_cm": [
-            7465.215081332605,
-            7483.9603154218275,
-            7483.963453412531
+            7465.215081329486,
+            7483.960315419635,
+            7483.963453410874
           ],
           "exact_manifold_weights": [
-            0.9990883507172783,
-            0.999755321598346,
-            0.9997546680145433
+            0.999088350717291,
+            0.999755321598345,
+            0.9997546680145386
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9990883507172783,
+          "minimum_exact_manifold_weight": 0.999088350717291,
           "product_states": [
             [
               1,
@@ -827,26 +827,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.27076037952429033
+          "vscf_minus_exact_centroid_cm": 0.2707603818480493
         },
         "first_overtone": {
-          "exact_centroid_cm": 8032.502065477146,
+          "exact_centroid_cm": 8032.502065471868,
           "exact_frequencies_cm": [
-            8032.424780611785,
-            8032.447893055838,
-            8032.633522763817
+            8032.42478060735,
+            8032.44789305194,
+            8032.633522756312
           ],
           "exact_manifold_weights": [
-            0.9997559285597972,
-            0.9997505168466629,
-            0.9991073288488334
+            0.9997559285597973,
+            0.9997505168464357,
+            0.999107328849079
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9991073288488334,
+          "minimum_exact_manifold_weight": 0.999107328849079,
           "product_states": [
             [
               2,
@@ -877,26 +877,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": -0.24499735897370556
+          "vscf_minus_exact_centroid_cm": -0.2449973536959078
         },
         "fundamental": {
-          "exact_centroid_cm": 3739.110004802353,
+          "exact_centroid_cm": 3739.110004801704,
           "exact_frequencies_cm": [
-            3726.8619417136038,
-            3745.213876452698,
-            3745.2541962407586
+            3726.861941714335,
+            3745.213876450164,
+            3745.2541962406126
           ],
           "exact_manifold_weights": [
-            0.9999912641222198,
-            0.9999964305906122,
-            0.9999964321976909
+            0.9999912641222068,
+            0.9999964305906124,
+            0.9999964321976856
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999912641222198,
+          "minimum_exact_manifold_weight": 0.9999912641222068,
           "product_states": [
             [
               1,
@@ -927,20 +927,20 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.008029794656977174
+          "vscf_minus_exact_centroid_cm": 0.008029795306356391
         },
         "triple_combination": {
-          "exact_centroid_cm": 11215.776776785953,
+          "exact_centroid_cm": 11215.776776782493,
           "exact_frequencies_cm": [
-            11215.776776785953
+            11215.776776782493
           ],
           "exact_manifold_weights": [
-            0.9984915957458701
+            0.9984915957458639
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.9984915957458701,
+          "minimum_exact_manifold_weight": 0.9984915957458639,
           "product_states": [
             [
               1,
@@ -957,7 +957,7 @@
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.8210750790422026
+          "vscf_minus_exact_centroid_cm": 0.8210750825019204
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -965,10 +965,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.02486673111287594,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.01515507915229455
+      "vscf_ground_minus_exact_cm": 0.01515507583843982
     },
     "narrow_21x21_from_25": {
-      "exact_ground_energy_Eh": 0.02574604669595537,
+      "exact_ground_energy_Eh": 0.025746046695937608,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -991,23 +991,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 8276.048070205137,
+          "exact_centroid_cm": 8276.048070207817,
           "exact_frequencies_cm": [
-            8265.130978295667,
-            8281.505099343602,
-            8281.508132976145
+            8265.130978300831,
+            8281.505099347549,
+            8281.508132975072
           ],
           "exact_manifold_weights": [
-            0.9998324101707191,
-            0.9999565215959366,
-            0.9999566352914876
+            0.9998324101707898,
+            0.9999565215959385,
+            0.999956635291487
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9998324101707191,
+          "minimum_exact_manifold_weight": 0.9998324101707898,
           "product_states": [
             [
               1,
@@ -1038,26 +1038,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.09484616018744418
+          "vscf_minus_exact_centroid_cm": 0.09484615750807279
         },
         "first_overtone": {
-          "exact_centroid_cm": 9373.187244006649,
+          "exact_centroid_cm": 9373.187244006016,
           "exact_frequencies_cm": [
-            9373.171427607032,
-            9373.185306476264,
-            9373.204997936653
+            9373.17142760211,
+            9373.185306476507,
+            9373.204997939432
           ],
           "exact_manifold_weights": [
-            0.9998513741845092,
-            0.9999566055542533,
-            0.9999415966837109
+            0.9998513741792066,
+            0.9999566055542621,
+            0.9999415966890912
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9998513741845092,
+          "minimum_exact_manifold_weight": 0.9998513741792066,
           "product_states": [
             [
               2,
@@ -1088,26 +1088,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": -0.086201930860625
+          "vscf_minus_exact_centroid_cm": -0.08620193022761669
         },
         "fundamental": {
-          "exact_centroid_cm": 4138.10175022767,
+          "exact_centroid_cm": 4138.10175022715,
           "exact_frequencies_cm": [
-            4127.27064874248,
-            4143.501750056886,
-            4143.532851883642
+            4127.270648739362,
+            4143.501750060102,
+            4143.532851881985
           ],
           "exact_manifold_weights": [
-            0.9999965409540972,
-            0.9999986142279073,
-            0.9999986138776132
+            0.9999965409541051,
+            0.9999986142279099,
+            0.9999986138776195
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999965409540972,
+          "minimum_exact_manifold_weight": 0.9999965409541051,
           "product_states": [
             [
               1,
@@ -1138,20 +1138,20 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.0035989797333968454
+          "vscf_minus_exact_centroid_cm": 0.003598980253627815
         },
         "triple_combination": {
-          "exact_centroid_cm": 12413.834177247334,
+          "exact_centroid_cm": 12413.834177252158,
           "exact_frequencies_cm": [
-            12413.834177247334
+            12413.834177252158
           ],
           "exact_manifold_weights": [
-            0.999741254294313
+            0.9997412542942535
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.999741254294313,
+          "minimum_exact_manifold_weight": 0.9997412542942535,
           "product_states": [
             [
               1,
@@ -1168,7 +1168,7 @@
           "vscf_iterations": [
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.2785362935883313
+          "vscf_minus_exact_centroid_cm": 0.2785362887643714
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -1176,10 +1176,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.0257460954481965,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.010699880150386748
+      "vscf_ground_minus_exact_cm": 0.010699884049039373
     },
     "repeated_25x25_from_wide31": {
-      "exact_ground_energy_Eh": 0.024866662061271416,
+      "exact_ground_energy_Eh": 0.024866662061267863,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -1202,23 +1202,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 7477.712950060657,
+          "exact_centroid_cm": 7477.712950063192,
           "exact_frequencies_cm": [
-            7465.215081336406,
-            7483.960315429235,
-            7483.9634534163315
+            7465.215081338404,
+            7483.9603154315255,
+            7483.963453419646
           ],
           "exact_manifold_weights": [
-            0.9990883507170036,
-            0.9997553215982878,
-            0.9997546680144643
+            0.9990883507170569,
+            0.9997553215982996,
+            0.9997546680144346
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9990883507170036,
+          "minimum_exact_manifold_weight": 0.9990883507170569,
           "product_states": [
             [
               1,
@@ -1249,26 +1249,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.2707603801436562
+          "vscf_minus_exact_centroid_cm": 0.2707603776088945
         },
         "first_overtone": {
-          "exact_centroid_cm": 8032.5020654762375,
+          "exact_centroid_cm": 8032.502065476513,
           "exact_frequencies_cm": [
-            8032.42478061159,
-            8032.447893051843,
-            8032.633522765279
+            8032.424780611444,
+            8032.447893052427,
+            8032.633522765669
           ],
           "exact_manifold_weights": [
-            0.999755928559722,
-            0.9997505168492566,
-            0.9991073288459033
+            0.9997559285597098,
+            0.9997505168492891,
+            0.9991073288459467
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9991073288459033,
+          "minimum_exact_manifold_weight": 0.9991073288459467,
           "product_states": [
             [
               2,
@@ -1299,26 +1299,26 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": -0.24499735838980996
+          "vscf_minus_exact_centroid_cm": -0.24499735866538686
         },
         "fundamental": {
-          "exact_centroid_cm": 3739.1100048014437,
+          "exact_centroid_cm": 3739.1100048069834,
           "exact_frequencies_cm": [
-            3726.8619417099,
-            3745.2138764519186,
-            3745.254196242513
+            3726.8619417150658,
+            3745.2138764604956,
+            3745.2541962453884
           ],
           "exact_manifold_weights": [
-            0.9999912641222237,
-            0.9999964305906122,
-            0.9999964321976968
+            0.9999912641222171,
+            0.9999964305906031,
+            0.9999964321976863
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999912641222237,
+          "minimum_exact_manifold_weight": 0.9999912641222171,
           "product_states": [
             [
               1,
@@ -1349,20 +1349,20 @@
             11,
             11
           ],
-          "vscf_minus_exact_centroid_cm": 0.00802979792933911
+          "vscf_minus_exact_centroid_cm": 0.008029792389606882
         },
         "triple_combination": {
-          "exact_centroid_cm": 11215.776776793557,
+          "exact_centroid_cm": 11215.776776797455,
           "exact_frequencies_cm": [
-            11215.776776793557
+            11215.776776797455
           ],
           "exact_manifold_weights": [
-            0.9984915957453819
+            0.9984915957454377
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.9984915957453819,
+          "minimum_exact_manifold_weight": 0.9984915957454377,
           "product_states": [
             [
               1,
@@ -1379,7 +1379,7 @@
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.8210750812286278
+          "vscf_minus_exact_centroid_cm": 0.8210750773305335
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -1387,10 +1387,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.02486673111289392,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.015155079394437429
+      "vscf_ground_minus_exact_cm": 0.015155080174167954
     },
     "wide_31x31": {
-      "exact_ground_energy_Eh": 0.02460466760537683,
+      "exact_ground_energy_Eh": 0.02460466760537061,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -1413,23 +1413,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 7072.003737174219,
+          "exact_centroid_cm": 7072.003737177679,
           "exact_frequencies_cm": [
-            7057.771598038761,
-            7079.115056632606,
-            7079.124556851291
+            7057.771598040906,
+            7079.115056635092,
+            7079.124556857042
           ],
           "exact_manifold_weights": [
-            0.9830174202023945,
-            0.9941476369313764,
-            0.9941268895620117
+            0.9830174202014572,
+            0.9941476369318553,
+            0.9941268895627778
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9830174202023945,
+          "minimum_exact_manifold_weight": 0.9830174202014572,
           "product_states": [
             [
               1,
@@ -1460,26 +1460,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.36472723310726
+          "vscf_minus_exact_centroid_cm": 1.3647272296475421
         },
         "first_overtone": {
-          "exact_centroid_cm": 7205.970898559776,
+          "exact_centroid_cm": 7205.9708985595325,
           "exact_frequencies_cm": [
-            7205.4152055979885,
-            7205.456307703915,
-            7207.041182377427
+            7205.415205596282,
+            7205.456307701429,
+            7207.041182380887
           ],
           "exact_manifold_weights": [
-            0.9941305235131555,
-            0.994147222325215,
-            0.9830557164573175
+            0.9941305235139326,
+            0.9941472223250701,
+            0.98305571645701
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9830557164573175,
+          "minimum_exact_manifold_weight": 0.98305571645701,
           "product_states": [
             [
               2,
@@ -1510,26 +1510,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -1.3113449022330315
+          "vscf_minus_exact_centroid_cm": -1.3113449019892869
         },
         "fundamental": {
-          "exact_centroid_cm": 3537.189403101785,
+          "exact_centroid_cm": 3537.189403106951,
           "exact_frequencies_cm": [
-            3524.157197939762,
-            3543.6804179052983,
-            3543.7305934602946
+            3524.1571979426376,
+            3543.680417910123,
+            3543.7305934680917
           ],
           "exact_manifold_weights": [
-            0.9999826988765728,
-            0.9999926669367161,
-            0.9999926723990173
+            0.9999826988765745,
+            0.9999926669367167,
+            0.9999926723990117
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999826988765728,
+          "minimum_exact_manifold_weight": 0.9999826988765745,
           "product_states": [
             [
               1,
@@ -1560,20 +1560,20 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.014044688068679534
+          "vscf_minus_exact_centroid_cm": 0.014044682902749628
         },
         "triple_combination": {
-          "exact_centroid_cm": 10603.637705210536,
+          "exact_centroid_cm": 10603.63770520347,
           "exact_frequencies_cm": [
-            10603.637705210536
+            10603.63770520347
           ],
           "exact_manifold_weights": [
-            0.9600244587045673
+            0.9600244587024398
           ],
           "exact_state_indices": [
             10
           ],
-          "minimum_exact_manifold_weight": 0.9600244587045673,
+          "minimum_exact_manifold_weight": 0.9600244587024398,
           "product_states": [
             [
               1,
@@ -1590,7 +1590,7 @@
           "vscf_iterations": [
             12
           ],
-          "vscf_minus_exact_centroid_cm": 4.8573299258187035
+          "vscf_minus_exact_centroid_cm": 4.857329932885477
         }
       },
       "maximum_shared_cut_disagreement_Eh": 0.0,
@@ -1598,10 +1598,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.02460475052009094,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018197676314911388
+      "vscf_ground_minus_exact_cm": 0.01819767767943981
     },
     "wider_37x37": {
-      "exact_ground_energy_Eh": 0.02457982548207882,
+      "exact_ground_energy_Eh": 0.024579825482043738,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -1624,23 +1624,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 6996.861168398391,
+          "exact_centroid_cm": 6996.861168405977,
           "exact_frequencies_cm": [
-            6987.278077653065,
-            7001.644165212208,
-            7001.661262329902
+            6987.278077664226,
+            7001.644165220443,
+            7001.661262333264
           ],
           "exact_manifold_weights": [
-            0.8982036488326985,
-            0.9818351064844936,
-            0.981822030381993
+            0.8982036488516374,
+            0.9818351064727706,
+            0.981822030376846
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.8982036488326985,
+          "minimum_exact_manifold_weight": 0.8982036488516374,
           "product_states": [
             [
               1,
@@ -1671,26 +1671,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -3.1280838026332276
+          "vscf_minus_exact_centroid_cm": -3.128083810219323
         },
         "first_overtone": {
-          "exact_centroid_cm": 6924.475328933437,
+          "exact_centroid_cm": 6924.475328940779,
           "exact_frequencies_cm": [
-            6920.7590399448045,
-            6926.303456972729,
-            6926.363489882777
+            6920.759039955234,
+            6926.303456975116,
+            6926.363489891987
           ],
           "exact_manifold_weights": [
-            0.8982314513427773,
-            0.9818190165916783,
-            0.9818287292424972
+            0.8982314513615342,
+            0.9818190165865288,
+            0.9818287292309537
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.8982314513427773,
+          "minimum_exact_manifold_weight": 0.8982314513615342,
           "product_states": [
             [
               2,
@@ -1721,26 +1721,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 3.2018847147674023
+          "vscf_minus_exact_centroid_cm": 3.2018847074250516
         },
         "fundamental": {
-          "exact_centroid_cm": 3497.594158965734,
+          "exact_centroid_cm": 3497.5941589732065,
           "exact_frequencies_cm": [
-            3484.4218128500297,
-            3504.1536294769003,
-            3504.2070345702723
+            3484.421812858753,
+            3504.1536294819684,
+            3504.207034578898
           ],
           "exact_manifold_weights": [
-            0.999979195842447,
-            0.9999908493408103,
-            0.9999908559170931
+            0.9999791958424462,
+            0.9999908493408167,
+            0.9999908559170951
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.999979195842447,
+          "minimum_exact_manifold_weight": 0.9999791958424462,
           "product_states": [
             [
               1,
@@ -1771,20 +1771,20 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.017210914521911036
+          "vscf_minus_exact_centroid_cm": 0.017210907049502566
         },
         "triple_combination": {
-          "exact_centroid_cm": 10492.7894581975,
+          "exact_centroid_cm": 10492.789458198717,
           "exact_frequencies_cm": [
-            10492.7894581975
+            10492.789458198717
           ],
           "exact_manifold_weights": [
-            0.8193933721624032
+            0.8193933721820617
           ],
           "exact_state_indices": [
             16
           ],
-          "minimum_exact_manifold_weight": 0.8193933721624032,
+          "minimum_exact_manifold_weight": 0.8193933721820617,
           "product_states": [
             [
               1,
@@ -1801,7 +1801,7 @@
           "vscf_iterations": [
             13
           ],
-          "vscf_minus_exact_centroid_cm": -4.428617425166522
+          "vscf_minus_exact_centroid_cm": -4.4286174263834255
         }
       },
       "maximum_shared_cut_disagreement_Eh": 2.0605739337042905e-13,
@@ -1809,10 +1809,10 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.02457991130803009,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018836619016906312
+      "vscf_ground_minus_exact_cm": 0.01883662671674525
     },
     "widest_43x43": {
-      "exact_ground_energy_Eh": 0.02457827428654502,
+      "exact_ground_energy_Eh": 0.02457827428655257,
       "exact_states_computed": 30,
       "grid_ranges_A": [
         [
@@ -1835,23 +1835,23 @@
       ],
       "manifolds": {
         "binary_combination": {
-          "exact_centroid_cm": 6986.280239869814,
+          "exact_centroid_cm": 6986.28023986788,
           "exact_frequencies_cm": [
-            6975.072028766782,
-            6991.875872999903,
+            6975.072028761372,
+            6991.8758729995125,
             6991.892817842755
           ],
           "exact_manifold_weights": [
-            0.9658235439075997,
-            0.9933951468466062,
-            0.9933852220138442
+            0.9658235439086361,
+            0.9933951468467371,
+            0.9933852220137381
           ],
           "exact_state_indices": [
             7,
             8,
             9
           ],
-          "minimum_exact_manifold_weight": 0.9658235439075997,
+          "minimum_exact_manifold_weight": 0.9658235439086361,
           "product_states": [
             [
               1,
@@ -1882,26 +1882,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": -1.779502175628295
+          "vscf_minus_exact_centroid_cm": -1.7795021736937997
         },
         "first_overtone": {
-          "exact_centroid_cm": 6865.4309292875305,
+          "exact_centroid_cm": 6865.430929286605,
           "exact_frequencies_cm": [
-            6863.328951319945,
-            6866.449747973103,
+            6863.328951317265,
+            6866.449747973005,
             6866.514088569544
           ],
           "exact_manifold_weights": [
-            0.9658572835973283,
-            0.9933798028955347,
-            0.9933848431313576
+            0.965857283598284,
+            0.9933798028954344,
+            0.9933848431315728
           ],
           "exact_state_indices": [
             4,
             5,
             6
           ],
-          "minimum_exact_manifold_weight": 0.9658572835973283,
+          "minimum_exact_manifold_weight": 0.965857283598284,
           "product_states": [
             [
               2,
@@ -1932,26 +1932,26 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 1.862098737251472
+          "vscf_minus_exact_centroid_cm": 1.8620987381773375
         },
         "fundamental": {
-          "exact_centroid_cm": 3493.0202704700187,
+          "exact_centroid_cm": 3493.0202704671924,
           "exact_frequencies_cm": [
-            3479.833577394266,
-            3499.5866580632,
-            3499.64057595259
+            3479.833577392804,
+            3499.5866580611532,
+            3499.6405759476193
           ],
           "exact_manifold_weights": [
-            0.9999785606534799,
-            0.9999904610096745,
-            0.9999904676843396
+            0.9999785606534901,
+            0.9999904610096886,
+            0.9999904676843503
           ],
           "exact_state_indices": [
             1,
             2,
             3
           ],
-          "minimum_exact_manifold_weight": 0.9999785606534799,
+          "minimum_exact_manifold_weight": 0.9999785606534901,
           "product_states": [
             [
               1,
@@ -1982,20 +1982,20 @@
             12,
             12
           ],
-          "vscf_minus_exact_centroid_cm": 0.01799114029017801
+          "vscf_minus_exact_centroid_cm": 0.017991143116432795
         },
         "triple_combination": {
-          "exact_centroid_cm": 10478.649907146433,
+          "exact_centroid_cm": 10478.649907139512,
           "exact_frequencies_cm": [
-            10478.649907146433
+            10478.649907139512
           ],
           "exact_manifold_weights": [
-            0.970247667680044
+            0.9702476676847048
           ],
           "exact_state_indices": [
             19
           ],
-          "minimum_exact_manifold_weight": 0.970247667680044,
+          "minimum_exact_manifold_weight": 0.9702476676847048,
           "product_states": [
             [
               1,
@@ -2012,7 +2012,7 @@
           "vscf_iterations": [
             13
           ],
-          "vscf_minus_exact_centroid_cm": -4.26827099331058
+          "vscf_minus_exact_centroid_cm": -4.268270986389325
         }
       },
       "maximum_shared_cut_disagreement_Eh": 2.0605739337042905e-13,
@@ -2020,7 +2020,7 @@
       "vscf_ground_converged": true,
       "vscf_ground_energy_Eh": 0.024578360442059077,
       "vscf_ground_iterations": 11,
-      "vscf_ground_minus_exact_cm": 0.018908949688048893
+      "vscf_ground_minus_exact_cm": 0.018908948031121527
     }
   }
 }

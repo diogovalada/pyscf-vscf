@@ -169,13 +169,16 @@ def product_dvr_2d(
     R1 = _as_uniform_grid("R1", R1)
     R2 = _as_uniform_grid("R2", R2)
     V_Eh = _as_grid_values("V_Eh", V_Eh, (R1.size, R2.size))
-    mu1 = _as_positive_mass("mu1_amu", mu1_amu) * AMU
-    mu2 = _as_positive_mass("mu2_amu", mu2_amu) * AMU
+    mu1_input = _as_positive_mass("mu1_amu", mu1_amu)
+    mu2_input = _as_positive_mass("mu2_amu", mu2_amu)
+    mu1 = mu1_input * AMU
+    mu2 = mu2_input * AMU
     g12 = float(g12_inv_amu) / AMU
     if not np.isfinite(g12):
         raise ValueError("g12_inv_amu must be finite")
-    # The kinetic metric [[1/mu1, g12], [g12, 1/mu2]] must be positive definite.
-    if g12 * g12 >= 1.0 / (mu1 * mu2):
+    # The kinetic metric [[1/mu1, g12], [g12, 1/mu2]] must be positive definite:
+    # the normalized cross term g12*sqrt(mu1*mu2) (input units) lies in (-1, 1).
+    if abs(float(g12_inv_amu) * np.sqrt(mu1_input * mu2_input)) >= 1.0:
         raise ValueError(
             "g12_inv_amu must satisfy g12^2 < 1/(mu1*mu2); the G matrix is not positive definite"
         )
@@ -211,6 +214,7 @@ def product_dvr_2d(
         count=k,
         tolerance=0.0,
         degeneracy_tolerance=1e-12,
+        shift=float(H.diagonal().min()),
     )
     return DVR2D(R1=R1, R2=R2, evals=evals[:k], evecs=phase_canonical_columns(evecs[:, :k]))
 

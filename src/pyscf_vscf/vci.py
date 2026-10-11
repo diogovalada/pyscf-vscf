@@ -422,7 +422,7 @@ def validate_ground_modal_basis_against_hamiltonian(
             difference,
             scalar_offset * np.eye(size),
             rtol=0.0,
-            atol=2e-10,
+            atol=_MEAN_FIELD_VALIDATION_EH,
         ):
             raise ValueError(
                 f"Modal mean-field Hamiltonian {mode} does not reproduce the full Hamiltonian"
@@ -1455,8 +1455,10 @@ def _iterate_ground_vscf(
         modals = new_modals
         previous_energy = energy
         final_fields = mean_fields(modals)
-        if delta_energy <= float(policy.energy_tolerance_Eh) and density_change <= float(
-            policy.density_tolerance
+        if (
+            delta_energy <= float(policy.energy_tolerance_Eh)
+            and density_change <= float(policy.density_tolerance)
+            and _mean_field_mismatch(final_fields, mean_fields) <= _MEAN_FIELD_CONSISTENCY_EH
         ):
             converged = True
             break
@@ -1468,6 +1470,28 @@ def _iterate_ground_vscf(
             f"density={last.max_density_change:.3e}"
         )
     return modals, final_fields, tuple(history), converged
+
+
+# The returned basis takes its ground modals from the stored mean fields, and
+# validate_ground_modal_basis_against_hamiltonian rebuilds the fields from those
+# modals (tolerance _MEAN_FIELD_VALIDATION_EH); convergence requires half of it.
+_MEAN_FIELD_VALIDATION_EH = 2e-10
+_MEAN_FIELD_CONSISTENCY_EH = 0.5 * _MEAN_FIELD_VALIDATION_EH
+
+
+def _mean_field_mismatch(fields: Sequence[np.ndarray], mean_fields) -> float:
+    """Largest centered change of the fields when rebuilt from their own ground modals."""
+
+    ground = [np.linalg.eigh(matrix)[1][:, 0] for matrix in fields]
+    rebuilt = mean_fields(ground)
+    mismatch = 0.0
+    for new, old in zip(rebuilt, fields):
+        difference = np.asarray(new) - np.asarray(old)
+        difference = difference - np.trace(difference) / difference.shape[0] * np.eye(
+            difference.shape[0]
+        )
+        mismatch = max(mismatch, float(np.max(np.abs(difference))))
+    return mismatch
 
 
 def _finalize_modal_basis(
