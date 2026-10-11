@@ -25,8 +25,16 @@ import numpy as np
 from ._arrays import immutable_array
 from ._artifacts import atomic_savez_compressed
 from ._identity import immutable_json_mapping, to_jsonable
-from .constants import HARTREE_TO_CM
+from ._phase import phase_canonical_columns
+from .constants import ATOMIC_DIPOLE_TO_DEBYE, HARTREE_TO_CM
 from .dvr import sinc_kinetic_1d
+from .spectra import (
+    einstein_a_from_debye,
+    integrated_cross_section_omega,
+    integrated_cross_section_omega_to_km_per_mol,
+)
+
+DEFAULT_OVERLAP_TOLERANCE = 0.05
 
 
 Pair = tuple[int, int]
@@ -288,12 +296,131 @@ class VSCFStateResult:
 
 
 @dataclass(frozen=True)
+class NModeDipole:
+    """Vector dipole on the VSCF grids: reference plus one- and two-mode increments.
+
+    ``reference_au`` is the dipole (atomic units, a fixed molecular frame) at
+    the reference point; ``one_mode_au[i]`` has shape ``(n_i, 3)`` and
+    ``two_mode_au[(i, j)]`` shape ``(n_i, n_j, 3)``, both as increments that
+    vanish at the reference values (the same convention as the potential).
+    """
+
+    coordinates: tuple[np.ndarray, ...]
+    reference_au: np.ndarray
+    one_mode_au: tuple[np.ndarray, ...]
+    two_mode_au: Mapping[Pair, np.ndarray] = field(default_factory=dict)
+    source_fingerprint: str | None = None
+
+    def __post_init__(self) -> None:
+        grids = tuple(
+            _validated_grid(f"coordinates[{i}]", q) for i, q in enumerate(self.coordinates)
+        )
+        reference = _validated_array("reference_au", self.reference_au, (3,))
+        if len(self.one_mode_au) != len(grids):
+            raise ValueError("one_mode_au must contain one array per coordinate")
+        one = tuple(
+            _validated_array(f"one_mode_au[{i}]", values, (grids[i].size, 3))
+            for i, values in enumerate(self.one_mode_au)
+        )
+        two = {}
+        for raw_pair, values in self.two_mode_au.items():
+            i, j = (operator.index(raw_pair[0]), operator.index(raw_pair[1]))
+            if not 0 <= i < j < len(grids):
+                raise ValueError(f"Invalid two-mode key {(i, j)!r}")
+            two[(i, j)] = _readonly_copy(
+                _validated_array(
+                    f"two_mode_au[{i}, {j}]", values, (grids[i].size, grids[j].size, 3)
+                )
+            )
+        object.__setattr__(self, "coordinates", tuple(_readonly_copy(q) for q in grids))
+        object.__setattr__(self, "reference_au", _readonly_copy(reference))
+        object.__setattr__(self, "one_mode_au", tuple(_readonly_copy(v) for v in one))
+        object.__setattr__(self, "two_mode_au", MappingProxyType(two))
+
+    @classmethod
+    def from_surface(cls, model: Any, coordinates: Sequence[np.ndarray]) -> NModeDipole:
+        """Evaluate a fitted n-mode dipole surface (body frame) on VSCF grids.
+
+        Requires every one-mode increment and no increment above rank two,
+        matching :func:`~pyscf_vscf.nmode.nmode_potential_from_surface`.
+        """
+
+        from .nmode import nmode_dms_fingerprint
+
+        increments = model.dipole_increments
+        if any(len(subset) >= 3 for subset in increments):
+            raise ValueError("VSCF intensities cannot discard rank-3 dipole increments")
+        grids = tuple(np.asarray(grid, dtype=float) for grid in coordinates)
+        one = []
+        for mode in range(len(grids)):
+            if (mode,) not in increments:
+                raise ValueError("VSCF intensities require every one-mode dipole increment")
+            one.append(np.asarray(increments[(mode,)].evaluate(grids[mode][:, None]), dtype=float))
+        two = {}
+        for subset, surface in increments.items():
+            if len(subset) != 2:
+                continue
+            mesh = np.meshgrid(*(grids[mode] for mode in subset), indexing="ij")
+            two[subset] = np.asarray(surface.evaluate(np.stack(mesh, axis=-1)), dtype=float)
+        return cls(
+            coordinates=grids,
+            reference_au=np.asarray(model.reference_dipole_body_au, dtype=float),
+            one_mode_au=tuple(one),
+            two_mode_au=two,
+            source_fingerprint=nmode_dms_fingerprint(model),
+        )
+
+
+@dataclass(frozen=True)
+class VSCFTransitionMoment:
+    """Transition dipole between the VSCF ground state and one excited state.
+
+    State-specific VSCF optimizes each state's modals separately, so the two
+    product states need not be orthogonal. ``state_overlap`` is their overlap
+    ``<0|n>``; ``approximate`` is true when its magnitude exceeds the
+    tolerance, in which case the moment contains a reference-dipole term that
+    an orthogonal treatment would not have. The isotropic intensity uses the
+    vector norm with the 1/3 orientation average.
+    """
+
+    dipole_au: np.ndarray
+    state_overlap: float
+    approximate: bool
+    integrated_cross_section_isotropic_omega_m2_per_s: float
+    einstein_a_s: float
+
+    @property
+    def dipole_debye(self) -> np.ndarray:
+        """Transition dipole in Debye."""
+
+        return np.asarray(self.dipole_au) * ATOMIC_DIPOLE_TO_DEBYE
+
+    @property
+    def norm_debye(self) -> float:
+        """Norm of the transition dipole in Debye."""
+
+        return float(np.linalg.norm(self.dipole_debye))
+
+    @property
+    def integrated_cross_section_isotropic_km_per_mol(self) -> float:
+        """Isotropic integrated absorption in km mol^-1."""
+
+        return integrated_cross_section_omega_to_km_per_mol(
+            self.integrated_cross_section_isotropic_omega_m2_per_s
+        )
+
+
+@dataclass(frozen=True)
 class VSCFTransition:
-    """Transition from the VSCF ground state to one excited product state."""
+    """Transition from the VSCF ground state to one excited product state.
+
+    ``transition_moment`` is present when a dipole expansion was supplied.
+    """
 
     quanta: tuple[int, ...]
     energy_Eh: float
     frequency_cm: float
+    transition_moment: VSCFTransitionMoment | None = None
 
 
 @dataclass(frozen=True)
@@ -389,7 +516,7 @@ def solve_vscf_state(
         quanta=target,
         energy_Eh=float(previous_energy),
         modal_eigenvalues_Eh=tuple(modal_eigenvalues),
-        modals=tuple(modal.copy() for modal in modals),
+        modals=tuple(_canonical_modal(modal) for modal in modals),
         converged=converged,
         iterations=len(history),
         history=tuple(history),
@@ -403,8 +530,17 @@ def vscf_spectrum(
     max_quanta_per_mode: int = 1,
     max_total_quanta: int = 1,
     settings: VSCFSettings | None = None,
+    dipole: NModeDipole | None = None,
+    overlap_tolerance: float = DEFAULT_OVERLAP_TOLERANCE,
 ) -> VSCFSpectrum:
-    """Solve a ground state and selected fundamental/overtone/combination states."""
+    """Solve a ground state and selected fundamental/overtone/combination states.
+
+    With ``dipole`` (an :class:`NModeDipole` on the same grids), each
+    transition carries a :class:`VSCFTransitionMoment`.
+    """
+
+    if dipole is not None:
+        _check_dipole_grids(model, dipole)
 
     ground_quanta = (0,) * model.n_modes
     if states is None:
@@ -430,15 +566,79 @@ def vscf_spectrum(
                 f"VSCF state {state.quanta} is not above the ground state; "
                 "the state-specific root assignment collapsed"
             )
+        frequency_cm = transition_energy * HARTREE_TO_CM
+        moment = None
+        if dipole is not None:
+            moment = vscf_transition_moment(
+                dipole, ground, state, frequency_cm, overlap_tolerance=overlap_tolerance
+            )
         transitions_list.append(
             VSCFTransition(
                 quanta=state.quanta,
                 energy_Eh=transition_energy,
-                frequency_cm=transition_energy * HARTREE_TO_CM,
+                frequency_cm=frequency_cm,
+                transition_moment=moment,
             )
         )
     transitions = tuple(transitions_list)
     return VSCFSpectrum(ground=ground, excited_states=ordered, transitions=transitions)
+
+
+def vscf_transition_moment(
+    dipole: NModeDipole,
+    ground: VSCFStateResult,
+    excited: VSCFStateResult,
+    frequency_cm: float,
+    *,
+    overlap_tolerance: float = DEFAULT_OVERLAP_TOLERANCE,
+) -> VSCFTransitionMoment:
+    """Return ``<ground|mu|excited>`` for product states of normalized DVR modals.
+
+    With modal overlaps ``S_k = <g_k|e_k>`` the moment is
+    ``mu_ref prod_k S_k + sum_i <g_i|mu_i|e_i> prod_{k!=i} S_k
+    + sum_{i<j} <g_i g_j|mu_ij|e_i e_j> prod_{k!=i,j} S_k``.
+    """
+
+    ground_modals = ground.modals
+    excited_modals = excited.modals
+    n_modes = len(ground_modals)
+    overlaps = np.array([float(g @ e) for g, e in zip(ground_modals, excited_modals)], dtype=float)
+
+    def others(*skip: int) -> float:
+        return float(np.prod([overlaps[k] for k in range(n_modes) if k not in skip]))
+
+    vector = np.asarray(dipole.reference_au, dtype=float) * float(np.prod(overlaps))
+    for mode, increment in enumerate(dipole.one_mode_au):
+        density = ground_modals[mode] * excited_modals[mode]
+        vector = vector + (density @ increment) * others(mode)
+    for (i, j), increment in dipole.two_mode_au.items():
+        first = ground_modals[i] * excited_modals[i]
+        second = ground_modals[j] * excited_modals[j]
+        vector = vector + np.einsum("a,b,abx->x", first, second, increment) * others(i, j)
+    state_overlap = float(np.prod(overlaps))
+    norm_debye = float(np.linalg.norm(vector) * ATOMIC_DIPOLE_TO_DEBYE)
+    frequency = float(frequency_cm)
+    return VSCFTransitionMoment(
+        dipole_au=_readonly_copy(np.asarray(vector, dtype=float)),
+        state_overlap=state_overlap,
+        approximate=abs(state_overlap) > float(overlap_tolerance),
+        integrated_cross_section_isotropic_omega_m2_per_s=integrated_cross_section_omega(
+            norm_debye, frequency
+        ),
+        einstein_a_s=einstein_a_from_debye(norm_debye, frequency),
+    )
+
+
+def _check_dipole_grids(model: NModePotential, dipole: NModeDipole) -> None:
+    if len(dipole.coordinates) != model.n_modes or any(
+        q.shape != d.shape or not np.array_equal(q, d)
+        for q, d in zip(model.coordinates, dipole.coordinates)
+    ):
+        raise ValueError("The dipole expansion must use the potential's grids")
+
+
+def _canonical_modal(modal: np.ndarray) -> np.ndarray:
+    return _readonly_copy(phase_canonical_columns(np.asarray(modal, dtype=float)[:, None])[:, 0])
 
 
 def product_states(
@@ -675,12 +875,14 @@ def _update_array_hash(digest: Any, array: np.ndarray) -> None:
 
 
 __all__ = [
+    "NModeDipole",
     "NModePotential",
     "VSCFIteration",
     "VSCFSettings",
     "VSCFSpectrum",
     "VSCFStateResult",
     "VSCFTransition",
+    "VSCFTransitionMoment",
     "dump_nmode_model",
     "load_nmode_model",
     "nmode_model_from_pair_surfaces",
@@ -688,4 +890,5 @@ __all__ = [
     "product_states",
     "solve_vscf_state",
     "vscf_spectrum",
+    "vscf_transition_moment",
 ]
