@@ -74,6 +74,31 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   instead of printing; the command lines show them with `-v`.
 - Final VSCF modals follow the package's deterministic sign convention.
 - Duplicated private validators are shared through one module.
+- Signed transition dipoles from the 1D and 2D DVR solvers follow the
+  package's deterministic eigenvector sign convention, so some signs differ
+  from 0.2 (intensities are unchanged); the archived water report was
+  regenerated accordingly.
+
+### Fixed
+
+- Iterative eigensolvers (VCI, the 2D DVR, and the exact n-mode reference)
+  could omit copies of degenerate levels; they now recover every copy, and
+  VCI no longer fails when the potential carries a large constant offset.
+- Damped VSCF (`modal_mixing < 1`) could report convergence far from
+  self-consistency; convergence is now judged on the undamped update. The
+  archived NH3 report was regenerated (some states take one more iteration).
+- `product_dvr_2d` rejects a kinetic G matrix that is not positive definite;
+  harmonic helpers reject non-finite masses.
+- Harmonic frequencies printed by the command line include imaginary modes.
+- Tensor-product surfaces no longer change when the caller mutates the arrays
+  they were built from; multilevel composition refuses models of different
+  electronic systems and accepts cubic fits.
+- Fractional charge or spin is refused instead of truncated; bond
+  specifications with negative indices are refused.
+- `load_legacy_grid` checks the stored arrays against the cache's declared
+  grid, as the 0.2 loaders did.
+- The water validation script exits nonzero when its acceptance criteria
+  fail; the NH3 analysis verifies its archive before running.
 
 ### Deprecated
 
