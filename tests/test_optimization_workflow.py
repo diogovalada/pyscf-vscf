@@ -84,165 +84,129 @@ def test_optimizer_convergence_kwargs() -> None:
     }
 
 
-def test_run_opt_uses_geometric_path_writes_xyz_and_checks_stationarity(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    molecule = _FakeMolecule()
-    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
-    initial_pmol = _FakePySCFMol(molecule.coords)
-    opt_coords = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.70]])
-    opt_pmol = _FakePySCFMol(opt_coords)
-    mean_fields = [_FakeMeanField(), _FakeMeanField()]
+def _patch_engine(monkeypatch, *, converged: bool, opt_coords, stationarity_error=None):
     captured: dict[str, object] = {}
+    scanner = object()
 
     class GeometricSolver:
         @staticmethod
-        def kernel(mf: object, **kwargs: object) -> tuple[bool, _FakePySCFMol]:
-            captured["mf"] = mf
+        def kernel(method: object, **kwargs: object):
+            captured["scanner"] = method
             captured["kwargs"] = kwargs
-            return True, opt_pmol
+            return converged, _FakePySCFMol(opt_coords)
 
-    def fake_molecule_to_pyscf(mol: object, basis: str) -> _FakePySCFMol:
-        captured.setdefault("basis", basis)
-        return initial_pmol if mol is molecule else opt_pmol
+    def fake_converged(molecule: object, factory: object) -> SimpleNamespace:
+        captured["stationarity_factory"] = factory
+        if stationarity_error is not None:
+            raise stationarity_error
+        return SimpleNamespace(mean_field=_FakeMeanField())
 
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", fake_molecule_to_pyscf)
-    monkeypatch.setattr(
-        workflow.pyscf_backend,
-        "make_mean_field",
-        lambda pmol, cfg_arg: mean_fields.pop(0),
-    )
+    monkeypatch.setattr(workflow, "_factory_gradient_scanner", lambda mol, factory: scanner)
     monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
+    monkeypatch.setattr(workflow.pyscf_backend, "converged_mean_field", fake_converged)
+    return captured, scanner
 
-    output_path = tmp_path / "optimized.xyz"
-    result = workflow.run_opt(
-        molecule,
-        cfg,
-        opt_out=output_path,
-        opt_maxsteps=7,
-        verbose=True,
-    )
 
-    assert result.backend == "geomeTRIC"
-    assert result.converged is True
-    assert result.output_path == output_path
-    np.testing.assert_allclose(result.molecule.coords, opt_coords)
-    assert result.stationarity is not None
+def test_optimize_geometry_runs_geometric_and_writes_only_when_asked(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    molecule = _FakeMolecule()
+    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
+    opt_coords = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.70]])
+    captured, scanner = _patch_engine(monkeypatch, converged=True, opt_coords=opt_coords)
+
+    result = workflow.optimize_geometry(molecule, cfg, max_steps=7)
+
+    assert captured["scanner"] is scanner
     assert captured["kwargs"] == {
         "convergence_gmax": 4.5e-5,
         "convergence_grms": 3.0e-5,
         "maxsteps": 7,
     }
-    assert captured["mf"].verbose == 4
-    assert "h2 (PySCF optimized)" in output_path.read_text()
-    assert "Optimized-geometry gradient check" in capsys.readouterr().out
-
-
-def test_run_opt_writes_mmol(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    molecule = _FakeMolecule()
-    cfg = {"basis": "sto-3g", "strict": True}
-    opt_pmol = _FakePySCFMol(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.71]]))
-
-    class GeometricSolver:
-        @staticmethod
-        def kernel(mf: object, **kwargs: object) -> tuple[bool, _FakePySCFMol]:
-            return True, opt_pmol
-
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: opt_pmol)
-    monkeypatch.setattr(
-        workflow.pyscf_backend, "make_mean_field", lambda pmol, cfg_arg: _FakeMeanField()
-    )
-    monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
-
-    output_path = tmp_path / "optimized.mmol"
-    result = workflow.run_opt(
-        molecule,
-        cfg,
-        opt_out=output_path,
-        opt_maxsteps=3,
-    )
-
     assert result.backend == "geomeTRIC"
+    assert result.converged is True
+    assert result.output_path is None
+    np.testing.assert_allclose(result.molecule.coords, opt_coords)
+    assert result.stationarity is not None
+    assert list(tmp_path.iterdir()) == []
+
+    output_path = tmp_path / "optimized.xyz"
+    result = workflow.optimize_geometry(molecule, cfg, output_path=output_path)
+    assert result.output_path == output_path
+    assert "h2 (PySCF optimized)" in output_path.read_text()
+
+
+def test_optimize_geometry_writes_mmol(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _patch_engine(monkeypatch, converged=True, opt_coords=_FakeMolecule.coords)
+    output_path = tmp_path / "optimized.mmol"
+
+    result = workflow.optimize_geometry(
+        _FakeMolecule(), {"basis": "sto-3g"}, output_path=output_path, max_steps=3
+    )
+
     assert result.output_path == output_path
     assert "#0 MidasMolecule" in output_path.read_text()
 
 
-def test_run_opt_warns_when_non_strict_optimization_does_not_converge(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+def test_optimize_geometry_rejects_unknown_suffix_before_running(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    molecule = _FakeMolecule()
-    cfg = SimpleNamespace(basis="sto-3g", strict=False)
-    opt_pmol = _FakePySCFMol(molecule.coords)
-    warnings: list[tuple[str, str]] = []
+    captured, _ = _patch_engine(monkeypatch, converged=True, opt_coords=_FakeMolecule.coords)
 
-    class GeometricSolver:
-        @staticmethod
-        def kernel(mf: object, **kwargs: object) -> tuple[bool, _FakePySCFMol]:
-            return False, opt_pmol
+    with pytest.raises(ValueError, match=".xyz or .mmol"):
+        workflow.optimize_geometry(
+            _FakeMolecule(), {"basis": "sto-3g"}, output_path=tmp_path / "x.pdb"
+        )
+    assert "scanner" not in captured
 
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: opt_pmol)
-    monkeypatch.setattr(
-        workflow.pyscf_backend, "make_mean_field", lambda pmol, cfg_arg: _FakeMeanField()
-    )
-    monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
 
-    result = workflow.run_opt(
-        molecule,
-        cfg,
-        opt_out=tmp_path / "optimized.xyz",
-        opt_maxsteps=1,
-        strict=False,
-        warn_fn=lambda key, msg: warnings.append((key, msg)),
-    )
+def test_non_strict_optimization_warns_when_not_converged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_engine(monkeypatch, converged=False, opt_coords=_FakeMolecule.coords)
 
+    with pytest.warns(RuntimeWarning, match="did not converge within the allowed steps"):
+        result = workflow.optimize_geometry(
+            _FakeMolecule(), {"basis": "sto-3g"}, max_steps=1, strict=False
+        )
     assert result.converged is False
-    assert (
-        "opt_not_converged",
-        "Geometry optimization did not converge within the allowed steps",
-    ) in warnings
+    with pytest.raises(RuntimeError, match="did not converge"):
+        workflow.optimize_geometry(_FakeMolecule(), {"basis": "sto-3g"}, max_steps=1)
 
 
-def test_run_opt_keeps_going_when_post_optimization_stationarity_fails(
+def test_failed_stationarity_check_warns_and_keeps_the_result(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    molecule = _FakeMolecule()
-    cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
-    opt_pmol = _FakePySCFMol(molecule.coords)
-    warnings: list[tuple[str, str]] = []
-
-    class GeometricSolver:
-        @staticmethod
-        def kernel(mf: object, **kwargs: object) -> tuple[bool, _FakePySCFMol]:
-            return True, opt_pmol
-
-    def fake_make_mean_field(pmol: object, cfg_arg: object) -> _FakeMeanField:
-        if fake_make_mean_field.calls:
-            raise RuntimeError("gradient unavailable")
-        fake_make_mean_field.calls += 1
-        return _FakeMeanField()
-
-    fake_make_mean_field.calls = 0
-
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: opt_pmol)
-    monkeypatch.setattr(workflow.pyscf_backend, "make_mean_field", fake_make_mean_field)
-    monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
-
-    result = workflow.run_opt(
-        molecule,
-        cfg,
-        opt_out=tmp_path / "optimized.xyz",
-        opt_maxsteps=1,
-        warn_fn=lambda key, msg: warnings.append((key, msg)),
+    _patch_engine(
+        monkeypatch,
+        converged=True,
+        opt_coords=_FakeMolecule.coords,
+        stationarity_error=RuntimeError("gradient unavailable"),
     )
 
+    with pytest.warns(RuntimeWarning, match="gradient check failed: gradient unavailable"):
+        result = workflow.optimize_geometry(_FakeMolecule(), {"basis": "sto-3g"})
     assert result.stationarity is None
-    assert warnings == [
-        ("opt_grad_check_failed", "Post-opt gradient check failed: gradient unavailable")
-    ]
+
+
+def test_run_opt_is_deprecated_and_keeps_writing_its_default_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
+
+    _patch_engine(monkeypatch, converged=True, opt_coords=_FakeMolecule.coords)
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.warns(PyscfVscfDeprecationWarning, match="optimize_geometry"):
+        result = workflow.run_opt(
+            _FakeMolecule(), {"basis": "sto-3g"}, opt_out=None, opt_maxsteps=2
+        )
+
+    assert result.output_path == Path("h2.pyscf_opt.mmol")
+    assert (tmp_path / "h2.pyscf_opt.mmol").exists()
+    out = capsys.readouterr().out
+    assert "Optimized-geometry gradient check" in out
+    assert "Optimized geometry written to: h2.pyscf_opt.mmol" in out

@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -36,6 +38,10 @@ class _FakeMeanField:
 
     def Hessian(self) -> _FakeHessian:
         return _FakeHessian(self._hessian)
+
+
+def _converged(mean_field: object, pmol: object) -> SimpleNamespace:
+    return SimpleNamespace(mean_field=mean_field, build=SimpleNamespace(molecule=pmol))
 
 
 def _h2_molecule() -> Molecule:
@@ -84,11 +90,10 @@ def test_harmonic_analysis_uses_analytic_hessian_and_existing_harmonic_helpers(
     pmol = _FakePMol()
     hessian = np.eye(6)
 
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: pmol)
     monkeypatch.setattr(
         workflow.pyscf_backend,
-        "make_mean_field",
-        lambda pmol_arg, cfg_arg: _FakeMeanField(hessian),
+        "converged_mean_field",
+        lambda mol, cfg_arg: _converged(_FakeMeanField(hessian), pmol),
     )
 
     result = workflow.harmonic_analysis(molecule, cfg, rtproj="none")
@@ -111,9 +116,10 @@ def test_harmonic_analysis_strict_analytic_failure_raises(
 ) -> None:
     cfg = ESSettings()
     monkeypatch.setattr(
-        workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
+        workflow.pyscf_backend,
+        "converged_mean_field",
+        lambda mol, cfg_arg: _converged(object(), _FakePMol()),
     )
-    monkeypatch.setattr(workflow.pyscf_backend, "make_mean_field", lambda pmol, cfg_arg: object())
 
     def fail_hessian(mf: object) -> np.ndarray:
         raise RuntimeError("synthetic hessian failure")
@@ -131,9 +137,10 @@ def test_harmonic_analysis_non_strict_analytic_failure_still_blocks_fd_unless_al
 ) -> None:
     cfg = ESSettings()
     monkeypatch.setattr(
-        workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: _FakePMol()
+        workflow.pyscf_backend,
+        "converged_mean_field",
+        lambda mol, cfg_arg: _converged(object(), _FakePMol()),
     )
-    monkeypatch.setattr(workflow.pyscf_backend, "make_mean_field", lambda pmol, cfg_arg: object())
 
     def fail_hessian(mf: object) -> np.ndarray:
         raise RuntimeError("synthetic hessian failure")
@@ -155,9 +162,10 @@ def test_harmonic_analysis_uses_fd_hessian_when_allowed(
     hessian = np.eye(6)
     captured_x0: list[np.ndarray] = []
 
-    monkeypatch.setattr(workflow.pyscf_backend, "molecule_to_pyscf", lambda mol, basis: pmol)
     monkeypatch.setattr(
-        workflow.pyscf_backend, "make_mean_field", lambda pmol_arg, cfg_arg: object()
+        workflow.pyscf_backend,
+        "converged_mean_field",
+        lambda mol, cfg_arg: _converged(object(), pmol),
     )
     monkeypatch.setattr(workflow, "analytic_hessian", lambda mf: None)
 
@@ -210,7 +218,9 @@ def test_es_settings_copy_preserves_all_electronic_inputs() -> None:
         dft_grid_level=5,
     )
 
-    copied = workflow.coerce_es_settings(cfg)
+    from pyscf_vscf.settings import coerce_es_settings
+
+    copied = coerce_es_settings(cfg)
 
     assert copied == cfg
     assert copied is not cfg

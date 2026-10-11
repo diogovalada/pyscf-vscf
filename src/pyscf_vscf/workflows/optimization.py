@@ -6,6 +6,8 @@ only when an optimization is actually run.
 
 from __future__ import annotations
 
+import logging
+import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +15,7 @@ from typing import Any
 
 import numpy as np
 
+from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.io import write_midas_mmol, write_xyz
 from pyscf_vscf.molecule import Molecule
@@ -21,6 +24,7 @@ from pyscf_vscf.workflows.harmonic import StationarityDiagnostic, stationarity_d
 
 
 _DEFAULT_ES = ESSettings()
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -43,6 +47,51 @@ def optimization_convergence_kwargs() -> dict[str, float]:
     }
 
 
+def optimize_geometry(
+    molecule: Any,
+    settings: Any,
+    *,
+    output_path: Path | str | None = None,
+    max_steps: int | None = 50,
+    strict: bool = True,
+) -> OptimizationResult:
+    """Optimize a geometry with geomeTRIC on the package's PySCF method.
+
+    ``settings`` is ``ESSettings`` (or compatible) or a method factory such as
+    :class:`~pyscf_vscf.backends.pyscf.MethodRecipe`; the method is rebuilt
+    through the construction seam at every geometry. The optimized geometry is
+    written only when ``output_path`` (``.xyz`` or ``.mmol``) is given. A
+    non-converged optimization raises in strict mode and warns otherwise.
+    """
+
+    if output_path is not None:
+        _validate_output_suffix(Path(output_path))
+    factory = pyscf_backend.method_factory(settings)
+    maxsteps = None if max_steps is None else int(max_steps)
+    _LOG.info("Starting geometry optimization (backend=geomeTRIC; maxsteps=%s)", maxsteps)
+    scanner = _factory_gradient_scanner(molecule, factory)
+    converged, optmol, backend = _run_geometric(scanner, maxsteps)
+    if not converged:
+        message = "Geometry optimization did not converge within the allowed steps"
+        if bool(strict):
+            raise RuntimeError(message)
+        warnings.warn(message, RuntimeWarning, stacklevel=2)
+
+    mol_opt = _optimized_molecule_from_pyscf(molecule, optmol)
+    stationarity = _post_optimization_stationarity(mol_opt, factory)
+    written = None
+    if output_path is not None:
+        written = _write_optimized_geometry(mol_opt, molecule, output_path)
+        _LOG.info("Optimized geometry written to %s", written)
+    return OptimizationResult(
+        molecule=mol_opt,
+        converged=bool(converged),
+        backend=backend,
+        output_path=written,
+        stationarity=stationarity,
+    )
+
+
 def run_opt(
     mol: Any,
     cfg: Any,
@@ -54,74 +103,93 @@ def run_opt(
     log_fn: Callable[[str], None] | None = None,
     warn_fn: Callable[[str, str], None] | None = None,
 ) -> OptimizationResult:
-    """Run a PySCF geometry optimization and write the result."""
+    """Deprecated: optimize, print a summary, and always write the geometry.
 
+    ``opt_out=None`` writes ``<label>.pyscf_opt.mmol``. Use
+    :func:`optimize_geometry`, which writes a file only when asked.
+    """
+
+    deprecated("run_opt() is deprecated; use optimize_geometry().")
+    del verbose, warn_fn
     emit_log = log_fn or _noop_log
-    emit_warning = warn_fn or pyscf_backend.warn_once
-    if opt_out is not None:
-        _validate_output_suffix(Path(opt_out))
+    path = Path(f"{mol.label}.pyscf_opt.mmol") if opt_out is None else Path(opt_out)
+    emit_log("Starting geometry optimization (backend=geomeTRIC)")
+    result = optimize_geometry(mol, cfg, output_path=path, max_steps=opt_maxsteps, strict=strict)
+    if result.stationarity is not None:
+        print(format_optimization_stationarity_diagnostic(result.stationarity))
+    print(f"Optimized geometry written to: {result.output_path}", flush=True)
+    return result
 
-    emit_log("Geometry optimization: setting up PySCF molecule and mean-field")
-    basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
-    pmol = _molecule_to_pyscf(mol, basis)
-    mf = pyscf_backend.make_mean_field(pmol, cfg)
-    mf.verbose = 4 if verbose else 0
 
-    maxsteps = None if opt_maxsteps is None else int(opt_maxsteps)
-    if maxsteps is not None:
-        emit_log(f"Starting geometry optimization (backend=geomeTRIC; maxsteps={maxsteps})")
-    else:
-        emit_log("Starting geometry optimization (backend=geomeTRIC; maxsteps=None)")
+def _factory_gradient_scanner(molecule: Any, factory: Any) -> Any:
+    """Return a geomeTRIC-compatible gradient scanner that rebuilds the method.
 
-    converged, optmol, backend = _run_geometric(mf, maxsteps)
+    PySCF's own scanners reuse one mean-field object across geometries; this
+    one builds the molecule and mean field through the seam at every step, so
+    every setting of a user recipe applies at every geometry.
+    """
 
-    if not converged:
-        msg = "Geometry optimization did not converge within the allowed steps"
-        if bool(strict):
-            raise RuntimeError(msg)
-        emit_warning("opt_not_converged", msg)
+    import sys
 
-    mol_opt = _optimized_molecule_from_pyscf(mol, optmol)
-    stationarity = _post_optimization_stationarity(mol_opt, cfg, warn_fn=emit_warning)
-    output_path = _write_optimized_geometry(mol_opt, mol, opt_out)
-    print(f"Optimized geometry written to: {output_path}", flush=True)
+    from pyscf import lib
 
-    return OptimizationResult(
-        molecule=mol_opt,
-        converged=bool(converged),
-        backend=backend,
-        output_path=output_path,
-        stationarity=stationarity,
-    )
+    from pyscf_vscf.backends._pyscf_factory import ElectronicSystem, build_mean_field
+    from pyscf_vscf.backends._pyscf_properties import converge, nuclear_gradient
+
+    system = ElectronicSystem.from_molecule(molecule)
+    initial = build_mean_field(system, factory)
+
+    class _State:
+        converged = False
+        e_tot = 0.0
+
+    class FactoryGradScanner(lib.GradScanner):
+        def __init__(self) -> None:
+            self.mol = initial.molecule
+            self.base = _State()
+            self.verbose = 0
+            self.stdout = sys.stdout
+            self.atmlst = None
+
+        def __call__(self, mol: Any) -> tuple[float, np.ndarray]:
+            point = ElectronicSystem(
+                nuclear_charges=system.nuclear_charges,
+                coordinates_A=np.asarray(mol.atom_coords(unit="Angstrom"), dtype=float),
+                charge=system.charge,
+                spin=system.spin,
+            )
+            converged = converge(build_mean_field(point, factory))
+            self.base.e_tot = converged.total_energy_Eh
+            self.base.converged = True
+            self.mol = mol
+            return converged.total_energy_Eh, nuclear_gradient(converged)
+
+    return FactoryGradScanner()
 
 
 def _run_geometric(
-    mf: Any,
+    scanner: Any,
     maxsteps: int | None,
 ) -> tuple[bool, Any, str]:
     solver = _load_geometric_solver()
     kwargs = optimization_convergence_kwargs()
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
-    converged, optmol = solver.kernel(mf, **kwargs)
+    converged, optmol = solver.kernel(scanner, **kwargs)
     return bool(converged), optmol, "geomeTRIC"
 
 
 def _post_optimization_stationarity(
     mol_opt: Molecule,
-    cfg: Any,
-    *,
-    warn_fn: Callable[[str, str], None],
+    factory: Any,
 ) -> StationarityDiagnostic | None:
     try:
-        basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
-        pmol = _molecule_to_pyscf(mol_opt, basis)
-        mf = pyscf_backend.make_mean_field(pmol, cfg)
-        diagnostic = stationarity_diagnostic(mf)
-        print(format_optimization_stationarity_diagnostic(diagnostic))
-        return diagnostic
+        converged = pyscf_backend.converged_mean_field(mol_opt, factory)
+        return stationarity_diagnostic(converged.mean_field)
     except Exception as exc:
-        warn_fn("opt_grad_check_failed", f"Post-opt gradient check failed: {exc}")
+        warnings.warn(
+            f"Post-optimization gradient check failed: {exc}", RuntimeWarning, stacklevel=3
+        )
         return None
 
 
@@ -218,5 +286,6 @@ __all__ = [
     "OptimizationResult",
     "format_optimization_stationarity_diagnostic",
     "optimization_convergence_kwargs",
+    "optimize_geometry",
     "run_opt",
 ]

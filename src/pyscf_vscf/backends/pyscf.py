@@ -1,55 +1,58 @@
-"""PySCF backend helpers.
+"""PySCF backend: the mean-field electronic provider and legacy helpers.
 
-This module intentionally does not import PySCF at module import time. Callers
-can import ``pyscf_vscf.backends.pyscf`` in environments without PySCF; functions
-that need the backend raise :class:`BackendUnavailableError` when it is missing.
+PySCF is imported only when a calculation runs, so this module imports in
+environments without PySCF. Every calculation builds its molecule and mean
+field through the construction seam in
+:mod:`pyscf_vscf.backends._pyscf_factory`; convergence and properties come
+from :mod:`pyscf_vscf.backends._pyscf_properties`.
 """
 
 from __future__ import annotations
 
-import sys
 import time
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from socket import gethostname
 from typing import Any
 
 import numpy as np
 
-from ..constants import ANG_TO_BOHR, MASS_AMU, atomic_mass_amu
+from .._identity import immutable_json_mapping, to_jsonable
+from .._warnings import deprecated
 from ..cache import runtime_provenance
-from ..electronic import (
+from ..constants import ANG_TO_BOHR, MASS_AMU, atomic_mass_amu
+from ..contracts import (
+    AU_DIPOLE_TO_DEBYE,
     ElectronicPointRequest,
     ElectronicResult,
     provider_scientific_fingerprint,
 )
-from .._identity import immutable_json_mapping, to_jsonable
 from ..molecule import Molecule
-from ..settings import (
-    ESSettings,
-    coerce_es_settings,
-    default_auxbasis,
-    resolve_scf_controls,
-    runtime_max_memory_mb,
+from ..settings import ESSettings, coerce_es_settings, default_auxbasis, runtime_max_memory_mb
+from ._pyscf_factory import (
+    BackendUnavailableError,
+    ElectronicSystem,
+    MeanFieldFactory,
+    MethodRecipe,
+    PySCFResources,
+    SettingsFactory,
+    build_mean_field,
+    configure_settings_mean_field,
+    require_pyscf,
 )
-
+from ._pyscf_properties import (
+    CONTINUITY_SUCCESS_SCOPE,
+    ConvergedMeanField,
+    continuity_diagnostics,
+    converge,
+    current_pyscf_threads,
+    dipole_au,
+    max_rss_mb,
+    nuclear_gradient,
+)
 
 _WARNED_ONCE: set[str] = set()
-_CONTINUITY_SUCCESS_SCOPE = "closed-shell-mulliken-and-meta-lowdin-ao-metrics"
-_CONTINUITY_REQUIRED_FIELDS = frozenset(
-    {
-        "mulliken_density_atom_populations",
-        "meta_lowdin_density_atom_populations",
-        "meta_lowdin_pre_orthogonalization",
-        "mulliken_occupied_orbital_atom_populations",
-        "occupied_orbital_energies_Eh",
-        "reference_homo_lumo_gap_Eh",
-    }
-)
-
-
-class BackendUnavailableError(ImportError):
-    """Raised when the required PySCF backend dependency is unavailable."""
+_CONTINUITY_SUCCESS_SCOPE = CONTINUITY_SUCCESS_SCOPE
 
 
 @dataclass(frozen=True)
@@ -68,57 +71,40 @@ class NormalRelaxedPointResult:
 
 
 @dataclass(frozen=True)
-class _MeanFieldSettings:
-    method: str
-    basis: str
-    use_density_fit: bool
-    auxbasis: str | None
-    scf_conv_tol: float
-    scf_max_cycle: int
-    dft_grid_level: int | None
-
-    @classmethod
-    def from_value(cls, value: object) -> _MeanFieldSettings:
-        settings = coerce_es_settings(value)
-        method = str(settings.method).strip()
-        basis = str(settings.basis).strip()
-        if not method or not basis:
-            raise ValueError("Electronic method and basis must be non-empty")
-        use_density_fit = bool(settings.use_density_fit)
-        auxbasis = None
-        if use_density_fit:
-            auxbasis = settings.auxbasis or default_auxbasis(basis)
-            auxbasis = str(auxbasis).strip()
-            if not auxbasis:
-                raise ValueError("Density fitting requires a non-empty auxiliary basis")
-        controls = resolve_scf_controls(settings)
-        tolerance = controls.conv_tol
-        max_cycle = controls.max_cycle
-        grid_level = controls.dft_grid_level
-        return cls(
-            method=method,
-            basis=basis,
-            use_density_fit=use_density_fit,
-            auxbasis=auxbasis,
-            scf_conv_tol=tolerance,
-            scf_max_cycle=max_cycle,
-            dft_grid_level=None if grid_level is None else int(grid_level),
-        )
-
-
-@dataclass(frozen=True)
 class PySCFMeanFieldProvider:
-    """Mean-field electronic points with split scientific and execution identity."""
+    """Mean-field electronic points with split scientific and execution identity.
 
-    settings: object
+    Pass ``ESSettings`` (or a mapping/object with the same fields) for the
+    built-in method, or ``factory=`` a :class:`MethodRecipe` (any
+    :class:`MeanFieldFactory`) for a user-supplied PySCF method. ``threads``
+    is advisory: worker processes apply it at start-up, and :meth:`evaluate`
+    never changes PySCF's process-wide thread count. ``max_memory_mb`` is the
+    PySCF memory budget of each calculation.
+    """
+
+    settings: object = None
     threads: int = 1
     max_memory_mb: int = 4000
     user_annotations: Mapping[str, Any] = field(default_factory=dict)
     retain_occupied_mo_coefficients: bool = False
     continuity_diagnostics: str = "off"
+    factory: Any = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "settings", _MeanFieldSettings.from_value(self.settings))
+        if self.factory is None:
+            if self.settings is None:
+                raise TypeError("Provide electronic settings or factory=")
+            factory = SettingsFactory(coerce_es_settings(self.settings))
+            object.__setattr__(self, "factory", factory)
+            object.__setattr__(self, "settings", factory.settings)
+        else:
+            if self.settings is not None:
+                raise TypeError("Provide either settings or factory=, not both")
+            if not isinstance(self.factory, MeanFieldFactory):
+                raise TypeError(
+                    "factory must provide scientific_settings_payload(), build_molecule(), "
+                    "and build_mean_field()"
+                )
         threads = int(self.threads)
         memory = int(self.max_memory_mb)
         if threads <= 0 or memory <= 0:
@@ -143,25 +129,38 @@ class PySCFMeanFieldProvider:
         )
 
     def scientific_settings_payload(self) -> Mapping[str, object]:
-        """Return every setting that can change the intended calculation."""
+        """Return every setting that can change the intended calculation.
 
+        For built-in settings the payload is unchanged from 0.2, so provider
+        fingerprints and stored results remain valid.
+        """
+
+        if isinstance(self.factory, SettingsFactory):
+            method_fields: dict[str, object] = {
+                "provider": "mean-field",
+                "reference_policy": "restricted-if-spin-zero-otherwise-unrestricted",
+                "settings": dict(self.factory.scientific_settings_payload()),
+                "frozen_core_policy": "not-applicable",
+                "orbital_policy": "self-consistent-canonical",
+                "post_scf_tolerance": None,
+                "integral_policy": "pyscf-default-in-core-or-direct",
+            }
+        else:
+            method_fields = {
+                "provider": "mean-field-recipe",
+                "method": dict(self.factory.scientific_settings_payload()),
+            }
         return {
             "schema": "pyscf-vscf-provider-settings",
             "schema_version": 1,
             "backend_family": "pyscf",
-            "provider": "mean-field",
-            "reference_policy": "restricted-if-spin-zero-otherwise-unrestricted",
-            "settings": asdict(self.settings),
-            "frozen_core_policy": "not-applicable",
-            "orbital_policy": "self-consistent-canonical",
-            "post_scf_tolerance": None,
-            "integral_policy": "pyscf-default-in-core-or-direct",
+            **method_fields,
             "continuity_diagnostics": {
                 "mode": self.continuity_diagnostics,
                 "scope": (
                     "disabled"
                     if self.continuity_diagnostics == "off"
-                    else _CONTINUITY_SUCCESS_SCOPE
+                    else CONTINUITY_SUCCESS_SCOPE
                 ),
                 "primary_density_population_partition": "meta-lowdin",
                 "meta_lowdin_pre_orthogonalization": "ANO",
@@ -201,241 +200,60 @@ class PySCFMeanFieldProvider:
             )
 
         started = time.perf_counter()
-        actual_threads = _configure_pyscf_threads(self.threads)
-        _, _, _, elements = _require_pyscf()
-        symbols = [elements._symbol(charge) for charge in request.nuclear_charges]
-        molecule = Molecule.from_arrays(
-            symbols,
-            request.coordinates_A,
-            charge=request.charge,
-            spin=request.spin,
-            label="electronic-point",
+        _, _, _, _ = require_pyscf()
+        build = build_mean_field(
+            ElectronicSystem.from_request(request),
+            self.factory,
+            resources=PySCFResources(max_memory_mb=self.max_memory_mb),
         )
-        pmol = molecule_to_pyscf(molecule, self.settings.basis)
-        pmol.max_memory = self.max_memory_mb
-        mf = make_mean_field(
-            pmol,
-            self.settings,
+        converged = converge(
+            build,
             field_au=request.field_au,
             field_origin_A=request.field_origin_A,
         )
         dipole = None
         if "dipole" in request.requested_properties:
-            density = mf.make_rdm1()
-            try:
-                dipole = mf.dip_moment(dm=density, unit="au", verbose=0)
-            except TypeError:
-                dipole = mf.dip_moment(unit="au", verbose=0)
-        nuclear_field_energy = float(getattr(mf, "_pyscf_vscf_nuclear_field_energy_Eh", 0.0))
+            dipole = dipole_au(converged)
         field_vector = np.zeros(3) if request.field_au is None else request.field_au
         field_origin = np.zeros(3) if request.field_origin_A is None else request.field_origin_A
         scientific_diagnostics = {
             "field_au": np.asarray(field_vector, dtype=float).tolist(),
             "field_origin_A": np.asarray(field_origin, dtype=float).tolist(),
             "field_hamiltonian": "H(F)=H(0)-F.mu",
-            "nuclear_field_energy_Eh": nuclear_field_energy,
+            "nuclear_field_energy_Eh": converged.nuclear_field_energy_Eh,
             "nuclear_field_term_included": True,
         }
         if self.continuity_diagnostics != "off":
-            try:
-                continuity = _validated_continuity_diagnostics(
-                    _mean_field_continuity_diagnostics(
-                        mf,
-                        retain_occupied_mo_coefficients=self.retain_occupied_mo_coefficients,
-                    ),
-                    require_coefficients=self.retain_occupied_mo_coefficients,
+            scientific_diagnostics.update(
+                continuity_diagnostics(
+                    converged,
+                    mode=self.continuity_diagnostics,
+                    retain_occupied_mo_coefficients=self.retain_occupied_mo_coefficients,
                 )
-                if (
-                    self.continuity_diagnostics == "strict"
-                    and continuity.get("continuity_descriptor_scope") != _CONTINUITY_SUCCESS_SCOPE
-                ):
-                    raise ValueError(
-                        "strict continuity diagnostics require scope "
-                        f"{_CONTINUITY_SUCCESS_SCOPE!r}"
-                    )
-            except Exception as exc:
-                if self.continuity_diagnostics == "strict":
-                    raise RuntimeError("Strict continuity diagnostics failed") from exc
-                continuity = immutable_json_mapping(
-                    {
-                        "continuity_descriptor_scope": "unavailable-after-error",
-                        "continuity_descriptor_error_type": (
-                            f"{type(exc).__module__}.{type(exc).__qualname__}"
-                        ),
-                    }
-                )
-            scientific_diagnostics.update(continuity)
+            )
         provider_id = provider_scientific_fingerprint(self)
-        runtime_seconds = time.perf_counter() - started
+        provenance = dict(self.execution_provenance())
+        provenance["configuration_snapshot"] = to_jsonable(build.configuration_snapshot)
         return ElectronicResult(
-            total_energy_Eh=float(mf.e_tot) + nuclear_field_energy,
-            dipole_au=None if dipole is None else np.asarray(dipole, dtype=float),
+            total_energy_Eh=converged.total_energy_Eh,
+            dipole_au=dipole,
             dipole_unit=None if dipole is None else "atomic_unit",
             dipole_frame=None if dipole is None else "input_cartesian",
-            converged=bool(mf.converged),
+            converged=True,
             point_causal_fingerprint=request.causal_fingerprint(provider_id),
             provider_scientific_fingerprint=provider_id,
             scientific_diagnostics=scientific_diagnostics,
             execution_diagnostics={
-                "reference_class": type(mf).__name__,
-                "scf_cycles": _optional_int(getattr(mf, "cycles", None)),
-                "runtime_seconds": runtime_seconds,
-                "max_rss_mb": _max_rss_mb(),
-                "threads_actual": actual_threads,
+                "reference_class": type(converged.mean_field).__name__,
+                "scf_cycles": converged.cycles,
+                "runtime_seconds": time.perf_counter() - started,
+                "max_rss_mb": max_rss_mb(),
+                "threads_actual": current_pyscf_threads(),
                 "max_memory_mb": self.max_memory_mb,
                 "warnings": [],
             },
-            provenance=self.execution_provenance(),
+            provenance=provenance,
         )
-
-
-def _mean_field_continuity_diagnostics(
-    mean_field: Any,
-    *,
-    retain_occupied_mo_coefficients: bool,
-) -> dict[str, object]:
-    """Return compact closed-shell density and occupied-orbital descriptors."""
-
-    from pyscf.scf import hf
-
-    required = ("mo_coeff", "mo_occ", "mo_energy", "make_rdm1", "get_ovlp", "mol")
-    if any(not hasattr(mean_field, name) for name in required):
-        return {"continuity_descriptor_scope": "unavailable"}
-    coefficients = np.asarray(mean_field.mo_coeff, dtype=float)
-    occupations = np.asarray(mean_field.mo_occ, dtype=float)
-    orbital_energies = np.asarray(mean_field.mo_energy, dtype=float)
-    density = np.asarray(mean_field.make_rdm1(), dtype=float)
-    if coefficients.ndim != 2 or occupations.ndim != 1 or density.ndim != 2:
-        return {"continuity_descriptor_scope": "unavailable-for-spin-resolved-reference"}
-    occupied = np.flatnonzero(occupations > 0.0)
-    virtual = np.flatnonzero(occupations == 0.0)
-    if not np.all(np.isclose(occupations[occupied], 2.0)):
-        return {"continuity_descriptor_scope": "unavailable-for-open-shell-reference"}
-    overlap = np.asarray(mean_field.get_ovlp(), dtype=float)
-    gross_ao = np.einsum("ij,ji->i", density, overlap, optimize=True)
-    atom_slices = np.asarray(mean_field.mol.aoslice_by_atom(), dtype=int)[:, 2:4]
-    mulliken_atom_populations = [
-        float(np.sum(gross_ao[start:stop])) for start, stop in atom_slices
-    ]
-    _, meta_lowdin_charges = hf.mulliken_pop_meta_lowdin_ao(
-        mean_field.mol,
-        density,
-        verbose=0,
-        pre_orth_method="ANO",
-        s=overlap,
-    )
-    meta_lowdin_atom_populations = (
-        np.asarray(mean_field.mol.atom_charges(), dtype=float)
-        - np.asarray(meta_lowdin_charges, dtype=float)
-    ).tolist()
-    occupied_characters = []
-    for orbital in occupied:
-        vector = coefficients[:, orbital]
-        gross_orbital = vector * (overlap @ vector)
-        occupied_characters.append(
-            [float(np.sum(gross_orbital[start:stop])) for start, stop in atom_slices]
-        )
-    gap = None
-    if occupied.size and virtual.size:
-        gap = float(orbital_energies[virtual[0]] - orbital_energies[occupied[-1]])
-    diagnostics = {
-        "continuity_descriptor_scope": _CONTINUITY_SUCCESS_SCOPE,
-        "mulliken_density_atom_populations": mulliken_atom_populations,
-        "meta_lowdin_density_atom_populations": meta_lowdin_atom_populations,
-        "meta_lowdin_pre_orthogonalization": "ANO",
-        "mulliken_occupied_orbital_atom_populations": occupied_characters,
-        "occupied_orbital_energies_Eh": orbital_energies[occupied].tolist(),
-        "reference_homo_lumo_gap_Eh": gap,
-    }
-    if retain_occupied_mo_coefficients:
-        diagnostics["occupied_mo_coefficients_ao"] = coefficients[:, occupied].tolist()
-    return diagnostics
-
-
-def _validated_continuity_diagnostics(
-    diagnostics: Mapping[str, object],
-    *,
-    require_coefficients: bool,
-) -> Mapping[str, object]:
-    """Freeze one descriptor mapping and validate a claimed successful scope."""
-
-    frozen = immutable_json_mapping(diagnostics)
-    scope = frozen.get("continuity_descriptor_scope")
-    if isinstance(scope, str) and scope.startswith("unavailable"):
-        return frozen
-    if scope != _CONTINUITY_SUCCESS_SCOPE:
-        raise ValueError("Continuity diagnostics returned an invalid descriptor scope")
-    required = set(_CONTINUITY_REQUIRED_FIELDS)
-    if require_coefficients:
-        required.add("occupied_mo_coefficients_ao")
-    missing = sorted(required.difference(frozen))
-    if missing:
-        raise ValueError(f"Successful continuity diagnostics are missing fields: {missing}")
-    if frozen["meta_lowdin_pre_orthogonalization"] != "ANO":
-        raise ValueError("Successful continuity diagnostics require ANO pre-orthogonalization")
-    mulliken_density = _continuity_array(
-        "mulliken_density_atom_populations",
-        frozen["mulliken_density_atom_populations"],
-        ndim=1,
-    )
-    meta_lowdin_density = _continuity_array(
-        "meta_lowdin_density_atom_populations",
-        frozen["meta_lowdin_density_atom_populations"],
-        ndim=1,
-    )
-    occupied_populations = _continuity_array(
-        "mulliken_occupied_orbital_atom_populations",
-        frozen["mulliken_occupied_orbital_atom_populations"],
-        ndim=2,
-    )
-    occupied_energies = _continuity_array(
-        "occupied_orbital_energies_Eh",
-        frozen["occupied_orbital_energies_Eh"],
-        ndim=1,
-    )
-    atom_count = mulliken_density.size
-    occupied_count = occupied_energies.size
-    if atom_count == 0 or meta_lowdin_density.shape != (atom_count,):
-        raise ValueError("Continuity atom-population arrays must have the same non-zero length")
-    if occupied_count == 0 or occupied_populations.shape != (occupied_count, atom_count):
-        raise ValueError("Occupied-orbital populations must have shape (occupied orbitals, atoms)")
-    _continuity_scalar(
-        "reference_homo_lumo_gap_Eh",
-        frozen["reference_homo_lumo_gap_Eh"],
-    )
-    if require_coefficients:
-        coefficients = _continuity_array(
-            "occupied_mo_coefficients_ao",
-            frozen["occupied_mo_coefficients_ao"],
-            ndim=2,
-        )
-        if coefficients.shape[0] == 0 or coefficients.shape[1] != occupied_count:
-            raise ValueError(
-                "Occupied MO coefficients must have shape (AO functions, occupied orbitals)"
-            )
-    return frozen
-
-
-def _continuity_array(name: str, value: object, *, ndim: int) -> np.ndarray:
-    if not isinstance(value, tuple):
-        raise ValueError(f"{name} must be a numeric array")
-    try:
-        raw = np.asarray(value)
-        values = np.asarray(value, dtype=float)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a rectangular numeric array") from exc
-    if raw.dtype.kind not in "iuf" or values.ndim != ndim or not np.all(np.isfinite(values)):
-        raise ValueError(f"{name} must be a finite {ndim}D numeric array")
-    return values
-
-
-def _continuity_scalar(name: str, value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{name} must be a finite number")
-    number = float(value)
-    if not np.isfinite(number):
-        raise ValueError(f"{name} must be a finite number")
-    return number
 
 
 def _normalized_continuity_mode(value: object) -> str:
@@ -447,13 +265,48 @@ def _normalized_continuity_mode(value: object) -> str:
     return mode
 
 
+def method_factory(cfg: Any) -> MeanFieldFactory:
+    """Return the factory for ``cfg``: itself if it is a factory, else built-in settings."""
+
+    if isinstance(cfg, MeanFieldFactory) and not isinstance(cfg, Mapping):
+        return cfg
+    return SettingsFactory(coerce_es_settings(cfg))
+
+
+def converged_mean_field(
+    molecule: Any,
+    cfg: Any,
+    *,
+    resources: PySCFResources | None = None,
+) -> ConvergedMeanField:
+    """Build through the seam and converge the mean field for a package molecule.
+
+    ``cfg`` is ``ESSettings`` (or compatible) or a :class:`MeanFieldFactory`.
+    """
+
+    return converge(
+        build_mean_field(
+            ElectronicSystem.from_molecule(molecule), method_factory(cfg), resources=resources
+        )
+    )
+
+
+def legacy_energy_dipole(molecule: Any, cfg: Any) -> tuple[float, np.ndarray]:
+    """Return the Hartree energy and Debye dipole of one point (0.2 evaluator contract)."""
+
+    converged = converged_mean_field(molecule, cfg)
+    return converged.total_energy_Eh, dipole_au(converged) * AU_DIPOLE_TO_DEBYE
+
+
 def warn_once(key: str, msg: str) -> None:
-    """Emit a backend warning once."""
+    """Emit a backend warning once per key."""
 
     if key in _WARNED_ONCE:
         return
     _WARNED_ONCE.add(key)
-    print(f"[WARN] {msg}", file=sys.stderr, flush=True)
+    import warnings
+
+    warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
 
 def electronic_symbol(symbol: str) -> str:
@@ -467,7 +320,7 @@ def is_available() -> bool:
     """Return whether the core PySCF backend imports successfully."""
 
     try:
-        _require_pyscf()
+        require_pyscf()
     except BackendUnavailableError:
         return False
     return True
@@ -482,7 +335,7 @@ def molecule_to_pyscf(molecule: Any, basis: str = "aug-cc-pVTZ"):
     ``max_memory`` budget, overriding PySCF's configured default.
     """
 
-    gto, _, _, elements = _require_pyscf()
+    gto, _, _, elements = require_pyscf()
     symbols = list(getattr(molecule, "symbols"))
     coords = getattr(molecule, "coords")
     sym_elec = [electronic_symbol(s) for s in symbols]
@@ -520,92 +373,19 @@ def make_mean_field(
     field_au: np.ndarray | None = None,
     field_origin_A: np.ndarray | None = None,
 ):
-    """Create and run a PySCF mean-field object from an ESSettings-like config.
+    """Deprecated: create and run the built-in mean field on an existing molecule.
 
-    Unset SCF controls resolve to the package defaults in
-    :mod:`pyscf_vscf.settings` rather than to PySCF's configurable defaults.
+    Use :func:`converged_mean_field` or :class:`PySCFMeanFieldProvider`.
     """
 
-    _, scf, dft, _ = _require_pyscf()
+    deprecated(
+        "make_mean_field() is deprecated; use converged_mean_field() or PySCFMeanFieldProvider."
+    )
     settings = coerce_es_settings(cfg)
-    controls = resolve_scf_controls(settings)
-    method = str(settings.method)
-    open_shell = int(getattr(pmol, "spin", 0)) != 0
-    is_dft = method.lower() != "hf"
-    if method.lower() == "hf":
-        mf = scf.UHF(pmol) if open_shell else scf.RHF(pmol)
-    else:
-        mf = dft.UKS(pmol, xc=method) if open_shell else dft.RKS(pmol, xc=method)
-
-    if bool(settings.use_density_fit):
-        aux = settings.auxbasis if settings.auxbasis else default_auxbasis(str(settings.basis))
-        try:
-            mf = mf.density_fit(auxbasis=aux)
-        except Exception as exc:
-            msg = (
-                f"RI density_fit(auxbasis='{aux}') failed. Refusing an implicit "
-                f"auxiliary-basis substitution because it would change the recorded "
-                f"electronic-structure model ({exc})"
-            )
-            raise RuntimeError(msg) from exc
-
-    if is_dft and controls.dft_grid_level is not None:
-        mf.grids.level = controls.dft_grid_level
-
-    nuclear_field_energy = _apply_electric_field(
-        mf,
-        pmol,
-        np.zeros(3) if field_au is None else field_au,
-        np.zeros(3) if field_origin_A is None else field_origin_A,
-    )
-    mf._pyscf_vscf_nuclear_field_energy_Eh = nuclear_field_energy
-
-    mf.conv_tol = controls.conv_tol
-    mf.max_cycle = controls.max_cycle
-    mf.kernel()
-    if not mf.converged:
-        cycles = getattr(mf, "cycles", None)
-        cycle_text = "" if cycles is None else f", cycles run={int(cycles)}"
-        raise RuntimeError(
-            f"SCF did not converge (method={method}, max_cycle={controls.max_cycle}, "
-            f"conv_tol={controls.conv_tol:g}{cycle_text})"
-        )
-    return mf
-
-
-def _apply_electric_field(
-    mean_field: Any,
-    molecule: Any,
-    field_au: np.ndarray,
-    origin_A: np.ndarray,
-) -> float:
-    """Apply ``H(F)=H(0)-F.mu`` and return the nuclear-field energy."""
-
-    field_vector = np.asarray(field_au, dtype=float)
-    origin = np.asarray(origin_A, dtype=float)
-    if field_vector.shape != (3,) or origin.shape != (3,):
-        raise ValueError("Electric field and origin must be three-component vectors")
-    if not np.all(np.isfinite(field_vector)) or not np.all(np.isfinite(origin)):
-        raise ValueError("Electric field and origin must be finite")
-    if not np.any(field_vector):
-        return 0.0
-    origin_bohr = origin * ANG_TO_BOHR
-    with molecule.with_common_orig(origin_bohr):
-        position_ao = molecule.intor_symmetric("int1e_r", comp=3)
-    field_hcore = np.einsum("x,xij->ij", field_vector, position_ao, optimize=True)
-    base_get_hcore = mean_field.get_hcore
-
-    def get_hcore(mol=None):
-        return base_get_hcore(mol) + field_hcore
-
-    mean_field.get_hcore = get_hcore
-    nuclear_dipole = np.einsum(
-        "i,ix->x",
-        molecule.atom_charges(),
-        molecule.atom_coords() - origin_bohr[None, :],
-        optimize=True,
-    )
-    return -float(field_vector @ nuclear_dipole)
+    mean_field = configure_settings_mean_field(pmol, settings)
+    build = _legacy_build(pmol, mean_field, SettingsFactory(settings))
+    converge(build, field_au=field_au, field_origin_A=field_origin_A)
+    return mean_field
 
 
 def energy_gradient_at_coords_bohr(
@@ -616,11 +396,8 @@ def energy_gradient_at_coords_bohr(
     """Return single-point energy and flattened nuclear gradient at Bohr coordinates."""
 
     coords = _coords_from_flat_bohr(molecule, xflat_bohr)
-    sub = _molecule_with_coords(molecule, coords)
-    pmol = molecule_to_pyscf(sub, str(_cfg_get(cfg, "basis", "aug-cc-pVTZ")))
-    mf = make_mean_field(pmol, cfg)
-    gradient = _nuclear_gradient(mf, warn_key="grad_api_fallback_cfg")
-    return float(mf.e_tot), gradient.reshape(-1)
+    converged = converged_mean_field(_molecule_with_coords(molecule, coords), cfg)
+    return converged.total_energy_Eh, nuclear_gradient(converged).reshape(-1)
 
 
 def normal_relaxed_point(
@@ -699,9 +476,7 @@ def normal_relaxed_point(
     achieved_bohr = float(np.dot(constraint_covector, final_x_bohr - x0_bohr))
     residual_A = (achieved_bohr - s_bohr) / ANG_TO_BOHR
     sub = _molecule_with_coords(molecule, final_coords)
-    from pyscf_vscf.surfaces import energy_dipole
-
-    energy, dipole = energy_dipole(sub, cfg)
+    energy, dipole = legacy_energy_dipole(sub, cfg)
     return NormalRelaxedPointResult(
         energy_hartree=float(energy),
         dipole_debye=np.asarray(dipole, dtype=float),
@@ -715,22 +490,16 @@ def normal_relaxed_point(
     )
 
 
-def _cfg_get(cfg: Any, name: str, default: Any) -> Any:
-    if isinstance(cfg, Mapping):
-        return cfg.get(name, default)
-    return getattr(cfg, name, default)
+def _legacy_build(molecule: Any, mean_field: Any, factory: MeanFieldFactory):
+    from .._identity import immutable_json_mapping as _freeze
+    from ._pyscf_factory import MeanFieldBuild, configuration_snapshot
 
-
-def _nuclear_gradient(mf: Any, *, warn_key: str) -> np.ndarray:
-    try:
-        gradient = mf.nuc_grad_method().kernel()
-    except AttributeError:
-        warn_once(
-            warn_key,
-            "Falling back to mf.Gradients().kernel() (mf.nuc_grad_method unavailable)",
-        )
-        gradient = mf.Gradients().kernel()
-    return np.asarray(gradient, dtype=float)
+    return MeanFieldBuild(
+        mean_field=mean_field,
+        molecule=molecule,
+        method_identity=_freeze(factory.scientific_settings_payload()),
+        configuration_snapshot=_freeze(configuration_snapshot(mean_field)),
+    )
 
 
 def _molecule_coords(molecule: Any) -> np.ndarray:
@@ -756,17 +525,6 @@ def _molecule_with_coords(molecule: Any, coords: np.ndarray) -> Molecule:
         label=str(getattr(molecule, "label", "mol")),
         masses_amu=masses,
     )
-
-
-def _require_pyscf():
-    try:
-        from pyscf import dft, gto, scf
-        from pyscf.data import elements
-    except Exception as exc:
-        raise BackendUnavailableError(
-            "PySCF is unavailable. Reinstall pyscf-vscf and its required dependencies."
-        ) from exc
-    return gto, scf, dft, elements
 
 
 def _analysis_masses(molecule: Any, symbols: list[str]) -> list[float]:
@@ -802,42 +560,24 @@ def _default_pyscf_masses(symbols: list[str], gto: Any, elements: Any) -> list[f
     return result
 
 
-def _optional_int(value: Any) -> int | None:
-    return None if value is None else int(value)
-
-
-def _configure_pyscf_threads(threads: int) -> int:
-    try:
-        from pyscf import lib
-    except Exception as exc:
-        raise BackendUnavailableError(
-            "PySCF is unavailable. Reinstall pyscf-vscf and its required dependencies."
-        ) from exc
-    lib.num_threads(int(threads))
-    return int(lib.num_threads())
-
-
-def _max_rss_mb() -> float | None:
-    try:
-        import resource
-    except ImportError:
-        return None
-    maximum = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    if sys.platform == "darwin":
-        return maximum / (1024.0 * 1024.0)
-    return maximum / 1024.0
-
-
 __all__ = [
     "BackendUnavailableError",
     "ESSettings",
+    "ElectronicSystem",
+    "MeanFieldFactory",
+    "MethodRecipe",
     "NormalRelaxedPointResult",
     "PySCFMeanFieldProvider",
+    "PySCFResources",
+    "SettingsFactory",
+    "converged_mean_field",
     "default_auxbasis",
     "electronic_symbol",
     "energy_gradient_at_coords_bohr",
     "is_available",
+    "legacy_energy_dipole",
     "make_mean_field",
+    "method_factory",
     "molecule_to_pyscf",
     "normal_relaxed_point",
     "warn_once",

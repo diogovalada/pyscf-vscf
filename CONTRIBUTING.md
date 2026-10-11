@@ -16,7 +16,7 @@ Bug reports, questions, and contributions are welcome.
 
 ## Development setup
 
-Use Python 3.10 or newer and [`uv`](https://docs.astral.sh/uv/):
+Use Python 3.11 or newer and [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/diogovalada/pyscf-vscf.git
@@ -41,7 +41,7 @@ uv run python -m build && uv run twine check dist/*
 ```
 
 Continuous integration also tests the lowest supported dependency versions
-(`uv pip install --resolution lowest-direct .` on Python 3.10). The
+(`uv pip install --resolution lowest-direct .` on Python 3.11). The
 `pyscf`-marked tests run small electronic-structure calculations; the archived
 validations do not run PySCF.
 

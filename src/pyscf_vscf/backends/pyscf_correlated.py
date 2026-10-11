@@ -19,15 +19,15 @@ from ..electronic import (
     ElectronicResult,
     provider_scientific_fingerprint,
 )
-from ..molecule import Molecule
-from .pyscf import (
-    _apply_electric_field,
-    _configure_pyscf_threads,
-    _max_rss_mb,
-    _optional_int,
-    _require_pyscf,
-    molecule_to_pyscf,
+from ..settings import ESSettings
+from ._pyscf_factory import (
+    ElectronicSystem,
+    PySCFResources,
+    SettingsFactory,
+    build_mean_field,
+    require_pyscf,
 )
+from ._pyscf_properties import converge, current_pyscf_threads, max_rss_mb
 
 
 _FIELD_CAPABILITY = {
@@ -169,37 +169,39 @@ class PySCFCCSDPerturbativeTriplesProvider:
             raise ValueError("CCSD(T) provider returns energy only; use finite fields for dipoles")
 
         started = time.perf_counter()
-        actual_threads = _configure_pyscf_threads(self.threads)
-        _, scf, _, elements = _require_pyscf()
+        require_pyscf()
         from pyscf import cc
 
-        symbols = [elements._symbol(charge) for charge in request.nuclear_charges]
-        molecule = Molecule.from_arrays(
-            symbols,
-            request.coordinates_A,
-            charge=request.charge,
-            spin=request.spin,
-            label="correlated-electronic-point",
+        # The RHF reference is always conventional (no density fitting); density
+        # fitting, when requested, applies to the CCSD correlation integrals only.
+        reference = SettingsFactory(
+            ESSettings(
+                method="hf",
+                basis=self.settings.basis,
+                use_density_fit=False,
+                scf_conv_tol=self.settings.scf_conv_tol,
+                scf_max_cycle=self.settings.scf_max_cycle,
+            )
         )
-        pmol = molecule_to_pyscf(molecule, self.settings.basis)
-        pmol.max_memory = self.max_memory_mb
+        build = build_mean_field(
+            ElectronicSystem.from_request(request),
+            reference,
+            resources=PySCFResources(max_memory_mb=self.max_memory_mb),
+        )
+        pmol = build.molecule
         if pmol.nelectron % 2:
             raise ValueError("RHF-CCSD(T) requires an even electron count")
-
-        mean_field = scf.RHF(pmol)
-        mean_field.conv_tol = self.settings.scf_conv_tol
-        mean_field.max_cycle = self.settings.scf_max_cycle
         field_vector = np.zeros(3) if request.field_au is None else request.field_au
         field_origin = np.zeros(3) if request.field_origin_A is None else request.field_origin_A
-        nuclear_field_energy = _apply_electric_field(
-            mean_field,
-            pmol,
-            field_vector,
-            field_origin,
-        )
-        mean_field.kernel()
-        if not mean_field.converged or not np.isfinite(mean_field.e_tot):
-            raise RuntimeError("RHF did not converge to a finite energy")
+        try:
+            converged = converge(
+                build, field_au=request.field_au, field_origin_A=request.field_origin_A
+            )
+        except RuntimeError as exc:
+            raise RuntimeError("RHF did not converge to a finite energy") from exc
+        mean_field = converged.mean_field
+        nuclear_field_energy = converged.nuclear_field_energy_Eh
+        actual_threads = current_pyscf_threads()
 
         if not self.settings.density_fit:
             _configure_conventional_integrals(
@@ -291,10 +293,10 @@ class PySCFCCSDPerturbativeTriplesProvider:
                 "ccsd_implementation": _qualified_type_name(coupled_cluster),
                 "triples_implementation": _qualified_callable_name(coupled_cluster.ccsd_t),
                 "actual_integral_path": actual_integral_path,
-                "scf_cycles": _optional_int(getattr(mean_field, "cycles", None)),
+                "scf_cycles": converged.cycles,
                 "ccsd_cycles": _optional_int(getattr(coupled_cluster, "cycles", None)),
                 "runtime_seconds": time.perf_counter() - started,
-                "max_rss_mb": _max_rss_mb(),
+                "max_rss_mb": max_rss_mb(),
                 "threads_actual": actual_threads,
                 "max_memory_mb": self.max_memory_mb,
                 "warnings": [],
@@ -607,3 +609,7 @@ __all__ = [
     "FiniteFieldDipoleProvider",
     "PySCFCCSDPerturbativeTriplesProvider",
 ]
+
+
+def _optional_int(value: object) -> int | None:
+    return None if value is None else int(value)

@@ -14,9 +14,9 @@ import numpy as np
 
 from pyscf_vscf import harmonic as harmonic_helpers
 from pyscf_vscf.backends import pyscf as pyscf_backend
+from pyscf_vscf.backends._pyscf_properties import to_numpy
 from pyscf_vscf.constants import ANG_TO_BOHR, atomic_mass_amu
-from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.settings import ESSettings, coerce_es_settings
+from pyscf_vscf.settings import ESSettings
 
 
 _DEFAULT_ES = ESSettings()
@@ -51,10 +51,10 @@ def harmonic_analysis(
     """
 
     strict = bool(strict)
-    basis = str(_cfg_get(cfg, "basis", _DEFAULT_ES.basis))
     allow_fd_hessian = bool(allow_fd_hessian)
-    pmol = pyscf_backend.molecule_to_pyscf(molecule, basis=basis)
-    mf = pyscf_backend.make_mean_field(pmol, cfg)
+    converged = pyscf_backend.converged_mean_field(molecule, cfg)
+    mf = converged.mean_field
+    pmol = converged.build.molecule
 
     if debug:
         _print_stationarity_diagnostic(mf)
@@ -111,7 +111,7 @@ def analytic_hessian(mf: Any) -> np.ndarray | None:
     hessian_factory = getattr(mf, "Hessian", None)
     if callable(hessian_factory):
         try:
-            return hessian_factory().kernel()
+            return np.asarray(to_numpy(hessian_factory().kernel()), dtype=float)
         except Exception as exc:
             raise RuntimeError("Analytic Hessian computation failed") from exc
 
@@ -144,13 +144,13 @@ def nuclear_gradient(
 
     emit_warning = warn_fn or harmonic_helpers.warn_once
     try:
-        gradient = mf.nuc_grad_method().kernel()
+        gradient = to_numpy(mf.nuc_grad_method().kernel())
     except AttributeError:
         emit_warning(
             warn_key,
             "Falling back to mf.Gradients().kernel() (mf.nuc_grad_method unavailable)",
         )
-        gradient = mf.Gradients().kernel()
+        gradient = to_numpy(mf.Gradients().kernel())
     return np.asarray(gradient, dtype=float)
 
 
@@ -198,21 +198,7 @@ def format_stationarity_diagnostic(diagnostic: StationarityDiagnostic) -> str:
 def gradient_at(molecule: Any, cfg: Any, xflat_bohr: np.ndarray) -> np.ndarray:
     """Return the flattened nuclear gradient at displaced Bohr coordinates."""
 
-    coords_ang = np.asarray(xflat_bohr, dtype=float).reshape(-1, 3) * BOHR_TO_ANG
-    masses_fn = getattr(molecule, "analysis_masses", None)
-    masses = masses_fn() if callable(masses_fn) else getattr(molecule, "masses", None)
-    displaced = Molecule.from_arrays(
-        list(getattr(molecule, "symbols")),
-        coords_ang,
-        charge=int(getattr(molecule, "charge", 0)),
-        spin=int(getattr(molecule, "spin", 0)),
-        label=str(getattr(molecule, "label", "mol")),
-        masses_amu=masses,
-    )
-    fd_cfg = coerce_es_settings(cfg)
-    pmol = pyscf_backend.molecule_to_pyscf(displaced, basis=fd_cfg.basis)
-    mf = pyscf_backend.make_mean_field(pmol, fd_cfg)
-    return nuclear_gradient(mf).reshape(-1)
+    return pyscf_backend.energy_gradient_at_coords_bohr(molecule, cfg, xflat_bohr)[1]
 
 
 def finite_difference_hessian_from_gradients(

@@ -12,6 +12,7 @@ import pytest
 
 
 BACKEND_MODULE = "pyscf_vscf.backends.pyscf"
+PROPERTIES_MODULE = "pyscf_vscf.backends._pyscf_properties"
 
 
 def _repo_root() -> Path:
@@ -82,9 +83,8 @@ def _complete_continuity_diagnostics() -> dict[str, object]:
 
 
 def test_continuity_success_schema_rejects_malformed_fields() -> None:
-    backend = importlib.import_module(BACKEND_MODULE)
     valid = _complete_continuity_diagnostics()
-    frozen = backend._validated_continuity_diagnostics(
+    frozen = importlib.import_module(PROPERTIES_MODULE)._validated_continuity_diagnostics(
         valid,
         require_coefficients=True,
     )
@@ -100,7 +100,7 @@ def test_continuity_success_schema_rejects_malformed_fields() -> None:
     )
     for diagnostics in malformed:
         with pytest.raises(ValueError):
-            backend._validated_continuity_diagnostics(
+            importlib.import_module(PROPERTIES_MODULE)._validated_continuity_diagnostics(
                 diagnostics,
                 require_coefficients=True,
             )
@@ -182,7 +182,11 @@ def test_continuity_collection_modes_do_not_discard_valid_energy(
     def fail_diagnostics(*_args, **_kwargs):
         raise ValueError("simulated population-analysis failure")
 
-    monkeypatch.setattr(backend, "_mean_field_continuity_diagnostics", fail_diagnostics)
+    monkeypatch.setattr(
+        importlib.import_module(PROPERTIES_MODULE),
+        "_mean_field_continuity_diagnostics",
+        fail_diagnostics,
+    )
 
     disabled = backend.PySCFMeanFieldProvider(settings).evaluate(request)
     assert "continuity_descriptor_scope" not in disabled.scientific_diagnostics
@@ -213,7 +217,11 @@ def test_continuity_collection_modes_do_not_discard_valid_energy(
             "invalid_value": np.nan,
         }
 
-    monkeypatch.setattr(backend, "_mean_field_continuity_diagnostics", nonfinite_diagnostics)
+    monkeypatch.setattr(
+        importlib.import_module(PROPERTIES_MODULE),
+        "_mean_field_continuity_diagnostics",
+        nonfinite_diagnostics,
+    )
 
     best_effort_nonfinite = backend.PySCFMeanFieldProvider(
         settings,
@@ -232,7 +240,7 @@ def test_continuity_collection_modes_do_not_discard_valid_energy(
     )
 
     monkeypatch.setattr(
-        backend,
+        importlib.import_module(PROPERTIES_MODULE),
         "_mean_field_continuity_diagnostics",
         lambda *_args, **_kwargs: {"unexpected": "JSON-valid but incomplete"},
     )
@@ -275,7 +283,7 @@ def test_strict_continuity_rejects_unavailable_or_incomplete_descriptors(
         requested_properties=("energy",),
     )
     monkeypatch.setattr(
-        backend,
+        importlib.import_module(PROPERTIES_MODULE),
         "_mean_field_continuity_diagnostics",
         lambda *_args, **_kwargs: diagnostics,
     )
@@ -288,7 +296,7 @@ def test_strict_continuity_rejects_unavailable_or_incomplete_descriptors(
 
 
 def test_continuity_diagnostics_reject_open_shell_occupations() -> None:
-    backend = _import_backend_or_skip()
+    _import_backend_or_skip()
     mean_field = SimpleNamespace(
         mo_coeff=np.eye(2),
         mo_occ=np.array([2.0, 1.0]),
@@ -298,7 +306,7 @@ def test_continuity_diagnostics_reject_open_shell_occupations() -> None:
         mol=SimpleNamespace(aoslice_by_atom=lambda: np.array([[0, 0, 0, 2]])),
     )
 
-    diagnostics = backend._mean_field_continuity_diagnostics(
+    diagnostics = importlib.import_module(PROPERTIES_MODULE)._mean_field_continuity_diagnostics(
         mean_field,
         retain_occupied_mo_coefficients=True,
     )
@@ -357,7 +365,6 @@ def test_normal_relaxed_point_enforces_exact_constraint_without_importing_pyscf(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     backend = importlib.import_module(BACKEND_MODULE)
-    from pyscf_vscf import surfaces
     from pyscf_vscf.molecule import Molecule
 
     molecule = Molecule.from_arrays(["H"], [[0.0, 0.0, 0.0]])
@@ -377,7 +384,7 @@ def test_normal_relaxed_point_enforces_exact_constraint_without_importing_pyscf(
         return 123.0, np.array([1.0, 2.0, 3.0])
 
     monkeypatch.setattr(backend, "energy_gradient_at_coords_bohr", fake_energy_gradient)
-    monkeypatch.setattr(surfaces, "energy_dipole", fake_energy_dipole)
+    monkeypatch.setattr(backend, "legacy_energy_dipole", fake_energy_dipole)
 
     result = backend.normal_relaxed_point(
         molecule,
@@ -405,7 +412,6 @@ def test_normal_relaxed_point_uses_mass_metric_for_heteronuclear_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     backend = importlib.import_module(BACKEND_MODULE)
-    from pyscf_vscf import surfaces
     from pyscf_vscf.constants import ANG_TO_BOHR
     from pyscf_vscf.molecule import Molecule
 
@@ -428,7 +434,7 @@ def test_normal_relaxed_point_uses_mass_metric_for_heteronuclear_mode(
         return 0.0, np.zeros(3)
 
     monkeypatch.setattr(backend, "energy_gradient_at_coords_bohr", fake_energy_gradient)
-    monkeypatch.setattr(surfaces, "energy_dipole", fake_energy_dipole)
+    monkeypatch.setattr(backend, "legacy_energy_dipole", fake_energy_dipole)
 
     result = backend.normal_relaxed_point(
         molecule,
@@ -454,8 +460,10 @@ def test_normal_relaxed_point_uses_mass_metric_for_heteronuclear_mode(
     assert result.constraint_residual_A == pytest.approx(0.0, abs=1e-10)
 
 
-def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch) -> None:
-    backend = importlib.import_module(BACKEND_MODULE)
+def test_settings_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch) -> None:
+    factory_module = importlib.import_module("pyscf_vscf.backends._pyscf_factory")
+    from pyscf_vscf.settings import ESSettings
+
     calls: list[str] = []
 
     class FakeMF:
@@ -492,18 +500,13 @@ def test_make_mean_field_selects_unrestricted_method_for_open_shell(monkeypatch)
             return FakeSCF.UHF(pmol)
 
     monkeypatch.setattr(
-        backend,
-        "_require_pyscf",
+        factory_module,
+        "require_pyscf",
         lambda: (object(), FakeSCF, FakeDFT, object()),
     )
-    mean_field = backend.make_mean_field(
+    mean_field = factory_module.configure_settings_mean_field(
         SimpleNamespace(spin=1),
-        SimpleNamespace(
-            method="pbe",
-            use_density_fit=False,
-            scf_conv_tol=1e-9,
-            scf_max_cycle=37,
-        ),
+        ESSettings(method="pbe", use_density_fit=False, scf_conv_tol=1e-9, scf_max_cycle=37),
     )
 
     assert isinstance(mean_field, FakeMF)
@@ -538,7 +541,8 @@ def test_make_mean_field_pins_scf_controls_independent_of_pyscf_defaults(monkeyp
         label="water",
     )
     pmol = backend.molecule_to_pyscf(water, basis="sto-3g")
-    mean_field = backend.make_mean_field(
+    factory_module = importlib.import_module("pyscf_vscf.backends._pyscf_factory")
+    mean_field = factory_module.configure_settings_mean_field(
         pmol, ESSettings(method="lda,vwn", basis="sto-3g", use_density_fit=False)
     )
 
@@ -547,35 +551,32 @@ def test_make_mean_field_pins_scf_controls_independent_of_pyscf_defaults(monkeyp
     assert mean_field.grids.level == DEFAULT_DFT_GRID_LEVEL
 
 
-def test_make_mean_field_reports_nonconvergence_controls(monkeypatch) -> None:
-    backend = importlib.import_module(BACKEND_MODULE)
+def test_convergence_failure_reports_scf_controls() -> None:
+    properties = importlib.import_module(PROPERTIES_MODULE)
+    factory_module = importlib.import_module("pyscf_vscf.backends._pyscf_factory")
+    from pyscf_vscf._identity import immutable_json_mapping
 
     class FakeMF:
         converged = False
         cycles = 4
+        max_cycle = 4
+        conv_tol = 1e-10
+        e_tot = 0.0
 
         def kernel(self):
             return 0.0
 
-    class FakeSCF:
-        @staticmethod
-        def RHF(pmol):
-            del pmol
-            return FakeMF()
-
-    monkeypatch.setattr(
-        backend,
-        "_require_pyscf",
-        lambda: (object(), FakeSCF, object(), object()),
+    build = factory_module.MeanFieldBuild(
+        mean_field=FakeMF(),
+        molecule=SimpleNamespace(),
+        method_identity=immutable_json_mapping({"method": "hf"}),
+        configuration_snapshot=immutable_json_mapping({}),
     )
     with pytest.raises(
         RuntimeError,
         match=r"SCF did not converge \(method=hf, max_cycle=4, conv_tol=1e-10, cycles run=4\)",
     ):
-        backend.make_mean_field(
-            SimpleNamespace(spin=0),
-            SimpleNamespace(method="hf", use_density_fit=False, scf_max_cycle=4),
-        )
+        properties.converge(build)
 
 
 @pytest.mark.pyscf
@@ -658,7 +659,10 @@ def test_make_mean_field_constructs_tiny_hf_water() -> None:
     )
     pmol = molecule_to_pyscf(water, basis="sto-3g")
 
-    mf = make_mean_field(pmol, _hf_sto3g_settings(backend))
+    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
+
+    with pytest.warns(PyscfVscfDeprecationWarning, match="make_mean_field"):
+        mf = make_mean_field(pmol, _hf_sto3g_settings(backend))
 
     assert mf.mol is pmol
     assert mf.mol.natm == 3

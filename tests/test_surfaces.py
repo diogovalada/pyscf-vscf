@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -191,40 +192,23 @@ def test_energy_dipole_coerces_mapping_before_selecting_basis(
 
     captured: dict[str, object] = {}
 
-    class FakeMeanField:
-        e_tot = -1.0
-
-        @staticmethod
-        def make_rdm1() -> np.ndarray:
-            return np.eye(1)
-
-        @staticmethod
-        def dip_moment(**kwargs) -> np.ndarray:
-            del kwargs
-            return np.array([1.0, 0.0, 0.0])
-
-    def fake_molecule_to_pyscf(molecule: Molecule, basis: str) -> object:
+    def fake_converged_mean_field(molecule: Molecule, cfg: object) -> object:
         captured["molecule"] = molecule
-        captured["basis"] = basis
-        return object()
+        captured["factory"] = backend.method_factory(cfg)
+        return SimpleNamespace(total_energy_Eh=-1.0)
 
-    def fake_make_mean_field(pmol: object, cfg: object) -> FakeMeanField:
-        del pmol
-        captured["cfg"] = cfg
-        return FakeMeanField()
-
-    monkeypatch.setattr(backend, "molecule_to_pyscf", fake_molecule_to_pyscf)
-    monkeypatch.setattr(backend, "make_mean_field", fake_make_mean_field)
+    monkeypatch.setattr(backend, "converged_mean_field", fake_converged_mean_field)
+    monkeypatch.setattr(backend, "dipole_au", lambda converged: np.array([1.0, 0.0, 0.0]))
 
     energy, dipole = surfaces.energy_dipole(
         _water(),
         {"basis": "6-31g", "method": "hf", "scf_max_cycle": 37},
     )
 
-    assert captured["basis"] == "6-31g"
-    assert isinstance(captured["cfg"], ESSettings)
-    assert captured["cfg"].basis == "6-31g"
-    assert captured["cfg"].scf_max_cycle == 37
+    settings = captured["factory"].settings
+    assert isinstance(settings, ESSettings)
+    assert settings.basis == "6-31g"
+    assert settings.scf_max_cycle == 37
     assert energy == pytest.approx(-1.0)
     assert dipole[0] == pytest.approx(surfaces.AU_DIPOLE_TO_DEBYE)
 

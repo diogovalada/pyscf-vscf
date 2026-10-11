@@ -1,6 +1,6 @@
 # Installation
 
-For a consumer installation with Python 3.10 or newer, install from PyPI:
+For a consumer installation with Python 3.11 or newer, install from PyPI:
 
 ```bash
 pip install pyscf-vscf
