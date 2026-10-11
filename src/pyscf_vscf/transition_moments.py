@@ -239,7 +239,7 @@ class ConfigurationDipoleOperator:
 
     @property
     def matrices_au(self) -> np.ndarray:
-        """Total dipole matrices in the configuration basis, shape ``(3, n, n)`` (atomic units)."""
+        """Total dipole matrices in the configuration basis, shape ``(n, n, 3)`` (atomic units)."""
 
         total = np.array(self.reference_matrices_au, copy=True)
         for values in self.increment_matrices_au.values():

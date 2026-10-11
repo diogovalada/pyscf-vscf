@@ -185,37 +185,49 @@ def _run_geometric(
     kwargs: dict[str, Any] = dict(optimization_convergence_kwargs())
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
-    if not logging.getLogger("pyscf_vscf").isEnabledFor(logging.INFO):
-        kwargs["logIni"] = str(Path(__file__).with_name("geometric_quiet.ini"))
-    with _restored_root_logging():
+    with _geometric_logging():
         converged, optmol = solver.kernel(scanner, **kwargs)
     return bool(converged), optmol, "geomeTRIC"
 
 
 @contextmanager
-def _restored_root_logging() -> Iterator[None]:
-    """Undo geomeTRIC's reconfiguration of the root logger (handlers, level, disabling)."""
+def _geometric_logging() -> Iterator[None]:
+    """Run geomeTRIC without letting it reconfigure logging.
 
-    root = logging.getLogger()
-    handlers, level = list(root.handlers), root.level
-    loggers = [
-        logger
-        for logger in logging.Logger.manager.loggerDict.values()
-        if isinstance(logger, logging.Logger)
-    ]
-    disabled = {id(logger): logger.disabled for logger in loggers}
+    geomeTRIC calls ``logging.config.fileConfig``, which replaces the root
+    logger's handlers and closes every existing handler. That call is skipped;
+    geomeTRIC's progress log is shown (on standard error) only when the
+    ``pyscf_vscf`` logger shows INFO messages, and its warnings always.
+    """
+
+    import logging.config
+    import sys
+
+    original = logging.config.fileConfig
+    loggers = [logging.getLogger("geometric"), logging.getLogger("geometric.nifty")]
+    levels = [logger.level for logger in loggers]
+    handler: logging.Handler | None = None
+    logging.config.fileConfig = _skip_logging_configuration  # type: ignore[assignment]
+    if logging.getLogger("pyscf_vscf").isEnabledFor(logging.INFO):
+        handler = logging.StreamHandler(sys.stderr)
+        handler.terminator = ""  # geomeTRIC messages carry their own newlines
+        loggers[0].addHandler(handler)
+        loggers[0].setLevel(logging.INFO)
+    else:
+        for logger in loggers:
+            logger.setLevel(logging.WARNING)
     try:
         yield
     finally:
-        for handler in list(root.handlers):
-            if handler not in handlers:
-                root.removeHandler(handler)
-        for handler in handlers:
-            if handler not in root.handlers:
-                root.addHandler(handler)
-        root.setLevel(level)
-        for logger in loggers:
-            logger.disabled = disabled[id(logger)]
+        logging.config.fileConfig = original  # type: ignore[assignment]
+        if handler is not None:
+            loggers[0].removeHandler(handler)
+        for logger, level in zip(loggers, levels):
+            logger.setLevel(level)
+
+
+def _skip_logging_configuration(*args: Any, **kwargs: Any) -> None:
+    return None
 
 
 def _post_optimization_stationarity(

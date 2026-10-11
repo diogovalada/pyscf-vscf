@@ -11,8 +11,8 @@ from typing import Callable, Mapping, Protocol, Sequence, runtime_checkable
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from scipy.sparse.linalg import LinearOperator, eigsh
 
+from ._eigen import lowest_eigenpairs
 from ._validation import nonempty as _nonempty
 from ._arrays import immutable_array
 from ._phase import phase_canonical_columns
@@ -1181,7 +1181,9 @@ def validate_vci_result_against_hamiltonian(
         count=result.diagnostic_energies_Eh.size,
         dense_dimension_threshold=operator.index(result.vci_settings.dense_dimension_threshold),
         eigensolver_tolerance=float(result.vci_settings.eigensolver_tolerance),
+        degeneracy_tolerance=float(result.vci_settings.degeneracy_tolerance_Eh),
     )
+    lowest_energies = lowest_energies[: result.diagnostic_energies_Eh.size]
     spectral_tolerance = max(
         2e-11,
         20.0 * float(result.vci_settings.eigensolver_tolerance),
@@ -1263,6 +1265,7 @@ def solve_vci(
         count=solve_count,
         dense_dimension_threshold=operator.index(policy.dense_dimension_threshold),
         eigensolver_tolerance=float(policy.eigensolver_tolerance),
+        degeneracy_tolerance=float(policy.degeneracy_tolerance_Eh),
     )
     while _diagnostic_window_is_open(
         computed_energies,
@@ -1277,6 +1280,7 @@ def solve_vci(
             count=solve_count,
             dense_dimension_threshold=operator.index(policy.dense_dimension_threshold),
             eigensolver_tolerance=float(policy.eigensolver_tolerance),
+            degeneracy_tolerance=float(policy.degeneracy_tolerance_Eh),
         )
     computed_coefficients = _phase_canonical_configurations(
         computed_coefficients,
@@ -1288,7 +1292,7 @@ def solve_vci(
                 matvec(computed_coefficients[:, state])
                 - computed_energies[state] * computed_coefficients[:, state]
             )
-            for state in range(solve_count)
+            for state in range(computed_energies.size)
         ]
     )
     if np.any(residuals > float(policy.eigensolver_tolerance) * 10.0):
@@ -1332,8 +1336,9 @@ def _solve_projected_roots(
     count: int,
     dense_dimension_threshold: int,
     eigensolver_tolerance: float,
+    degeneracy_tolerance: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    if dimension <= dense_dimension_threshold or count == dimension:
+    if dimension <= dense_dimension_threshold or count >= dimension - 1:
         identity = np.eye(dimension)
         dense = np.column_stack([matvec(identity[:, column]) for column in range(dimension)])
         asymmetry = float(np.max(np.abs(dense - dense.T)))
@@ -1342,21 +1347,13 @@ def _solve_projected_roots(
         all_energies, all_coefficients = np.linalg.eigh(0.5 * (dense + dense.T))
         return all_energies[:count], all_coefficients[:, :count]
 
-    linear = LinearOperator(
-        (dimension, dimension),
-        matvec=matvec,
-        rmatvec=matvec,
-        dtype=float,
+    return lowest_eigenpairs(
+        matvec,
+        dimension=dimension,
+        count=count,
+        tolerance=eigensolver_tolerance,
+        degeneracy_tolerance=degeneracy_tolerance,
     )
-    energies, coefficients = eigsh(
-        linear,
-        k=count,
-        which="SA",
-        v0=_deterministic_initial(dimension),
-        tol=eigensolver_tolerance,
-    )
-    order = np.argsort(energies)
-    return energies[order], coefficients[:, order]
 
 
 def _diagnostic_window_is_open(
@@ -1438,19 +1435,21 @@ def _iterate_ground_vscf(
         old_modals = [modal.copy() for modal in modals]
         fields = mean_fields(old_modals)
         new_modals = []
+        # Convergence is judged on the undamped update (see solve_vscf_state).
+        density_change = 0.0
         for mode, matrix in enumerate(fields):
             _, eigenvectors = np.linalg.eigh(matrix)
             candidate = _phase_aligned(eigenvectors[:, 0], old_modals[mode])
+            density_change = max(
+                density_change,
+                float(np.max(np.abs(np.square(candidate) - np.square(old_modals[mode])))),
+            )
             mixed = _normalized(
                 (1.0 - float(policy.modal_mixing)) * old_modals[mode]
                 + float(policy.modal_mixing) * candidate
             )
             new_modals.append(mixed)
         energy = product_energy(new_modals)
-        density_change = max(
-            float(np.max(np.abs(np.square(new) - np.square(old))))
-            for new, old in zip(new_modals, old_modals)
-        )
         delta_energy = abs(float(energy - previous_energy))
         history.append(VSCFIteration(iteration, float(energy), delta_energy, density_change))
         modals = new_modals
@@ -1821,12 +1820,6 @@ def _assignment_identity(
             ],
         }
     )
-
-
-def _deterministic_initial(dimension: int) -> np.ndarray:
-    indices = np.arange(1, dimension + 1, dtype=float)
-    vector = np.sin(np.sqrt(2.0) * indices) + np.cos(np.sqrt(3.0) * indices)
-    return vector / np.linalg.norm(vector)
 
 
 def _readonly(values: np.ndarray) -> np.ndarray:

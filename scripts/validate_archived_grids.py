@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import hashlib
 import json
 from pathlib import Path
@@ -272,7 +273,7 @@ def _is_fundamental_signature(signature: tuple) -> bool:
     return bool(signature) and all(sum(quanta) == 1 for quanta, _sign in signature)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     repo_root = Path(__file__).resolve().parents[1]
     parser.add_argument("--data-root", type=Path, default=repo_root / "validation_data")
@@ -286,7 +287,16 @@ def main() -> None:
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
+    failed = [
+        name
+        for name, system in payload["systems"].items()
+        if not system["fundamental_convergence_acceptance"]["passed"]
+    ]
+    if failed:
+        print(f"Acceptance criteria failed for: {', '.join(failed)}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

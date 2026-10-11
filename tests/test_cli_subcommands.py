@@ -228,7 +228,7 @@ def test_reuse_takes_the_method_from_the_file(monkeypatch, tmp_path, capsys) -> 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["scan1d", geometry, "--bond", "0-1", "--reuse", str(output), "--method", "hf"])
     assert excinfo.value.code == 2
-    assert "takes the method from the scan file" in capsys.readouterr().err
+    assert "from the scan file" in capsys.readouterr().err
 
     report = tmp_path / "reuse.json"
     argv = ["scan1d", geometry, "--bond", "0-1", "--reuse", str(output), "--json", str(report)]
@@ -327,3 +327,53 @@ def test_legacy_reuse_serves_isotopologues(tmp_path, capsys) -> None:
     assert cli.main([argv[0], str(heavy), *argv[1:]]) == 0
     deuterated = capsys.readouterr().out
     assert deuterated != light
+
+
+def test_reuse_refuses_a_range_and_foreign_normal_scans(monkeypatch, tmp_path, capsys) -> None:
+    from pyscf_vscf.artifacts.scans import dump_scan
+    from pyscf_vscf.io import read_xyz
+    from pyscf_vscf.scans import plan_normal_scan, run_scan
+
+    _use_morse(monkeypatch, MorseProvider())
+    geometry = str(_water(tmp_path / "w.xyz"))
+    output = _write_v4_scan(tmp_path, geometry, capsys)
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            [
+                "scan1d",
+                geometry,
+                "--bond",
+                "0-1",
+                "--reuse",
+                str(output),
+                "--range",
+                "0.8",
+                "1.2",
+                "31",
+            ]
+        )
+    assert excinfo.value.code == 2
+    assert "--range" in capsys.readouterr().err
+
+    molecule = read_xyz(geometry)
+    direction = np.zeros((3, 3))
+    direction[1] = molecule.coords[1] - molecule.coords[0]
+    grid = np.linspace(-0.1, 0.1, 11)
+    for label, expected in (("s", 1), ("normal-mode-of-bond-0-1", 0)):
+        plan = plan_normal_scan(molecule, MorseProvider(), direction, grid, label=label)
+        path = tmp_path / f"normal-{expected}.npz"
+        dump_scan(path, run_scan(plan, MorseProvider()))
+        argv = [
+            "scan1d",
+            geometry,
+            "--bond",
+            "0-1",
+            "--coordinate",
+            "normal",
+            "--reuse",
+            str(path),
+        ]
+        assert cli.main(argv) == expected
+        if expected:
+            assert "was not selected for bond 0-1" in capsys.readouterr().err
+        capsys.readouterr()

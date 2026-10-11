@@ -169,3 +169,23 @@ def test_runner_memory_budget_reaches_the_calculation(monkeypatch) -> None:
     assert provider.execution_provenance()["max_memory_mb"] == 128
     explicit = PySCFMeanFieldProvider(ESSettings(method="hf", basis="sto-3g"), max_memory_mb=512)
     assert explicit.memory_budget_mb() == 512
+
+
+def ghf(mol):
+    return mol.GHF()
+
+
+def test_unsupported_representations_are_refused_for_dipoles() -> None:
+    pytest.importorskip("pyscf")
+    from pyscf_vscf.contracts import ElectronicPointRequest
+
+    recipe = MethodRecipe(
+        recipe_id="test.ghf",
+        recipe_version="1",
+        basis="sto-3g",
+        configuration={"reference": "GHF"},
+        mean_field=ghf,
+    )
+    request = ElectronicPointRequest(nuclear_charges=(1, 1), coordinates_A=_h2().coords)
+    with pytest.raises(ValueError, match="generalized, Dirac, and X2C"):
+        PySCFMeanFieldProvider(factory=recipe).evaluate(request)

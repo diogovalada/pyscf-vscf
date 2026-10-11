@@ -32,6 +32,8 @@ from ._cli_common import (
     _log_fn,
     _package_version,
     _print_error,
+    _limit_process_threads,
+    _print_frequencies,
     _print_records,
     _warn_boundary,
     _write_json,
@@ -471,9 +473,12 @@ def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
                 "--reuse reads a finished scan; it cannot be combined with --store/--output"
             )
         explicit = [flag for flag, name in _METHOD_OPTIONS if getattr(args, name) is not None]
+        if args.range is not None:
+            explicit.append("--range")
         if explicit:
             parser.error(
-                f"--reuse takes the method from the scan file; remove {', '.join(explicit)}"
+                "--reuse takes the method and grid from the scan file; "
+                f"remove {', '.join(explicit)}"
             )
         if not args.reuse.is_file():
             parser.error(f"scan file not found: {args.reuse}")
@@ -528,6 +533,8 @@ def _prepare_method(context: _Context) -> None:
     )
     context.parallel = parallel
     apply_thread_env_updates(parallel.threads_per_worker, os.environ)
+    if not (parallel.workers and parallel.workers > 1):
+        _limit_process_threads(parallel.threads_per_worker)
     if parallel.max_memory_mb is not None:
         os.environ[MAX_MEMORY_ENV_VAR] = str(parallel.max_memory_mb)
     provider_kwargs = {"threads": parallel.threads_per_worker or 1}
@@ -633,8 +640,7 @@ def _run_harmonic(context: _Context) -> dict[str, Any]:
         debug=args.verbose,
     )
     print(f"ZPE (harmonic): {result.zpe_cm:.2f} cm^-1")
-    print("Frequencies (cm^-1):")
-    print(" ".join(f"{float(freq):.1f}" for freq in result.freqs_cm if float(freq) > 1e-2))
+    _print_frequencies(result.freqs_cm)
     payload = _base_payload(context)
     payload["harmonic"] = {
         "zpe_cm": float(result.zpe_cm),
@@ -806,7 +812,9 @@ def _compute_scan(context: _Context) -> Any:
             molecule, context.factory, context.bonds[0], log_fn=context.log
         )
         grid = context.grids[0] if context.grids else _default_normal_grid()
-        plan = scans.plan_normal_scan(molecule, provider, direction.u_dir, grid)
+        plan = scans.plan_normal_scan(
+            molecule, provider, direction.u_dir, grid, label=_normal_axis_label(context.bonds[0])
+        )
         context.normal_direction = direction
     else:
         plan = scans.plan_bond_scan(molecule, provider, context.bonds, context.grids)
@@ -847,6 +855,12 @@ def _compute_scan(context: _Context) -> Any:
             store.close()
 
 
+def _normal_axis_label(bond: Any) -> str:
+    """Axis label recording the bond whose strongest normal mode defines the scan."""
+
+    return f"normal-mode-of-bond-{bond.i}-{bond.j}"
+
+
 def _default_normal_grid():
     import numpy as np
 
@@ -885,6 +899,11 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
             raise _CLIError(str(exc)) from exc
         if scan.scan_kind == "normal-1d":
             bond = context.bonds[0]
+            if scan.axes[0].label != _normal_axis_label(bond):
+                raise _CLIError(
+                    f"the scan file's normal coordinate (axis {scan.axes[0].label!r}) was not "
+                    f"selected for bond {bond.i}-{bond.j} by 'pyscf-vscf scan1d --coordinate normal'"
+                )
             axis = np.asarray(molecule.coords[bond.j]) - np.asarray(molecule.coords[bond.i])
             return scans.normal_coordinate_spectrum(
                 scan, molecule, max_state_index=args.states, intensity_axis=axis

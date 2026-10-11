@@ -165,6 +165,39 @@ class ScanResult:
         object.__setattr__(self, "point_keys", immutable_array(keys))
         for name in ("provider_payload", "reference_geometry", "sampling", "provenance"):
             object.__setattr__(self, name, immutable_json_mapping(getattr(self, name)))
+        self._check_definition()
+
+    def _check_definition(self) -> None:
+        """Require the axes, sampling, provider, and point keys to describe one scan."""
+
+        if (
+            payload_fingerprint(dict(self.provider_payload))
+            != self.provider_scientific_fingerprint
+        ):
+            raise ValueError("provider_payload does not match provider_scientific_fingerprint")
+        sampling = to_jsonable(self.sampling)
+        assert isinstance(sampling, dict)
+        if sampling.get("scan_kind") != self.scan_kind or sampling.get("axes") != to_jsonable(
+            [axis.payload() for axis in self.axes]
+        ):
+            raise ValueError("The scan's axes or kind differ from its sampling definition")
+        reference = self.reference_geometry
+        requests = _requests(
+            self.scan_kind,
+            np.asarray(reference["coordinates_A"], dtype=float),
+            self.axes,
+            sampling,
+            charges=tuple(int(value) for value in reference["nuclear_charges"]),
+            charge=int(reference["charge"]),
+            spin=int(reference["spin"]),
+        )
+        for index, request in requests.items():
+            if request.causal_fingerprint(self.provider_scientific_fingerprint) != str(
+                self.point_keys[index]
+            ):
+                raise ValueError(
+                    f"Point key {list(index)} does not match the geometry the scan defines"
+                )
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -252,20 +285,7 @@ def plan_bond_scan(
     )
     if np.any(axes[0].values <= 0.0) or (len(axes) == 2 and np.any(axes[1].values <= 0.0)):
         raise ValueError("Bond lengths must be positive")
-    geometries: dict[tuple[int, ...], np.ndarray]
-    if len(axes) == 1:
-        geometries = {
-            (index,): stretch_along_bond(coordinates, parsed[0], value)
-            for index, value in enumerate(axes[0].values)
-        }
-        kind = "bond-1d"
-    else:
-        geometries = {
-            (i, j): stretch_two_bonds(coordinates, parsed[0], parsed[1], r1, r2)
-            for i, r1 in enumerate(axes[0].values)
-            for j, r2 in enumerate(axes[1].values)
-        }
-        kind = "bond-2d"
+    kind = "bond-1d" if len(axes) == 1 else "bond-2d"
     sampling = {
         "schema": SCAN_PLAN_SCHEMA,
         "schema_version": SCAN_PLAN_SCHEMA_VERSION,
@@ -273,7 +293,7 @@ def plan_bond_scan(
         "geometry_construction": "frozen-bond-stretch",
         "axes": [axis.payload() for axis in axes],
     }
-    return _plan(molecule, provider, kind, axes, geometries, sampling)
+    return _plan(molecule, provider, kind, axes, sampling)
 
 
 def plan_normal_scan(
@@ -301,9 +321,6 @@ def plan_normal_scan(
     axis = ScanAxis(
         label=label, coordinate="normal-displacement", values=np.asarray(displacements_A)
     )
-    geometries: dict[tuple[int, ...], np.ndarray] = {
-        (index,): coordinates + float(value) * unit for index, value in enumerate(axis.values)
-    }
     sampling = {
         "schema": SCAN_PLAN_SCHEMA,
         "schema_version": SCAN_PLAN_SCHEMA_VERSION,
@@ -312,7 +329,7 @@ def plan_normal_scan(
         "direction": unit.tolist(),
         "axes": [axis.payload()],
     }
-    return _plan(molecule, provider, "normal-1d", (axis,), geometries, sampling)
+    return _plan(molecule, provider, "normal-1d", (axis,), sampling)
 
 
 def assemble_scan(
@@ -498,12 +515,59 @@ def _check_same_system(scan: ScanResult, molecule: Any) -> None:
         raise ValueError("The molecule's charge or spin differs from the scan's")
 
 
+def _requests(
+    kind: str,
+    coordinates: np.ndarray,
+    axes: Sequence[ScanAxis],
+    sampling: Mapping[str, Any],
+    *,
+    charges: tuple[int, ...],
+    charge: int,
+    spin: int,
+) -> dict[tuple[int, ...], ElectronicPointRequest]:
+    """Build the request of every grid point from the scan definition."""
+
+    geometries: dict[tuple[int, ...], np.ndarray]
+    if kind == "bond-1d":
+        bond = Bond(*_axis_bond(axes[0]))
+        geometries = {
+            (index,): stretch_along_bond(coordinates, bond, value)
+            for index, value in enumerate(axes[0].values)
+        }
+    elif kind == "bond-2d":
+        first, second = Bond(*_axis_bond(axes[0])), Bond(*_axis_bond(axes[1]))
+        geometries = {
+            (i, j): stretch_two_bonds(coordinates, first, second, r1, r2)
+            for i, r1 in enumerate(axes[0].values)
+            for j, r2 in enumerate(axes[1].values)
+        }
+    elif kind == "normal-1d":
+        unit = np.asarray(sampling["direction"], dtype=float)
+        geometries = {
+            (index,): coordinates + float(value) * unit
+            for index, value in enumerate(axes[0].values)
+        }
+    else:
+        raise ValueError(f"Unknown scan kind {kind!r}")
+    return {
+        index: ElectronicPointRequest(
+            nuclear_charges=charges, coordinates_A=geometry, charge=charge, spin=spin
+        )
+        for index, geometry in geometries.items()
+    }
+
+
+def _axis_bond(axis: ScanAxis) -> tuple[int, int]:
+    if axis.bond is None:
+        raise ValueError(f"Bond-scan axis {axis.label!r} does not name its bond")
+    return axis.bond
+
+
 def _plan(
     molecule: Any,
     provider: ElectronicProvider,
     kind: str,
     axes: tuple[ScanAxis, ...],
-    geometries: Mapping[tuple[int, ...], np.ndarray],
     sampling: Mapping[str, Any],
 ) -> ScanPlan:
     provider_id = provider_scientific_fingerprint(provider)
@@ -513,13 +577,16 @@ def _plan(
     shape = tuple(axis.values.size for axis in axes)
     keys = np.empty(shape, dtype="<U64")
     requests: dict[str, ElectronicPointRequest] = {}
-    for index, coordinates in geometries.items():
-        request = ElectronicPointRequest(
-            nuclear_charges=charges,
-            coordinates_A=coordinates,
-            charge=charge,
-            spin=spin,
-        )
+    point_requests = _requests(
+        kind,
+        np.asarray(molecule.coords, dtype=float),
+        axes,
+        sampling,
+        charges=charges,
+        charge=charge,
+        spin=spin,
+    )
+    for index, request in point_requests.items():
         key = request.causal_fingerprint(provider_id)
         requests.setdefault(key, request)
         keys[index] = key

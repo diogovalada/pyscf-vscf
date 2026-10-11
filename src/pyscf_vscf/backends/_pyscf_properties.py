@@ -78,6 +78,7 @@ def apply_electric_field(
         return 0.0
     molecule = build.molecule
     mean_field = build.mean_field
+    require_spatial_orbitals(mean_field, "finite electric fields")
     origin_bohr = origin * ANG_TO_BOHR
     with molecule.with_common_orig(origin_bohr):
         position_ao = molecule.intor_symmetric("int1e_r", comp=3)
@@ -129,6 +130,32 @@ def converge(
     )
 
 
+def require_spatial_orbitals(mean_field: Any, purpose: str) -> None:
+    """Reject mean fields whose one-electron operators the package cannot form.
+
+    Dipoles and finite fields are built from non-relativistic spatial-orbital
+    integrals: restricted or unrestricted HF/KS, with or without density
+    fitting or solvent. Generalized (GHF/GKS), Dirac, and X2C mean fields need
+    spin-blocked or picture-change-corrected operators and are refused.
+    """
+
+    name = type(mean_field).__name__
+    relativistic = getattr(mean_field, "with_x2c", None) is not None
+    generalized = any(
+        cls.__name__ in {"GHF", "GKS", "DHF", "DKS", "UHF4C", "RHF4C"}
+        or cls.__module__.startswith(
+            ("pyscf.scf.ghf", "pyscf.dft.gks", "pyscf.scf.dhf", "pyscf.x2c")
+        )
+        for cls in type(mean_field).__mro__
+    )
+    if relativistic or generalized:
+        raise ValueError(
+            f"{name}: {purpose} need a non-relativistic restricted or unrestricted mean "
+            "field (RHF/UHF/ROHF/RKS/UKS); generalized, Dirac, and X2C methods are not "
+            "supported"
+        )
+
+
 def density_matrix(converged: ConvergedMeanField) -> np.ndarray:
     """Return the total one-particle density matrix in the AO basis (NumPy)."""
 
@@ -146,7 +173,13 @@ def dipole_au(converged: ConvergedMeanField) -> np.ndarray:
     """
 
     molecule = converged.build.molecule
+    require_spatial_orbitals(converged.mean_field, "dipoles")
     density = density_matrix(converged)
+    if density.shape != (molecule.nao_nr(),) * 2:
+        raise ValueError(
+            f"{type(converged.mean_field).__name__}: the density is not in the spatial "
+            "atomic-orbital basis, so the package cannot compute its dipole"
+        )
     with molecule.with_common_orig((0.0, 0.0, 0.0)):
         position_ao = molecule.intor_symmetric("int1e_r", comp=3)
     electronic = np.einsum("xij,ji->x", position_ao, density, optimize=True).real

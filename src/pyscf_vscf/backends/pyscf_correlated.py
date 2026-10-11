@@ -22,6 +22,7 @@ from ..electronic import (
 )
 from ..settings import DEFAULT_PROVIDER_MAX_MEMORY_MB, ESSettings, runtime_max_memory_mb
 from ._pyscf_factory import (
+    ConfigurationGuard,
     ElectronicSystem,
     PySCFResources,
     SettingsFactory,
@@ -457,6 +458,15 @@ class FiniteFieldDipoleProvider:
             for result in results.values()
         ]
         origin = np.zeros(3) if request.field_origin_A is None else request.field_origin_A
+        # Every constituent must use the same method configuration (see MethodRecipe).
+        guard = ConfigurationGuard(self.factory)
+        for result in results.values():
+            snapshot = result.provenance.get("configuration_snapshot")
+            guard.check(None if snapshot is None else dict(snapshot))
+        provenance = dict(self.execution_provenance())
+        zero_snapshot = zero_result.provenance.get("configuration_snapshot")
+        if zero_snapshot is not None:
+            provenance["configuration_snapshot"] = to_jsonable(zero_snapshot)
         return ElectronicResult(
             total_energy_Eh=zero_result.total_energy_Eh,
             dipole_au=dipole,
@@ -492,8 +502,14 @@ class FiniteFieldDipoleProvider:
                 "max_rss_semantics": "maximum-constituent-process-peak-rss",
                 "warnings": [],
             },
-            provenance=self.execution_provenance(),
+            provenance=provenance,
         )
+
+    @property
+    def factory(self) -> Any:
+        """The energy provider's method factory, whose configuration policy applies."""
+
+        return getattr(self.energy_provider, "factory", None)
 
     def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult:
         """Run the finite-field batch serially and assemble its dipole."""

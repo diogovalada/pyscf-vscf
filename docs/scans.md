@@ -14,19 +14,27 @@ coordinate grid. In 0.3 it has three steps:
    input Cartesian frame).
 
 ```python
-import numpy as np
 from pyscf_vscf import (
     ESSettings, PointStore, PySCFMeanFieldProvider, RunnerSettings,
     bond_spectrum, plan_bond_scan, read_geometry, run_scan,
 )
 
-molecule = read_geometry("water-opt.xyz")
-provider = PySCFMeanFieldProvider(ESSettings(method="b3lyp", basis="cc-pvdz"))
-plan = plan_bond_scan(molecule, provider, ["0-1", "0-2"])      # default grids
-with PointStore("water.sqlite") as store:
-    scan = run_scan(plan, provider, store=store, settings=RunnerSettings(workers=8))
-records = bond_spectrum(scan, molecule, max_state_index=6)
+def main():
+    molecule = read_geometry("water-opt.xyz")
+    provider = PySCFMeanFieldProvider(ESSettings(method="b3lyp", basis="cc-pvdz"))
+    plan = plan_bond_scan(molecule, provider, ["0-1", "0-2"])      # default grids
+    with PointStore("water.sqlite") as store:
+        scan = run_scan(plan, provider, store=store, settings=RunnerSettings(workers=8))
+    return bond_spectrum(scan, molecule, max_state_index=6)
+
+
+if __name__ == "__main__":
+    records = main()
 ```
+
+Worker processes are started with `spawn`, which imports your script again in
+each worker; code that runs a plan with `workers` must therefore sit under
+`if __name__ == "__main__":` (as above) when it is in a script.
 
 ## The point store
 

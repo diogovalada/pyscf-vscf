@@ -98,7 +98,11 @@ changes. The package also records a snapshot of the configured mean field as
 provenance and refuses builds whose snapshot changes between geometries
 unless you declare those fields in `variable_snapshot_fields`. Recipes work
 everywhere the built-in settings do: scans, n-mode plans, `harmonic_analysis`,
-and `optimize_geometry` (which rebuilds the method at every step).
+and `optimize_geometry` (which rebuilds the method at every step). Dipoles
+and finite fields are computed with non-relativistic spatial-orbital
+integrals, so they need a restricted or unrestricted HF or KS mean field
+(with or without density fitting or solvent); generalized (GHF/GKS), Dirac,
+and X2C methods are refused for them.
 
 ### Other changes
 

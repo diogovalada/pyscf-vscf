@@ -155,6 +155,12 @@ def _model(
             "schema_version": 1,
             "provider_scientific_fingerprint": f"{level}-provider",
             "point_causal_fingerprints": [f"{level}-point-0", f"{level}-point-1"],
+            "electronic_system": {
+                "nuclear_charges": [8, 1, 1],
+                "charge": 0,
+                "spin": 0,
+                "electronic_state": "ground",
+            },
         },
         annotations={} if annotations is None else annotations,
         anchor_tolerance_Eh=anchor_tolerance_Eh,

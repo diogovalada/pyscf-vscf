@@ -479,6 +479,7 @@ class ConfigurationGuard:
     def __init__(self, factory: Any) -> None:
         self._variable_fields = tuple(getattr(factory, "variable_snapshot_fields", ()) or ())
         self._reference: dict[str, object] | None = None
+        self.reference_snapshot: Mapping[str, object] | None = None
 
     def check(self, snapshot: Mapping[str, object] | None) -> None:
         """Raise ``ValueError`` if ``snapshot`` differs from the reference."""
@@ -488,6 +489,7 @@ class ConfigurationGuard:
         invariant = invariant_snapshot(snapshot, self._variable_fields)
         if self._reference is None:
             self._reference = invariant
+            self.reference_snapshot = snapshot
             return
         if invariant != self._reference:
             reference = self._reference

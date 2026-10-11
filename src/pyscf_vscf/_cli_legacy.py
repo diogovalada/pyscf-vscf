@@ -29,6 +29,7 @@ from ._cli_common import (
     _log_fn,
     _package_version,
     _print_error,
+    _print_frequencies,
     _print_records,
     _print_worker_traceback,
     _warn_boundary,
@@ -772,8 +773,7 @@ def _run_harmonic(prepared: _Prepared) -> dict[str, Any]:
         debug=args.verbose,
     )
     print(f"ZPE (harmonic): {result.zpe_cm:.2f} cm^-1")
-    print("Frequencies (cm^-1):")
-    print(" ".join(f"{float(freq):.1f}" for freq in result.freqs_cm if float(freq) > 1e-2))
+    _print_frequencies(result.freqs_cm)
     payload = _base_payload(prepared)
     payload["harmonic"] = {
         "zpe_cm": float(result.zpe_cm),

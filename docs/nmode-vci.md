@@ -50,6 +50,9 @@ samples = assemble_nmode_samples(plan, run.results)
 surface = fit_nmode_surface(samples, method="cubic")
 ```
 
+In a script, run this under `if __name__ == "__main__":`: the workers are
+spawned processes that import the script again.
+
 `provider` is any `ElectronicProvider`; `PySCFMeanFieldProvider(settings)`
 uses the built-in method and `PySCFMeanFieldProvider(factory=recipe)` any
 PySCF method described by a `MethodRecipe` (see the

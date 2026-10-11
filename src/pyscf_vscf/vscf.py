@@ -464,6 +464,9 @@ def solve_vscf_state(
         old_modals = tuple(modal.copy() for modal in modals)
         new_modals: list[np.ndarray] = []
         new_eigenvalues: list[float] = []
+        # Convergence is judged on the undamped update: with modal_mixing < 1 the
+        # damped step is small even far from self-consistency.
+        undamped_change = 0.0
 
         for mode, root in enumerate(target):
             effective = one_mode_hamiltonians[mode] + np.diag(
@@ -475,6 +478,10 @@ def solve_vscf_state(
                 overlaps = np.abs(eigenvectors.T @ old_modals[mode])
                 chosen = int(np.argmax(overlaps))
             candidate = _phase_aligned(eigenvectors[:, chosen], old_modals[mode])
+            undamped_change = max(
+                undamped_change,
+                float(np.max(np.abs(np.square(candidate) - np.square(old_modals[mode])))),
+            )
             mixed = _normalized(
                 (1.0 - float(policy.modal_mixing)) * old_modals[mode]
                 + float(policy.modal_mixing) * candidate
@@ -483,10 +490,7 @@ def solve_vscf_state(
             new_eigenvalues.append(float(mixed @ effective @ mixed))
 
         energy = _product_energy(model, one_mode_hamiltonians, new_modals)
-        density_change = max(
-            float(np.max(np.abs(np.square(new) - np.square(old))))
-            for new, old in zip(new_modals, old_modals)
-        )
+        density_change = undamped_change
         delta_energy = abs(float(energy - previous_energy))
         history.append(
             VSCFIteration(

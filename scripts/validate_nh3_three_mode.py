@@ -12,6 +12,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from pyscf_vscf import Bond, HARTREE_TO_CM, __version__
+from pyscf_vscf.constants import atomic_number
 from pyscf_vscf.io import load_grid_npz, read_xyz
 from pyscf_vscf.validation import exact_nmode_dvr
 from pyscf_vscf.vscf import (
@@ -284,7 +285,27 @@ def _acceptance(variants: dict, accepted_variant_names: tuple[str, ...]) -> dict
     }
 
 
+def _verify_archive(data_root: Path) -> None:
+    """Check every archived input against the SHA-256 recorded in manifest.json."""
+
+    manifest_path = data_root / "manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError(f"{manifest_path} is missing; the archive cannot be verified")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    inputs = {
+        name: entry["sha256"]
+        for name, entry in manifest["files"].items()
+        if not name.startswith("report")
+    }
+    changed = [
+        name for name, digest in sorted(inputs.items()) if _sha256(data_root / name) != digest
+    ]
+    if changed:
+        raise ValueError(f"Archived NH3 inputs differ from manifest.json: {', '.join(changed)}")
+
+
 def analyze(data_root: Path, *, exact_states: int) -> dict:
+    _verify_archive(data_root)
     summary25, pair_data25, scientific25 = _load_pair_data(data_root, 25)
     summary31, pair_data31, scientific31 = _load_pair_data(data_root, 31)
     summary_wide, pair_data_wide, scientific_wide = _load_pair_data(data_root, 31, tag="wide")
@@ -301,6 +322,13 @@ def analyze(data_root: Path, *, exact_states: int) -> dict:
     ):
         raise ValueError("NH3 grid caches have incompatible molecular or electronic provenance")
     molecule = read_xyz(data_root / summary25["optimized_geometry"]["path"])
+    cached = scientific25["molecule"]
+    if [atomic_number(symbol) for symbol in molecule.symbols] != [
+        atomic_number(symbol) for symbol in cached["symbols"]
+    ] or not np.allclose(molecule.coords, np.asarray(cached["coordinates_A"]), atol=1e-10, rtol=0):
+        raise ValueError("The NH3 geometry does not match the molecule of the grid caches")
+    if any(symbol.upper() == "D" for symbol in molecule.symbols):
+        raise ValueError("The NH3 validation is defined for the 14N/1H isotopologue")
     variant_inputs = {
         "coarse_13x13_from_25": (pair_data25, np.arange(0, 25, 2)),
         "narrow_21x21_from_25": (pair_data25, np.arange(2, 23)),
@@ -406,13 +434,20 @@ def main() -> int:
     )
     parser.add_argument("--exact-states", type=int, default=30)
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--update-manifest",
+        action="store_true",
+        help="after regenerating the archive, record new hashes (requires the default output)",
+    )
     args = parser.parse_args()
     if args.exact_states < 20:
         parser.error("--exact-states must be at least 20 for the target manifolds")
     output = args.output or args.data_root / "report.json"
+    if args.update_manifest and output.resolve() != (args.data_root / "report.json").resolve():
+        parser.error("--update-manifest records the archive's own report.json; omit --output")
     report = analyze(args.data_root, exact_states=args.exact_states)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    if output.resolve().parent == args.data_root.resolve():
+    if args.update_manifest:
         _write_manifest(args.data_root, output)
     print(json.dumps(report["acceptance"], indent=2, sort_keys=True))
     return 0 if report["acceptance"]["passed"] else 1

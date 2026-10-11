@@ -144,6 +144,17 @@ def _print_worker_traceback(exc: BaseException) -> None:
         print(first.traceback, file=sys.stderr)
 
 
+def _print_frequencies(freqs_cm: Sequence[float]) -> None:
+    """Print harmonic frequencies; imaginary modes appear as negative numbers."""
+
+    shown = [float(freq) for freq in freqs_cm if abs(float(freq)) > 1e-2]
+    print("Frequencies (cm^-1):")
+    print(" ".join(f"{freq:.1f}" for freq in shown))
+    imaginary = sum(1 for freq in shown if freq < 0.0)
+    if imaginary:
+        print(f"{imaginary} imaginary mode(s), shown as negative numbers: not a minimum")
+
+
 def _configure_logging(verbose: bool) -> None:
     """Show the package's INFO log messages on standard output when verbose."""
 
@@ -166,6 +177,28 @@ def _log_fn(verbose: bool):
             print(f"[INFO] {message}", flush=True)
 
     return emit
+
+
+def _limit_process_threads(threads: int | None) -> None:
+    """Apply a thread count to pools this process has already loaded.
+
+    PySCF's OpenMP count is set directly. NumPy's BLAS pool is fixed when NumPy
+    is imported; it is limited only if ``threadpoolctl`` is installed.
+    """
+
+    if threads is None:
+        return
+    try:
+        from pyscf import lib
+    except Exception:
+        pass
+    else:
+        lib.num_threads(int(threads))
+    try:
+        from threadpoolctl import threadpool_limits
+    except ImportError:
+        return
+    threadpool_limits(int(threads))
 
 
 def _worker_init(threads_per_worker: int | None, max_memory_mb: int | None = None) -> None:

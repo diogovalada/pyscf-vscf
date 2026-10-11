@@ -469,10 +469,11 @@ def parse_bond(s: str) -> Bond:
     if "-" not in spec:
         raise ValueError(f"Bond specification must contain '-': {s!r}")
     left, right = spec.split("-", 1)
-    try:
-        return Bond(int(left), int(right))
-    except ValueError as exc:
-        raise ValueError(f"Invalid bond specification {s!r}; expected 0-1") from exc
+    if not (left.isdigit() and right.isdigit()):
+        raise ValueError(
+            f"Invalid bond specification {s!r}; expected two zero-based atom indices such as 0-1"
+        )
+    return Bond(int(left), int(right))
 
 
 def stretch_along_bond(coords: np.ndarray, bond: Bond, new_len_A: float) -> np.ndarray:

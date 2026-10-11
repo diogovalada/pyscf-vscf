@@ -37,6 +37,7 @@ from ..settings import (
 )
 from ._pyscf_factory import (
     BackendUnavailableError,
+    ConfigurationGuard,
     ElectronicSystem,
     MeanFieldFactory,
     MethodRecipe,
@@ -74,6 +75,7 @@ class NormalRelaxedPointResult:
     converged: bool
     n_iterations: int
     message: str
+    configuration_snapshot: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -306,10 +308,17 @@ def converged_mean_field(
     )
 
 
-def legacy_energy_dipole(molecule: Any, cfg: Any) -> tuple[float, np.ndarray]:
-    """Return the Hartree energy and Debye dipole of one point (0.2 evaluator contract)."""
+def legacy_energy_dipole(
+    molecule: Any, cfg: Any, *, guard: ConfigurationGuard | None = None
+) -> tuple[float, np.ndarray]:
+    """Return the Hartree energy and Debye dipole of one point (0.2 evaluator contract).
+
+    ``guard`` rejects a method configuration that differs from earlier builds.
+    """
 
     converged = converged_mean_field(molecule, cfg)
+    if guard is not None:
+        guard.check(converged.build.configuration_snapshot)
     return converged.total_energy_Eh, dipole_au(converged) * AU_DIPOLE_TO_DEBYE
 
 
@@ -407,11 +416,15 @@ def energy_gradient_at_coords_bohr(
     molecule: Any,
     cfg: Any,
     xflat_bohr: np.ndarray,
+    *,
+    guard: ConfigurationGuard | None = None,
 ) -> tuple[float, np.ndarray]:
     """Return single-point energy and flattened nuclear gradient at Bohr coordinates."""
 
     coords = _coords_from_flat_bohr(molecule, xflat_bohr)
     converged = converged_mean_field(_molecule_with_coords(molecule, coords), cfg)
+    if guard is not None:
+        guard.check(converged.build.configuration_snapshot)
     return converged.total_energy_Eh, nuclear_gradient(converged).reshape(-1)
 
 
@@ -467,10 +480,13 @@ def normal_relaxed_point(
     s_bohr = float(s) * ANG_TO_BOHR
     orthogonal_basis = linalg.null_space(constraint_covector.reshape(1, -1))
     constrained_origin = x0_bohr + s_bohr * u_flat
+    # Every build of this point (optimizer steps and the final evaluation) must
+    # share one method configuration; the scan compares the points' snapshots.
+    guard = ConfigurationGuard(cfg)
 
     def objective_and_gradient(y: np.ndarray) -> tuple[float, np.ndarray]:
         xflat_bohr = constrained_origin + orthogonal_basis @ y
-        energy, gradient = energy_gradient_at_coords_bohr(molecule, cfg, xflat_bohr)
+        energy, gradient = energy_gradient_at_coords_bohr(molecule, cfg, xflat_bohr, guard=guard)
         return energy, orthogonal_basis.T @ gradient
 
     result = optimize.minimize(
@@ -491,7 +507,8 @@ def normal_relaxed_point(
     achieved_bohr = float(np.dot(constraint_covector, final_x_bohr - x0_bohr))
     residual_A = (achieved_bohr - s_bohr) / ANG_TO_BOHR
     sub = _molecule_with_coords(molecule, final_coords)
-    energy, dipole = legacy_energy_dipole(sub, cfg)
+    energy, dipole = legacy_energy_dipole(sub, cfg, guard=guard)
+    snapshot = guard.reference_snapshot
     return NormalRelaxedPointResult(
         energy_hartree=float(energy),
         dipole_debye=np.asarray(dipole, dtype=float),
@@ -502,6 +519,7 @@ def normal_relaxed_point(
         converged=bool(result.success),
         n_iterations=int(result.nit),
         message=str(result.message),
+        configuration_snapshot=None if snapshot is None else to_jsonable(snapshot),
     )
 
 

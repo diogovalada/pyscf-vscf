@@ -47,8 +47,8 @@ class Molecule:
                 f"Expected one symbol per coordinate row, got {len(self.symbols)} symbols "
                 f"and {self.coords.shape[0]} coordinate rows"
             )
-        self.charge = int(self.charge)
-        self.spin = int(self.spin)
+        self.charge = _integer("charge", self.charge)
+        self.spin = _integer("spin", self.spin)
         self.label = str(self.label)
         if self.mass_overrides_amu is not None:
             masses = np.asarray(self.mass_overrides_amu, dtype=float)
@@ -87,10 +87,22 @@ class Molecule:
         return cls(
             symbols=list(symbols),
             coords=np.asarray(coords, dtype=float),
-            charge=int(charge),
-            spin=int(spin),
+            charge=_integer("charge", charge),
+            spin=_integer("spin", spin),
             label=str(label),
             mass_overrides_amu=(
                 None if masses_amu is None else np.asarray(masses_amu, dtype=float)
             ),
         )
+
+
+def _integer(name: str, value: object) -> int:
+    """Return ``value`` as an int, refusing fractional or non-numeric values."""
+
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if not number.is_integer():
+        raise ValueError(f"{name} must be an integer, got {value!r}")
+    return int(number)

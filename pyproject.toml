@@ -56,7 +56,7 @@ pyscf-vscf = "pyscf_vscf.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pyscf_vscf = ["py.typed", "workflows/geometric_quiet.ini"]
+pyscf_vscf = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"

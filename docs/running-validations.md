@@ -92,8 +92,11 @@ centroid-spread criterion. The first overtone does not and cannot be cited as
 converged from this archive. Reanalysis takes about 17 minutes on the recorded
 Ryzen 7 6800HS and requires neither PySCF nor an external program.
 
+The analysis first checks every archived input against the SHA-256 hashes in
+`validation_data/nh3_three_mode/manifest.json` and stops if any differ.
 Regeneration is opt-in. The exact commands and source-cache chain are stored
-in `validation_data/nh3_three_mode/manifest.json`. The complete archive
+in the manifest; after regenerating the archive, rerun the analysis with
+`--update-manifest` to record the new hashes. The complete archive
 represents 11,961 independently evaluated electronic points and about 2.9
 hours of measured surface-generation time with eight one-thread workers on
 that CPU.

@@ -23,6 +23,7 @@ import warnings
 import numpy as np
 
 from pyscf_vscf._warnings import deprecated
+from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
 from pyscf_vscf.cache import (
     dump_grid_npz,
     electronic_structure_provenance,
@@ -372,6 +373,7 @@ def normal_mode_direction_from_modes(
     if freqs_arr.ndim != 1 or freqs_arr.shape[0] != modes_arr.shape[1]:
         raise ValueError("freqs_cm must have one entry per mode column")
 
+    _validate_bond_indices(b, natm)
     axis_vec = coords[b.j] - coords[b.i]
     axis_norm = float(np.linalg.norm(axis_vec))
     if axis_norm < 1e-12:
@@ -635,7 +637,19 @@ def grid_1d_pes_dms_normal_relaxed(
         stop_on_error=stop_on_error,
         batch_size=batch_size,
     )
-    for idx, energy, dipole, actual, residual, ok, n_iter, message in run.values.values():
+    snapshots: dict[int, Any] = {}
+    for (
+        idx,
+        energy,
+        dipole,
+        actual,
+        residual,
+        ok,
+        n_iter,
+        message,
+        snapshot,
+    ) in run.values.values():
+        snapshots[idx] = snapshot
         energies[idx] = energy
         dipoles[idx] = dipole
         completed[idx] = True
@@ -654,10 +668,15 @@ def grid_1d_pes_dms_normal_relaxed(
         dipoles=dipoles,
         point_of=lambda position: ((position,), (float(S[position]),)),
     )
-    if np.max(np.abs(residuals)) > 1e-10:
+    guard = ConfigurationGuard(cfg)
+    for idx in sorted(snapshots):
+        guard.check(None if snapshots[idx] is None else dict(snapshots[idx]))
+    if not (np.all(np.isfinite(residuals)) and np.all(np.isfinite(achieved))):
+        raise RuntimeError("normal-relaxed constraint diagnostics must be finite")
+    if np.max(np.abs(residuals)) > 1e-10 or np.max(np.abs(achieved - S)) > 1e-10:
         raise RuntimeError(
             "normal-relaxed constraint residual exceeded 1e-10 A: "
-            f"max={np.max(np.abs(residuals)):.3e} A"
+            f"max={max(np.max(np.abs(residuals)), np.max(np.abs(achieved - S))):.3e} A"
         )
     energies -= float(np.min(energies))
     result = NormalRelaxedGrid(
@@ -1081,6 +1100,7 @@ def _grid_1d_normal_relaxed_worker(task: tuple[Any, ...]) -> tuple[Any, ...]:
         bool(result.converged),
         int(result.n_iterations),
         str(result.message),
+        getattr(result, "configuration_snapshot", None),
     )
 
 

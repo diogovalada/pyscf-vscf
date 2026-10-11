@@ -372,13 +372,13 @@ def test_normal_relaxed_point_enforces_exact_constraint_without_importing_pyscf(
     seen: dict[str, np.ndarray] = {}
     orthogonal_minimum_bohr = np.array([0.0, 2.0, -1.0])
 
-    def fake_energy_gradient(molecule_arg, cfg_arg, xflat_bohr):
+    def fake_energy_gradient(molecule_arg, cfg_arg, xflat_bohr, **kwargs):
         del molecule_arg, cfg_arg
         xflat = np.asarray(xflat_bohr, dtype=float)
         delta = xflat - orthogonal_minimum_bohr
         return 0.5 * float(np.dot(delta, delta)), delta
 
-    def fake_energy_dipole(molecule_arg, cfg_arg):
+    def fake_energy_dipole(molecule_arg, cfg_arg, **kwargs):
         del cfg_arg
         seen["coords"] = np.asarray(molecule_arg.coords, dtype=float).copy()
         return 123.0, np.array([1.0, 2.0, 3.0])
@@ -423,12 +423,12 @@ def test_normal_relaxed_point_uses_mass_metric_for_heteronuclear_mode(
     direction = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
     seen: dict[str, np.ndarray] = {}
 
-    def fake_energy_gradient(molecule_arg, cfg_arg, xflat_bohr):
+    def fake_energy_gradient(molecule_arg, cfg_arg, xflat_bohr, **kwargs):
         del molecule_arg, cfg_arg
         xflat = np.asarray(xflat_bohr, dtype=float)
         return 0.5 * float(np.dot(xflat, xflat)), xflat
 
-    def fake_energy_dipole(molecule_arg, cfg_arg):
+    def fake_energy_dipole(molecule_arg, cfg_arg, **kwargs):
         del cfg_arg
         seen["coords"] = np.asarray(molecule_arg.coords, dtype=float).copy()
         return 0.0, np.zeros(3)

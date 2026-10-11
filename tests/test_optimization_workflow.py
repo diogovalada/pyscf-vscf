@@ -123,9 +123,7 @@ def test_optimize_geometry_runs_geometric_and_writes_only_when_asked(
     result = workflow.optimize_geometry(molecule, cfg, max_steps=7)
 
     assert captured["scanner"] is scanner
-    kwargs = dict(captured["kwargs"])
-    assert Path(kwargs.pop("logIni")).name == "geometric_quiet.ini"
-    assert kwargs == {
+    assert captured["kwargs"] == {
         "convergence_gmax": 4.5e-5,
         "convergence_grms": 3.0e-5,
         "maxsteps": 7,
@@ -218,22 +216,32 @@ def test_run_opt_is_deprecated_and_keeps_writing_its_default_file(
     assert "Optimized geometry written to: h2.pyscf_opt.mmol" in out
 
 
-def test_geometric_logging_is_quiet_and_root_logging_is_restored(monkeypatch) -> None:
+def test_geometric_cannot_reconfigure_or_close_logging(monkeypatch, tmp_path) -> None:
     import logging
     import logging.config
 
-    pytest.importorskip("geometric")
     root = logging.getLogger()
+    log_file = tmp_path / "caller.log"
+    handler = logging.FileHandler(log_file)
+    root.addHandler(handler)
     before = (list(root.handlers), root.level)
+    seen = {}
 
     class GeometricSolver:
         @staticmethod
         def kernel(method: object, **kwargs: object):
-            logging.config.fileConfig(str(kwargs["logIni"]), disable_existing_loggers=False)
-            assert root.level == logging.WARNING
+            logging.config.fileConfig("does-not-exist.ini", disable_existing_loggers=False)
+            seen["quiet"] = not logging.getLogger("geometric.nifty").isEnabledFor(logging.INFO)
             return True, _FakePySCFMol(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.7]]))
 
     monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
-    workflow._run_geometric(object(), 5)
-
-    assert (list(root.handlers), root.level) == before
+    try:
+        workflow._run_geometric(object(), 5)
+        assert seen["quiet"]
+        assert (list(root.handlers), root.level) == before
+        root.warning("still logging")
+        handler.flush()
+        assert "still logging" in log_file.read_text()
+    finally:
+        root.removeHandler(handler)
+        handler.close()

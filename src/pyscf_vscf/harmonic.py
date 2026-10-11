@@ -183,8 +183,8 @@ def mass_weight(H_au: np.ndarray, masses_amu: np.ndarray) -> np.ndarray:
     if H_au.shape != (3 * masses_amu.size, 3 * masses_amu.size):
         raise ValueError("Hessian shape is inconsistent with masses_amu")
     M = np.repeat(masses_amu, 3) * AMU
-    if np.any(M <= 0.0):
-        raise ValueError("masses_amu must be positive")
+    if not np.all(np.isfinite(M)) or np.any(M <= 0.0):
+        raise ValueError("masses_amu must be finite and positive")
     return H_au / np.sqrt(np.outer(M, M))
 
 
@@ -209,8 +209,8 @@ def mw_rt_projector_explicit(
         raise ValueError("W shape mismatch for explicit RT projector")
 
     mass_au = masses_amu * AMU
-    if np.any(mass_au <= 0.0):
-        raise ValueError("masses_amu must be positive")
+    if not np.all(np.isfinite(mass_au)) or np.any(mass_au <= 0.0):
+        raise ValueError("masses_amu must be finite and positive")
     sqrt_mass = np.sqrt(np.repeat(mass_au, 3))
 
     msum = float(np.sum(masses_amu))

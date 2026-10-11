@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 import operator
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from types import MappingProxyType
@@ -406,6 +407,20 @@ def _validate_model_compatibility(low: NModeSurfaceModel, high: NModeSurfaceMode
         raise ValueError("Low- and high-level models require one exact reference coordinate")
     if low.coordinate_map_fingerprint != high.coordinate_map_fingerprint:
         raise ValueError("Low- and high-level models use different coordinate map/frame")
+    low_system = low.source_lineage.get("electronic_system")
+    high_system = high.source_lineage.get("electronic_system")
+    if low_system is None or high_system is None:
+        warnings.warn(
+            "A model's source lineage predates electronic-system records; composition "
+            "cannot verify that both levels describe the same nuclei, charge, spin, and state",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+    elif to_jsonable(low_system) != to_jsonable(high_system):
+        raise ValueError(
+            "Low- and high-level models describe different electronic systems "
+            "(nuclear charges, charge, spin, or electronic state)"
+        )
 
 
 def _require_exact_model_anchors(

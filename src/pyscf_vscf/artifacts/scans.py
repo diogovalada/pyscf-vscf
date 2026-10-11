@@ -159,21 +159,42 @@ def load_legacy_grid(path: Path | str) -> LegacyRelativeScan:
     elif version != CACHE_SCHEMA_VERSION:
         raise ValueError(f"{path} is not a legacy grid cache (schema {version!r})")
     _validate_schema3_metadata_integrity(meta, "Grid cache")
-    kind = meta["identity"]["scan"].get("kind")
+    from ..workflows.scans import _validate_grid_arrays_1d, _validate_grid_arrays_2d
+
+    scan = meta["identity"]["scan"]
+    kind = scan.get("kind")
+    energies = np.asarray(arrays["E_Eh"], dtype=float)
+    dipoles = np.asarray(arrays["MU_Debye"], dtype=float)
     axes: tuple[np.ndarray, ...]
+    # The arrays must be the grid that the verified identity declares.
     if kind == "1d":
         axes = (np.asarray(arrays["R_A"], dtype=float),)
+        _validate_grid_arrays_1d(axes[0], energies, dipoles, _declared_grid(scan, "grid_A"))
     elif kind == "2d":
         axes = (np.asarray(arrays["R1_A"], dtype=float), np.asarray(arrays["R2_A"], dtype=float))
+        _validate_grid_arrays_2d(
+            axes[0],
+            axes[1],
+            energies,
+            dipoles,
+            _declared_grid(scan, "grid1_A"),
+            _declared_grid(scan, "grid2_A"),
+        )
     else:
         raise ValueError(f"{path}: unknown legacy scan kind {kind!r}")
     return LegacyRelativeScan(
         scan_kind=f"legacy-{kind}",
         axes=axes,
-        relative_energies_Eh=np.asarray(arrays["E_Eh"], dtype=float),
-        dipoles_debye=np.asarray(arrays["MU_Debye"], dtype=float),
+        relative_energies_Eh=energies,
+        dipoles_debye=dipoles,
         metadata=immutable_json_mapping(meta),
     )
+
+
+def _declared_grid(scan: Mapping[str, Any], key: str) -> np.ndarray:
+    if key not in scan:
+        raise ValueError(f"Legacy grid cache identity lacks {key}")
+    return np.asarray(scan[key], dtype=float)
 
 
 def _axis_meta(axis: ScanAxis) -> dict[str, Any]:

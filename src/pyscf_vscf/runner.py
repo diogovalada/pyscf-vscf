@@ -383,7 +383,11 @@ def _run_parallel(
             }
         finish(key, attempt_id, outcome)
 
+    # Spawned workers import NumPy (and its BLAS pool) before their initializer
+    # runs, so the thread settings must already be in the environment they inherit.
+    environment = _ThreadEnvironment(policy.threads_per_worker)
     try:
+        environment.apply()
         executor = ProcessPoolExecutor(
             max_workers=workers,
             mp_context=mp.get_context(policy.start_method),
@@ -391,6 +395,7 @@ def _run_parallel(
             initargs=(policy.threads_per_worker, policy.max_memory_mb),
         )
     except Exception as exc:
+        environment.restore()
         return f"{_type_name(exc)}: {exc}"
     try:
         while queue or in_flight:
@@ -421,10 +426,33 @@ def _run_parallel(
         for future in list(in_flight):
             future.cancel()
         executor.shutdown(wait=True, cancel_futures=True)
+        environment.restore()
         # Account for every point still in flight: finished during shutdown, or cancelled.
         for future in list(in_flight):
             collect(future)
     return executor_error
+
+
+class _ThreadEnvironment:
+    """Temporarily set the thread variables that spawned workers inherit."""
+
+    def __init__(self, threads: int | None) -> None:
+        from .settings import thread_env_updates
+
+        self._updates = thread_env_updates(threads)
+        self._saved: dict[str, str | None] = {}
+
+    def apply(self) -> None:
+        self._saved = {name: os.environ.get(name) for name in self._updates}
+        os.environ.update(self._updates)
+
+    def restore(self) -> None:
+        for name, value in self._saved.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        self._saved = {}
 
 
 def _evaluate_point(

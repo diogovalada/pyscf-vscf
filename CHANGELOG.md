@@ -38,7 +38,8 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   `load_legacy_grid` for 0.1/0.2 caches.
 - Subcommand command line: `pyscf-vscf harmonic|opt|scan1d|scan2d|inspect`
   with `--store`, `--output`, `--reuse`, `--recipe`, and `--workers`. `--reuse`
-  takes the method from the scan file (method options are refused) and checks
+  takes the method and grid from the scan file (method options and `--range`
+  are refused) and checks
   the geometry, charge, spin, bonds, and coordinate kind.
 - VSCF intensities: `NModeDipole` and `vscf_spectrum(dipole=...)` attach a
   `VSCFTransitionMoment` (with state overlap and an `approximate` flag) to each
@@ -65,9 +66,10 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   the runner's per-worker budget, else 4000 MB.
 - The correlated CCSD(T) provider builds its RHF reference through the seam
   (still conventional, without density fitting).
-- `optimize_geometry` and `pyscf-vscf opt` show geomeTRIC's log only when
-  the `pyscf_vscf` logger shows INFO messages (`-v`), and restore the root
-  logger that geomeTRIC reconfigures.
+- `optimize_geometry` and `pyscf-vscf opt` no longer let geomeTRIC reconfigure
+  logging (it replaced and closed the root logger's handlers); geomeTRIC's
+  progress log is shown only when the `pyscf_vscf` logger shows INFO messages
+  (`-v`).
 - Library diagnostics use the `pyscf_vscf` logger and `RuntimeWarning`
   instead of printing; the command lines show them with `-v`.
 - Final VSCF modals follow the package's deterministic sign convention.

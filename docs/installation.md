@@ -48,7 +48,12 @@ flag-style CLI), and `--max-memory` (MB per process). Harmonic analysis and opti
 process with `--max-parallel` threads. From Python, the environment variable
 `PYSCF_VSCF_MAX_MEMORY_MB` sets the same per-process budget for every PySCF
 molecule the package builds. Avoid combining uncontrolled process and BLAS
-parallelism.
+parallelism. Worker processes start with the thread settings applied. In the
+main process (harmonic analysis, optimization, serial scans) the command
+line sets PySCF's own thread count; NumPy's BLAS thread pool is fixed when
+NumPy loads, so it follows `--max-parallel` only if `threadpoolctl` is
+installed. Otherwise set `OMP_NUM_THREADS` and `OPENBLAS_NUM_THREADS`
+before starting `pyscf-vscf` to cap it.
 
 XYZ and MMOL geometry files do not reliably preserve electronic charge or
 spin. Pass `--charge` and `--spin` explicitly when reusing non-neutral or

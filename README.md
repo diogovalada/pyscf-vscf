@@ -84,13 +84,18 @@ from pyscf_vscf import (
     bond_spectrum, plan_bond_scan, read_geometry, run_scan,
 )
 
-water = read_geometry("water-opt.xyz")
-provider = PySCFMeanFieldProvider(ESSettings(method="b3lyp", basis="cc-pvdz"))
-plan = plan_bond_scan(water, provider, ["0-1"])          # default grid
-with PointStore("water.sqlite") as store:
-    scan = run_scan(plan, provider, store=store, settings=RunnerSettings(workers=4))
-for record in bond_spectrum(scan, water, max_state_index=3):
-    print(record.quanta, round(record.frequency_cm, 1))
+def main():
+    water = read_geometry("water-opt.xyz")
+    provider = PySCFMeanFieldProvider(ESSettings(method="b3lyp", basis="cc-pvdz"))
+    plan = plan_bond_scan(water, provider, ["0-1"])          # default grid
+    with PointStore("water.sqlite") as store:
+        scan = run_scan(plan, provider, store=store, settings=RunnerSettings(workers=4))
+    for record in bond_spectrum(scan, water, max_state_index=3):
+        print(record.quanta, round(record.frequency_cm, 1))
+
+
+if __name__ == "__main__":    # workers are spawned processes that import this file
+    main()
 ```
 
 Any PySCF method can be used through a `MethodRecipe`: a module-level

@@ -64,8 +64,7 @@ def exact_nmode_dvr(model: NModePotential, *, nstates: int = 12) -> ExactProduct
     It is not intended as a production high-dimensional vibrational solver.
     """
 
-    from scipy.sparse.linalg import LinearOperator, eigsh
-
+    from ._eigen import lowest_eigenpairs
     from .dvr import sinc_kinetic_1d
 
     shape = tuple(q.size for q in model.coordinates)
@@ -98,25 +97,17 @@ def exact_nmode_dvr(model: NModePotential, *, nstates: int = 12) -> ExactProduct
             result = result + np.moveaxis(acted, 0, mode)
         return np.asarray(result).reshape(-1)
 
-    operator = LinearOperator(
-        (dimension, dimension),
-        matvec=matvec,
-        rmatvec=matvec,
-        dtype=float,
-    )
-    indices = np.arange(1, dimension + 1, dtype=float)
-    initial = np.sin(np.sqrt(2.0) * indices) + np.cos(np.sqrt(3.0) * indices)
-    initial /= np.linalg.norm(initial)
-    eigenvalues, eigenvectors = eigsh(
-        operator,
-        k=count,
-        which="SA",
-        v0=initial,
-        tol=1e-11,
-    )
-    order = np.argsort(eigenvalues)
-    evals = np.asarray(eigenvalues[order], dtype=float)
-    evecs = np.asarray(eigenvectors[:, order], dtype=float)
+    if count >= dimension - 1:
+        dense = np.column_stack([matvec(column) for column in np.eye(dimension)])
+        all_values, all_vectors = np.linalg.eigh(0.5 * (dense + dense.T))
+        eigenvalues, eigenvectors = all_values[:count], all_vectors[:, :count]
+    else:
+        # Deflated solves recover every copy of a degenerate level.
+        eigenvalues, eigenvectors = lowest_eigenpairs(
+            matvec, dimension=dimension, count=count, tolerance=1e-11, degeneracy_tolerance=1e-10
+        )
+    evals = np.asarray(eigenvalues[:count], dtype=float).copy()
+    evecs = np.asarray(eigenvectors[:, :count], dtype=float).copy()
     evals.setflags(write=False)
     evecs.setflags(write=False)
     return ExactProductDVR(shape=shape, evals=evals, evecs=evecs)
@@ -216,7 +207,7 @@ def _record_mapping(record: Mapping | object) -> Mapping:
 
 
 def _state_label(record: Mapping) -> StateLabel:
-    if "assignment_signature" in record:
+    if record.get("assignment_signature") is not None:
         values = tuple(
             (tuple(int(value) for value in quanta), int(sign))
             for quanta, sign in record["assignment_signature"]
@@ -233,7 +224,7 @@ def _state_label(record: Mapping) -> StateLabel:
         values = (int(record["v"]),)
     else:
         raise ValueError("Each record must contain an explicit 'assignment' or 'v' label")
-    if "assignment_signature" not in record and any(value < 0 for value in values):
+    if record.get("assignment_signature") is None and any(value < 0 for value in values):
         raise ValueError(f"Invalid negative state assignment {values}")
     return values
 

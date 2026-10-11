@@ -600,6 +600,7 @@ def assemble_nmode_samples(
         )
         for subset in plan.subsets
     }
+    reference_request = plan.requests[plan.reference_point_fingerprint]
     source_lineage = {
         "schema": "pyscf-vscf-electronic-source-lineage",
         "schema_version": 1,
@@ -611,6 +612,13 @@ def assemble_nmode_samples(
         "sampling_lineage_fingerprints": sorted(
             lineage.content_fingerprint() for lineage in plan.sampling_lineage.values()
         ),
+        # Isotope masses are deliberately absent: they do not change the surface.
+        "electronic_system": {
+            "nuclear_charges": list(reference_request.nuclear_charges),
+            "charge": reference_request.charge,
+            "spin": reference_request.spin,
+            "electronic_state": reference_request.electronic_state,
+        },
     }
     return NModeSampleSet(
         coordinate_map=plan.coordinate_map,
@@ -752,6 +760,9 @@ class TensorProductSurface:
         component_count = 1 if values.ndim == len(axes) else values.shape[-1]
         if len(self.diagnostics.training_max_abs_error) != component_count:
             raise ValueError("Fit diagnostics do not match surface output components")
+        # Interpolate the same immutable copies that the fingerprints describe.
+        axes = tuple(immutable_array(axis) for axis in axes)
+        values = immutable_array(values)
         backend_method = "cubic_legacy" if method == "cubic" else method
         interpolator = RegularGridInterpolator(
             axes,
@@ -768,8 +779,8 @@ class TensorProductSurface:
         )
         if actual_training_max != self.diagnostics.training_max_abs_error:
             raise ValueError("Training diagnostics do not match the interpolation representation")
-        object.__setattr__(self, "axes", tuple(immutable_array(axis) for axis in axes))
-        object.__setattr__(self, "node_values", immutable_array(values))
+        object.__setattr__(self, "axes", axes)
+        object.__setattr__(self, "node_values", values)
         object.__setattr__(self, "method", method)
         object.__setattr__(self, "_interpolator", interpolator)
 
@@ -1101,6 +1112,14 @@ def fit_nmode_surface(
                 .evaluate(lower_points)
                 .reshape(dipole_increment.shape)
             )
+        # On an anchor slice the increment vanishes exactly (those geometries are
+        # the lower cuts' own points); remove interpolation roundoff there.
+        for position, mode in enumerate(subset):
+            anchor = int(np.flatnonzero(np.asarray(cut.axes[position]) == reference[mode])[0])
+            selector: list[int | slice] = [slice(None)] * len(subset)
+            selector[position] = anchor
+            energy_increment[tuple(selector)] = 0.0
+            dipole_increment[tuple(selector)] = 0.0
         held_energy_increment = None
         held_dipole_increment = None
         held_points = held_out_samples.get(subset)
@@ -1506,6 +1525,7 @@ def _validated_source_lineage(values: Mapping[str, Any]):
     optional = {
         "result_scientific_fingerprints",
         "sampling_lineage_fingerprints",
+        "electronic_system",
     }
     if set(source) - required - optional or not required.issubset(source):
         raise ValueError("Source lineage contains missing or unsupported fields")
@@ -1542,6 +1562,16 @@ def _validated_source_lineage(values: Mapping[str, Any]):
         if any(not value for value in sampling) or len(set(sampling)) != len(sampling):
             raise ValueError("Sampling-lineage fingerprints must be non-empty and unique")
         normalized["sampling_lineage_fingerprints"] = list(sampling)
+    if "electronic_system" in source:
+        system = dict(source["electronic_system"])
+        if set(system) != {"nuclear_charges", "charge", "spin", "electronic_state"}:
+            raise ValueError("Source-lineage electronic system has missing or unsupported fields")
+        normalized["electronic_system"] = {
+            "nuclear_charges": [operator.index(value) for value in system["nuclear_charges"]],
+            "charge": operator.index(system["charge"]),
+            "spin": operator.index(system["spin"]),
+            "electronic_state": _nonempty("electronic_state", system["electronic_state"]),
+        }
     return immutable_json_mapping(normalized)
 
 

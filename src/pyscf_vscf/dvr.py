@@ -8,8 +8,10 @@ from typing import Callable
 
 import numpy as np
 from scipy import sparse
-from scipy.sparse.linalg import eigsh
 
+
+from ._eigen import lowest_eigenpairs
+from ._phase import phase_canonical_columns
 from .constants import AMU, ANG_TO_BOHR
 
 
@@ -119,7 +121,7 @@ def sinc_dvr_1d(R: np.ndarray, mu_red_amu: float, V_Eh: np.ndarray) -> DVR1D:
     T = _sinc_kinetic_1d(R, mu_red_amu)
     H = T + np.diag(V_Eh)
     evals, evecs = np.linalg.eigh(H)
-    return DVR1D(R=R, evals=evals, evecs=evecs)
+    return DVR1D(R=R, evals=evals, evecs=phase_canonical_columns(evecs))
 
 
 def trans_mu_1d(
@@ -172,6 +174,11 @@ def product_dvr_2d(
     g12 = float(g12_inv_amu) / AMU
     if not np.isfinite(g12):
         raise ValueError("g12_inv_amu must be finite")
+    # The kinetic metric [[1/mu1, g12], [g12, 1/mu2]] must be positive definite.
+    if g12 * g12 >= 1.0 / (mu1 * mu2):
+        raise ValueError(
+            "g12_inv_amu must satisfy g12^2 < 1/(mu1*mu2); the G matrix is not positive definite"
+        )
 
     n1, n2 = R1.size, R2.size
     I1 = sparse.identity(n1, format="csr")
@@ -196,12 +203,16 @@ def product_dvr_2d(
     k = nmax_int + 1
     if k >= dim:
         raise ValueError(f"Requested {k} eigenpairs for 2D DVR dimension {dim}")
-    indices = np.arange(1, dim + 1, dtype=float)
-    initial_vector = np.sin(np.sqrt(2.0) * indices) + np.cos(np.sqrt(3.0) * indices)
-    initial_vector /= np.linalg.norm(initial_vector)
-    evals, evecs = eigsh(H, k=k, which="SA", v0=initial_vector)
-    order = np.argsort(evals)
-    return DVR2D(R1=R1, R2=R2, evals=evals[order], evecs=evecs[:, order])
+    # Deflated solves recover every copy of a degenerate level (for example the
+    # two fundamentals of uncoupled identical bonds).
+    evals, evecs = lowest_eigenpairs(
+        lambda vector: H @ vector,
+        dimension=dim,
+        count=k,
+        tolerance=0.0,
+        degeneracy_tolerance=1e-12,
+    )
+    return DVR2D(R1=R1, R2=R2, evals=evals[:k], evecs=phase_canonical_columns(evecs[:, :k]))
 
 
 def trans_mu_2d(dvr: DVR2D, mu_proj_grid: np.ndarray, n: int) -> float:
