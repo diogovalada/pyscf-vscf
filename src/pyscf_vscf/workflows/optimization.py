@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import logging
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -181,11 +182,40 @@ def _run_geometric(
     maxsteps: int | None,
 ) -> tuple[bool, Any, str]:
     solver = _load_geometric_solver()
-    kwargs = optimization_convergence_kwargs()
+    kwargs: dict[str, Any] = dict(optimization_convergence_kwargs())
     if maxsteps is not None:
         kwargs["maxsteps"] = maxsteps
-    converged, optmol = solver.kernel(scanner, **kwargs)
+    if not logging.getLogger("pyscf_vscf").isEnabledFor(logging.INFO):
+        kwargs["logIni"] = str(Path(__file__).with_name("geometric_quiet.ini"))
+    with _restored_root_logging():
+        converged, optmol = solver.kernel(scanner, **kwargs)
     return bool(converged), optmol, "geomeTRIC"
+
+
+@contextmanager
+def _restored_root_logging() -> Iterator[None]:
+    """Undo geomeTRIC's reconfiguration of the root logger (handlers, level, disabling)."""
+
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    loggers = [
+        logger
+        for logger in logging.Logger.manager.loggerDict.values()
+        if isinstance(logger, logging.Logger)
+    ]
+    disabled = {id(logger): logger.disabled for logger in loggers}
+    try:
+        yield
+    finally:
+        for handler in list(root.handlers):
+            if handler not in handlers:
+                root.removeHandler(handler)
+        for handler in handlers:
+            if handler not in root.handlers:
+                root.addHandler(handler)
+        root.setLevel(level)
+        for logger in loggers:
+            logger.disabled = disabled[id(logger)]
 
 
 def _post_optimization_stationarity(

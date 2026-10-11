@@ -30,7 +30,7 @@ dependencies = [
     "numpy>=1.23.2",
     "scipy>=1.13",
     "pyscf>=2.3",
-    "geometric>=1.0"
+    "geometric>=1.0.2"
 ]
 
 [project.urls]
@@ -56,7 +56,7 @@ pyscf-vscf = "pyscf_vscf.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pyscf_vscf = ["py.typed"]
+pyscf_vscf = ["py.typed", "workflows/geometric_quiet.ini"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"

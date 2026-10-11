@@ -123,7 +123,9 @@ def test_optimize_geometry_runs_geometric_and_writes_only_when_asked(
     result = workflow.optimize_geometry(molecule, cfg, max_steps=7)
 
     assert captured["scanner"] is scanner
-    assert captured["kwargs"] == {
+    kwargs = dict(captured["kwargs"])
+    assert Path(kwargs.pop("logIni")).name == "geometric_quiet.ini"
+    assert kwargs == {
         "convergence_gmax": 4.5e-5,
         "convergence_grms": 3.0e-5,
         "maxsteps": 7,
@@ -214,3 +216,24 @@ def test_run_opt_is_deprecated_and_keeps_writing_its_default_file(
     out = capsys.readouterr().out
     assert "Optimized-geometry gradient check" in out
     assert "Optimized geometry written to: h2.pyscf_opt.mmol" in out
+
+
+def test_geometric_logging_is_quiet_and_root_logging_is_restored(monkeypatch) -> None:
+    import logging
+    import logging.config
+
+    pytest.importorskip("geometric")
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+
+    class GeometricSolver:
+        @staticmethod
+        def kernel(method: object, **kwargs: object):
+            logging.config.fileConfig(str(kwargs["logIni"]), disable_existing_loggers=False)
+            assert root.level == logging.WARNING
+            return True, _FakePySCFMol(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.7]]))
+
+    monkeypatch.setattr(workflow, "_load_geometric_solver", lambda: GeometricSolver)
+    workflow._run_geometric(object(), 5)
+
+    assert (list(root.handlers), root.level) == before

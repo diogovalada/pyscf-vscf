@@ -991,7 +991,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'dev'" },
-    { name = "geometric", specifier = ">=1.0" },
+    { name = "geometric", specifier = ">=1.0.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "numpy", specifier = ">=1.23.2" },
     { name = "pyscf", specifier = ">=2.3" },
