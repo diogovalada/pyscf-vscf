@@ -404,6 +404,9 @@ def _run_parallel(
     except Exception as exc:
         environment.restore()
         return f"{_type_name(exc)}: {exc}"
+    except BaseException:  # e.g. KeyboardInterrupt while the pool starts
+        environment.restore()
+        raise
     try:
         while queue or in_flight:
             while (

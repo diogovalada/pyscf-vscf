@@ -430,3 +430,20 @@ def test_thread_limits_require_spawned_workers() -> None:
 
     with pytest.raises(ValueError, match="start_method='spawn'"):
         RunnerSettings(workers=2, threads_per_worker=1, start_method="fork")
+
+
+def test_thread_environment_is_restored_if_the_pool_cannot_start(monkeypatch) -> None:
+    from pyscf_vscf import runner
+    from pyscf_vscf.scans import plan_bond_scan
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setenv("OPENBLAS_NUM_THREADS", "8")
+    monkeypatch.setattr(runner, "ProcessPoolExecutor", interrupted)
+    water = Molecule.from_arrays(["O", "H", "H"], REFERENCE)
+    plan = plan_bond_scan(water, QuarticProvider(), ["0-1"], [np.linspace(0.9, 1.1, 3)])
+    settings = runner.RunnerSettings(workers=2, threads_per_worker=1)
+    with pytest.raises(KeyboardInterrupt):
+        runner.run_plan(plan, QuarticProvider(), settings=settings)
+    assert os.environ["OPENBLAS_NUM_THREADS"] == "8"
