@@ -15,6 +15,8 @@ from pyscf_vscf import surfaces
 from pyscf_vscf import grid_2d_pes_dms as public_grid_2d_pes_dms
 from pyscf_vscf.surfaces import grid_1d_pes_dms, grid_1d_pes_dms_normal, grid_2d_pes_dms
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 def _water() -> Molecule:
     return Molecule.from_arrays(
@@ -228,9 +230,6 @@ class BlockPySCF(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, BlockPySCF())
 import pyscf_vscf.surfaces
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning"
-)
 print("surfaces-ok")
 """
     env = os.environ.copy()

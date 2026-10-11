@@ -14,6 +14,8 @@ from pyscf_vscf.cache import scientific_fingerprint
 from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.workflows import scans
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 class _RecordingExecutor:
     def __init__(self, calls: list[object]):
@@ -70,9 +72,6 @@ class BlockPySCF(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, BlockPySCF())
 import pyscf_vscf.workflows.scans
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning"
-)
 print("scans-ok")
 """
     env = os.environ.copy()

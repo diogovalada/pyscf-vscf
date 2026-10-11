@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+from ._warnings import deprecated
 from ._validation import (
     component_max_abs as _component_max_abs,
     mesh_points as _mesh_points,
@@ -1044,8 +1045,11 @@ class NModeSurfaceModel:
         return payload_fingerprint(self.artifact_payload())
 
     def fingerprint(self) -> str:
-        """Compatibility spelling for complete artifact integrity."""
+        """Deprecated spelling of :meth:`artifact_integrity_fingerprint`."""
 
+        deprecated(
+            "NModeSurfaceModel.fingerprint() is deprecated; use artifact_integrity_fingerprint()."
+        )
         return self.artifact_integrity_fingerprint()
 
 
