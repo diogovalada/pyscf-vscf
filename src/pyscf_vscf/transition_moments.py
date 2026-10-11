@@ -12,6 +12,7 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
+from ._validation import nonempty_string as _nonempty
 from ._arrays import immutable_array
 from ._artifacts import atomic_savez_compressed, atomic_write_text
 from ._identity import (
@@ -923,15 +924,6 @@ def _configuration(values: Sequence[int]) -> Configuration:
     if not configuration or any(value < 0 for value in configuration):
         raise ValueError("Configurations must contain non-negative quanta")
     return configuration
-
-
-def _nonempty(name: str, value: str) -> str:
-    if not isinstance(value, str):
-        raise TypeError(f"{name} must be a string")
-    text = value.strip()
-    if not text:
-        raise ValueError(f"{name} must be non-empty")
-    return text
 
 
 def _readonly(values: np.ndarray) -> np.ndarray:

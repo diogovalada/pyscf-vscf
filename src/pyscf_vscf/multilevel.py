@@ -11,6 +11,12 @@ from typing import Any
 
 import numpy as np
 
+from ._validation import (
+    component_max_abs as _component_max_abs,
+    mesh_points as _mesh_points,
+    nonempty as _nonempty,
+    subset_key as _subset_key,
+)
 from ._identity import payload_fingerprint, to_jsonable
 from .nmode import (
     FitDiagnostics,
@@ -535,17 +541,6 @@ def _surface_fingerprint(surface: TensorProductSurface) -> str:
     return payload_fingerprint(surface.numerical_payload())
 
 
-def _component_max_abs(values: np.ndarray, rank: int) -> tuple[float, ...]:
-    trailing = values.shape[rank:]
-    reshaped = values.reshape((-1, int(np.prod(trailing)) if trailing else 1))
-    return tuple(float(value) for value in np.max(np.abs(reshaped), axis=0))
-
-
-def _mesh_points(axes: tuple[np.ndarray, ...]) -> np.ndarray:
-    mesh = np.meshgrid(*axes, indexing="ij")
-    return np.stack([component.reshape(-1) for component in mesh], axis=-1)
-
-
 def _normalized_subset_collection(values: Sequence[Sequence[int]]) -> tuple[ModeSubset, ...]:
     subsets = tuple(_normalize_subset(value) for value in values)
     if len(set(subsets)) != len(subsets):
@@ -558,17 +553,6 @@ def _normalize_subset(values: Sequence[int]) -> ModeSubset:
     if not subset or subset != tuple(sorted(set(subset))) or subset[0] < 0:
         raise ValueError("Mode subsets must be non-empty unique increasing indices")
     return subset
-
-
-def _subset_key(subset: ModeSubset) -> str:
-    return ",".join(str(value) for value in subset)
-
-
-def _nonempty(name: str, value: object) -> str:
-    text = str(value).strip()
-    if not text:
-        raise ValueError(f"{name} must be non-empty")
-    return text
 
 
 def _optional_nonempty(name: str, value: object | None) -> str | None:

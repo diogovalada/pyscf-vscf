@@ -10,6 +10,7 @@ from typing import Mapping, Protocol, Sequence, runtime_checkable
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigsh
 
+from ._validation import nonempty_string as _nonempty
 from ._arrays import immutable_array
 from ._phase import phase_canonical_columns
 from ._identity import (
@@ -861,15 +862,6 @@ def _deterministic_initial(dimension: int) -> np.ndarray:
     indices = np.arange(1, dimension + 1, dtype=float)
     vector = np.sin(np.sqrt(2.0) * indices) + np.cos(np.sqrt(3.0) * indices)
     return vector / np.linalg.norm(vector)
-
-
-def _nonempty(name: str, value: str) -> str:
-    if not isinstance(value, str):
-        raise TypeError(f"{name} must be a string")
-    text = value.strip()
-    if not text:
-        raise ValueError(f"{name} must be non-empty")
-    return text
 
 
 def _readonly(values: np.ndarray) -> np.ndarray:

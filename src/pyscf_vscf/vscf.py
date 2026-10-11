@@ -22,6 +22,7 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from ._validation import positive_finite as _positive_finite
 from ._arrays import immutable_array
 from ._artifacts import atomic_savez_compressed
 from ._identity import immutable_json_mapping, to_jsonable
@@ -843,13 +844,6 @@ def _validated_array(name: str, values: np.ndarray, shape: tuple[int, ...]) -> n
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")
     return array
-
-
-def _positive_finite(name: str, value: float) -> float:
-    number = float(value)
-    if not np.isfinite(number) or number <= 0.0:
-        raise ValueError(f"{name} must be positive and finite")
-    return number
 
 
 def _readonly_copy(array: np.ndarray) -> np.ndarray:

@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 
+from .._validation import nonempty as _nonempty
 from .._identity import immutable_json_mapping, to_jsonable
 from ..cache import runtime_provenance
 from ..electronic import (
@@ -595,13 +596,6 @@ def _qualified_type_name(value: object) -> str:
 def _qualified_callable_name(value: object) -> str:
     function = getattr(value, "__func__", value)
     return f"{function.__module__}.{function.__qualname__}"
-
-
-def _nonempty(name: str, value: object) -> str:
-    text = str(value).strip()
-    if not text:
-        raise ValueError(f"{name} must be non-empty")
-    return text
 
 
 __all__ = [

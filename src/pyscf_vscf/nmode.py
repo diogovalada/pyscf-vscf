@@ -14,6 +14,13 @@ from typing import Any
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+from ._validation import (
+    component_max_abs as _component_max_abs,
+    mesh_points as _mesh_points,
+    nonempty as _nonempty,
+    positive_finite as _positive_finite,
+    subset_key as _subset_key,
+)
 from ._arrays import immutable_array
 from ._artifacts import atomic_savez_compressed
 from ._identity import (
@@ -1446,11 +1453,6 @@ def _reference_index(axis: np.ndarray, reference: float, mode: int) -> int:
     return int(matches[0])
 
 
-def _mesh_points(axes: Sequence[np.ndarray]) -> np.ndarray:
-    mesh = np.meshgrid(*axes, indexing="ij")
-    return np.stack(mesh, axis=-1).reshape((-1, len(axes)))
-
-
 def _validated_shape(name: str, values: object, shape: tuple[int, ...]) -> np.ndarray:
     array = np.asarray(values, dtype="<f8")
     if array.shape != shape or not np.all(np.isfinite(array)):
@@ -1463,14 +1465,6 @@ def _validated_interpolation_method(value: object) -> str:
     if method not in {"linear", "cubic"}:
         raise ValueError("Interpolation method must be 'linear' or 'cubic'")
     return method
-
-
-def _component_max_abs(error: np.ndarray, leading_rank: int) -> tuple[float, ...]:
-    values = np.asarray(error, dtype=float)
-    component_shape = values.shape[leading_rank:]
-    component_count = int(np.prod(component_shape)) if component_shape else 1
-    rows = values.reshape((-1, component_count))
-    return tuple(float(value) for value in np.max(np.abs(rows), axis=0))
 
 
 def _component_rmse(error: np.ndarray) -> tuple[float, ...]:
@@ -1547,10 +1541,6 @@ def _validated_source_lineage(values: Mapping[str, Any]):
     return immutable_json_mapping(normalized)
 
 
-def _subset_key(subset: ModeSubset) -> str:
-    return ",".join(str(mode) for mode in subset)
-
-
 def _validated_solver_grid(name: str, values: object) -> np.ndarray:
     grid = _finite_array(name, values, ndim=1)
     if grid.size < 3 or np.any(np.diff(grid) <= 0.0):
@@ -1559,13 +1549,6 @@ def _validated_solver_grid(name: str, values: object) -> np.ndarray:
     if not np.allclose(steps, steps[0], rtol=1e-10, atol=1e-12):
         raise ValueError(f"{name} must be uniformly spaced")
     return grid
-
-
-def _positive_finite(name: str, value: object) -> float:
-    number = float(value)
-    if not np.isfinite(number) or number <= 0.0:
-        raise ValueError(f"{name} must be positive and finite")
-    return number
 
 
 def _nonnegative_finite(name: str, value: object) -> float:
@@ -1587,13 +1570,6 @@ def _finite_array(name: str, values: object, *, ndim: int) -> np.ndarray:
     if array.ndim != ndim or not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must be a finite {ndim}-dimensional array")
     return np.ascontiguousarray(array)
-
-
-def _nonempty(name: str, value: object) -> str:
-    text = str(value).strip()
-    if not text:
-        raise ValueError(f"{name} must be non-empty")
-    return text
 
 
 __all__ = [
