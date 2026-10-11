@@ -200,6 +200,38 @@ def run_plan(
             continue
         pending.append(key)
 
+    variable_fields = frozenset(
+        getattr(getattr(provider, "factory", None), "variable_snapshot_fields", ()) or ()
+    )
+    snapshot_reference: dict[str, Any] = {}
+
+    def check_configuration(result: ElectronicResult) -> None:
+        """Require the same invariant method configuration for every point."""
+
+        snapshot = result.provenance.get("configuration_snapshot")
+        if snapshot is None:
+            return
+        invariant = {
+            key: value for key, value in dict(snapshot).items() if key not in variable_fields
+        }
+        if not snapshot_reference:
+            snapshot_reference.update(invariant)
+            return
+        if invariant != snapshot_reference:
+            changed = sorted(
+                key
+                for key in set(invariant) | set(snapshot_reference)
+                if invariant.get(key) != snapshot_reference.get(key)
+            )
+            raise ValueError(
+                "The method configuration differs between points "
+                f"(fields: {', '.join(changed)}); declare legitimately geometry-dependent "
+                "fields in the recipe's variable_snapshot_fields"
+            )
+
+    for key in sorted(reused):
+        check_configuration(results[key])
+
     total = len(requests)
     counter = {"done": len(reused) + len(failures)}
     conflicts: list[str] = []
@@ -219,6 +251,7 @@ def run_plan(
             result = outcome["result"]
             try:
                 _validate_result(result, requests[key], provider_id)
+                check_configuration(result)
                 if store is not None:
                     assert attempt_id is not None
                     store.record_success(attempt_id, requests[key], result)
