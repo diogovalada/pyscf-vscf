@@ -31,8 +31,9 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   provider-identity checks, and fail-fast or continue policies.
 - Typed scans (`pyscf_vscf.scans`): `plan_bond_scan`, `plan_normal_scan`,
   `run_scan`, `ScanResult` (absolute energies, atomic-unit dipoles),
-  `bond_spectrum`, `normal_coordinate_spectrum`, and equilibrium-relative
-  default grids.
+  `bond_spectrum`, `normal_coordinate_spectrum`, and a default bond grid
+  relative to the bond length (r_e - 0.40 A to r_e + 0.70 A, 41 points),
+  chosen by benchmark (see `docs/scans.md`).
 - Schema-4 scan files (`artifacts.scans.dump_scan` / `load_scan`) and
   `load_legacy_grid` for 0.1/0.2 caches.
 - Subcommand command line: `pyscf-vscf harmonic|opt|scan1d|scan2d|inspect`
@@ -53,7 +54,8 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
 
 ### Changed
 
-- Python 3.11 or newer is required; NumPy 1.23.2 or newer.
+- Python 3.11 or newer is required; NumPy 1.23.2 or newer; geomeTRIC 1.0.2 or
+  newer (1.0 and 1.0.1 import `pkg_resources`, which fresh environments lack).
 - Flag-style command lines (`--xyz ... --task ...`) run unchanged through the
   0.2 interface and print a deprecation notice.
 - `PySCFMeanFieldProvider.evaluate` no longer changes PySCF's process-wide
@@ -63,6 +65,9 @@ works in 0.3 with a `PyscfVscfDeprecationWarning`.
   the runner's per-worker budget, else 4000 MB.
 - The correlated CCSD(T) provider builds its RHF reference through the seam
   (still conventional, without density fitting).
+- `optimize_geometry` and `pyscf-vscf opt` show geomeTRIC's log only when
+  the `pyscf_vscf` logger shows INFO messages (`-v`), and restore the root
+  logger that geomeTRIC reconfigures.
 - Library diagnostics use the `pyscf_vscf` logger and `RuntimeWarning`
   instead of printing; the command lines show them with `-v`.
 - Final VSCF modals follow the package's deterministic sign convention.

@@ -67,18 +67,57 @@ so plan from an optimized geometry:
 
     r_min = r_e - DEFAULT_BOND_GRID_INNER_A,  r_max = r_e + DEFAULT_BOND_GRID_OUTER_A
 
-with `DEFAULT_BOND_GRID_POINTS` points. The default was chosen by benchmark
-(next section); it is a starting point, not a convergence guarantee. Check
-convergence for the states you report: every `TransitionRecord` carries
-`grid_boundary_weight` and `ground_grid_boundary_weight`, the probability on
-the outermost grid points, and the CLI marks states above `1e-5` with `*`.
-The boundary weight grows with the grid spacing for the same physical
-wavefunction, so treat it as a warning sign and confirm by widening or
-refining the grid.
+with `DEFAULT_BOND_GRID_POINTS` points: 0.40 A inside and 0.70 A outside the
+bond length, 41 points (a spacing of 0.0275 A). The default was chosen by
+benchmark (next section); it is a starting point, not a convergence
+guarantee. Check convergence for the states you report:
+
+- **Range.** Every `TransitionRecord` carries `grid_boundary_weight` and
+  `ground_grid_boundary_weight`, the probability on the outermost grid
+  points, and the CLI marks states above `1e-5` with `*`. A marked state
+  needs a wider range. The weight also grows with the spacing for the same
+  wavefunction, so it is a warning sign, not a measure of the error.
+- **Density.** The boundary weight does not detect a grid that is too coarse
+  for the wavefunction. Heavy-atom bonds and high overtones need more points;
+  confirm that the reported states do not change when the number of points
+  grows.
 
 ### How the default was chosen
 
-<!-- filled from the benchmark report -->
+The rule was selected on B3LYP/cc-pVDZ frozen-bond stretches of O-H in water
+(with H2O and D2O masses on the same surface), H-Cl, C-O, and the C-C bond of
+ethane, from optimized geometries. For each bond, a dense reference scan
+(0.55-2.30 r_e with 176 points for the X-H bonds, 0.75-2.00 r_e with 201
+points for the heavy-atom bonds; the CO reference ends at 1.82 A, before the
+first SCF failure of its dense scan) gave transitions v = 1-3 converged to better than
+1e-4 cm^-1 in both range and density. Candidate rules were evaluated by
+interpolating the reference energies and dipoles onto each candidate grid
+(checked against directly computed candidates to 0.001 cm^-1); a rule
+passed if every v <= 3 transition of every bond was within 0.5 cm^-1 of its
+reference.
+
+The two kinds of bond limit the grid differently. X-H bonds are limited by
+range: with only 0.30 A inside the bond length, the H-Cl fundamental and
+overtones are 0.4-7 cm^-1 too high; with a range of 0.70-1.70 r_e, the O-H
+v = 3 transition is 1 cm^-1 too high. C-O is limited by density: 31 points
+over the default range put its v = 3 transition 2.6 cm^-1 off, with boundary
+weights near 1e-10. The narrowest passing rules use 31 points (r_e - 0.40 A
+to r_e + 0.60 A, largest error 0.19 cm^-1), but they sit close to failure:
+at 31 or 35 points, slightly wider rules fail for C-O. The default uses 41
+points (32% more than 31 in 1D, 75% more in 2D), where every nearby rule
+(inner 0.35-0.45 A, outer 0.70-0.90 A) passes; its largest error over the
+five systems is 0.003 cm^-1, confirmed by direct calculation on the default
+grids. These results cover v <= 3 frequencies of these frozen-bond models
+with this method; they do not establish intensities, 2D scans, or other
+bonds, which is why the convergence checks above remain necessary.
+
+| Bond | r_e / A | Reference v = 1, 2, 3 / cm^-1 | Largest default-grid error / cm^-1 |
+| --- | --- | --- | --- |
+| O-H (H2O) | 0.9687 | 3644.8, 7136.8, 10481.2 | < 0.001 |
+| O-D (D2O) | 0.9687 | 2684.4, 5286.6, 7808.7 | < 0.001 |
+| H-Cl | 1.2839 | 2930.1, 5738.3, 8432.3 | 0.003 |
+| C-O | 1.1346 | 2176.6, 4329.1, 6457.7 | < 0.001 |
+| C-C (ethane) | 1.5292 | 1430.6, 2845.5, 4244.0 | < 0.001 |
 
 ## Files
 

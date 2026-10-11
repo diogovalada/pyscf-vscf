@@ -43,8 +43,8 @@ SCAN_PLAN_SCHEMA = "pyscf-vscf-scan-plan"
 SCAN_PLAN_SCHEMA_VERSION = 1
 
 # Default bond grid relative to the equilibrium bond length r_e (angstrom).
-# Chosen by benchmark; see docs/scans.md.
-DEFAULT_BOND_GRID_INNER_A = 0.30
+# Chosen by benchmark on O-H, H-Cl, C-O, and C-C stretches; see docs/scans.md.
+DEFAULT_BOND_GRID_INNER_A = 0.40
 DEFAULT_BOND_GRID_OUTER_A = 0.70
 DEFAULT_BOND_GRID_POINTS = 41
 MIN_GRID_POINTS = 3

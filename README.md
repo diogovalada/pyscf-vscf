@@ -40,11 +40,15 @@ pyscf-vscf scan1d water-opt.xyz --bond 0-1 --method b3lyp --basis cc-pvdz \
 ```
 
 ```text
-OUTPUT_SCAN
+v  nu/cm^-1   mu_axis/D   I_axis/(km/mol)   int_axis/(m^2/s)   orientation: polarized along bond axis
+1   3644.8     2.6930e-02     1.9877e+01     6.2173e-11
+2   7136.8     8.8835e-03     4.2353e+00     1.3247e-11
+3  10481.2     2.0528e-03     3.3214e-01     1.0389e-12
+4  13683.0     4.9706e-04     2.5422e-02     7.9517e-14
 ```
 
-Bonds are zero-based atom indices. The points run in parallel automatically;
-SCAN_TIMING. `--store` keeps every
+Bonds are zero-based atom indices. The 41 points run in parallel
+automatically; this scan takes about 11 s on an 8-core machine. `--store` keeps every
 electronic point in a SQLite file, so an interrupted or partly failed scan
 resumes where it stopped. `--output` writes the finished scan, from which
 spectra are recomputed without electronic-structure calculations, for any
@@ -55,11 +59,13 @@ pyscf-vscf scan1d water-opt.xyz --bond 0-1 --reuse oh.npz --states 6 --intensity
 ```
 
 Check that the grid is wide and dense enough for the states you report.
-Without `--range MIN MAX NPTS`, the grid spans DEFAULT_RULE around the
-bond length in the input geometry, a starting point chosen by benchmark
+Without `--range MIN MAX NPTS`, the grid runs from 0.40 A inside to 0.70 A
+outside the bond length in the input geometry, with 41 points: a starting
+point chosen by benchmark on O-H, H-Cl, C-O, and C-C bonds
 ([scans](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/scans.md)). States that place more than `1e-5` of their
-probability on the outermost grid points are marked with `*`; confirm the
-reported states do not change when the range grows or the grid is refined.
+probability on the outermost grid points are marked with `*` and need a
+wider range. The mark does not detect a grid that is too coarse, so also
+confirm that the reported states do not change when you add points.
 
 Other commands: `pyscf-vscf harmonic` (harmonic frequencies), `scan2d` (two
 coupled bond stretches), `scan1d --coordinate normal|normal-relaxed`, and
