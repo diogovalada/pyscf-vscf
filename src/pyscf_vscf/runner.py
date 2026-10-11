@@ -32,8 +32,15 @@ from .point_store import PointStore, StoreConflictError
 class ElectronicPlan(Protocol):
     """A set of electronic point requests for one provider."""
 
-    provider_scientific_fingerprint: str
-    requests: Mapping[str, ElectronicPointRequest]
+    @property
+    def provider_scientific_fingerprint(self) -> str:
+        """Fingerprint of the provider the plan was made for."""
+        ...
+
+    @property
+    def requests(self) -> Mapping[str, ElectronicPointRequest]:
+        """Requests keyed by point causal fingerprint."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -143,7 +150,7 @@ class PlanIncompleteError(RuntimeError):
         super().__init__(message)
         self.run = run
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[Any, ...]:
         return (type(self), (str(self), self.run))
 
 
@@ -213,6 +220,7 @@ def run_plan(
             try:
                 _validate_result(result, requests[key], provider_id)
                 if store is not None:
+                    assert attempt_id is not None
                     store.record_success(attempt_id, requests[key], result)
                 results[key] = result
                 status = "succeeded"
@@ -223,6 +231,7 @@ def run_plan(
             except Exception as exc:
                 failures[key] = PointFailure(key, _type_name(exc), str(exc))
                 if store is not None:
+                    assert attempt_id is not None
                     store.record_failure(attempt_id, error_type=_type_name(exc), message=str(exc))
                 status = "failed"
         else:
@@ -230,6 +239,7 @@ def run_plan(
                 key, outcome["error_type"], outcome["message"], outcome["traceback"]
             )
             if store is not None:
+                assert attempt_id is not None
                 store.record_failure(
                     attempt_id,
                     error_type=outcome["error_type"],
@@ -242,7 +252,10 @@ def run_plan(
             progress(ProgressEvent(counter["done"], total, key, status))
 
     def begin(key: str) -> int | None:
-        return None if store is None else store.begin_attempt(run_id, key)
+        if store is None:
+            return None
+        assert run_id is not None
+        return store.begin_attempt(run_id, key)
 
     executor_error = None
     interrupted = False
@@ -269,11 +282,11 @@ def run_plan(
             )
     except KeyboardInterrupt:
         interrupted = True
-        if store is not None:
+        if store is not None and run_id is not None:
             store.finish_run(run_id, "interrupted")
         raise
     finally:
-        if store is not None and not interrupted:
+        if store is not None and run_id is not None and not interrupted:
             complete = len(results) == total
             store.finish_run(run_id, "complete" if complete else "incomplete")
 
@@ -311,7 +324,7 @@ def _run_parallel(
             "The provider cannot be sent to worker processes; method recipes must use "
             f"importable module-level functions ({_type_name(exc)}: {exc})"
         ) from exc
-    workers = int(policy.workers)
+    workers = int(policy.workers or 1)
     limit = int(policy.max_in_flight or 2 * workers)
     queue = list(pending)
     in_flight: dict[Future, tuple[str, int | None]] = {}

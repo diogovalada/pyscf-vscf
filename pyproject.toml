@@ -45,6 +45,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff>=0.15,<0.16",
+    "mypy>=1.10",
     "twine"
 ]
 
@@ -53,6 +54,9 @@ pyscf-vscf = "pyscf_vscf.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pyscf_vscf = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -77,3 +81,27 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+files = [
+    "src/pyscf_vscf/_phase.py",
+    "src/pyscf_vscf/_warnings.py",
+    "src/pyscf_vscf/contracts.py",
+    "src/pyscf_vscf/point_store.py",
+    "src/pyscf_vscf/runner.py",
+    "src/pyscf_vscf/scans.py",
+    "src/pyscf_vscf/artifacts",
+    "src/pyscf_vscf/backends/_pyscf_factory.py",
+    "src/pyscf_vscf/backends/_pyscf_properties.py",
+]
+strict = true
+# Third-party array and PySCF objects are untyped at the boundary.
+disallow_any_generics = false
+warn_return_any = false
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = ["pyscf_vscf._identity", "pyscf_vscf._arrays", "pyscf_vscf.cache", "pyscf_vscf.coordinates", "pyscf_vscf.io", "pyscf_vscf.settings", "pyscf_vscf.molecule", "pyscf_vscf.constants", "pyscf_vscf.workflows.*", "pyscf_vscf.variational", "pyscf_vscf._artifacts"]
+follow_imports = "silent"

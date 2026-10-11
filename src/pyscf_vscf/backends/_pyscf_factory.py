@@ -107,10 +107,11 @@ class ElectronicSystem:
         """Return PySCF ``mol.atom`` entries with element symbols and angstrom positions."""
 
         _, _, _, elements = require_pyscf()
-        return [
-            (elements._symbol(charge), tuple(float(value) for value in xyz))
-            for charge, xyz in zip(self.nuclear_charges, self.coordinates_A)
-        ]
+        atoms = []
+        for charge, xyz in zip(self.nuclear_charges, self.coordinates_A):
+            x, y, z = (float(value) for value in xyz)
+            atoms.append((str(elements._symbol(charge)), (x, y, z)))
+        return atoms
 
 
 @dataclass(frozen=True)
@@ -468,7 +469,7 @@ def invariant_snapshot(snapshot: Mapping[str, object], variable_fields: tuple[st
     return {key: value for key, value in snapshot.items() if key not in set(variable_fields)}
 
 
-def require_pyscf():
+def require_pyscf() -> tuple[Any, Any, Any, Any]:
     """Import PySCF lazily; raise :class:`BackendUnavailableError` if it is missing."""
 
     try:

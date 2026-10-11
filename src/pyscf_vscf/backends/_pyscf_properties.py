@@ -84,7 +84,7 @@ def apply_electric_field(
     field_hcore = np.einsum("x,xij->ij", field_vector, position_ao, optimize=True)
     base_get_hcore = mean_field.get_hcore
 
-    def get_hcore(mol=None):
+    def get_hcore(mol: Any = None) -> Any:
         hcore = base_get_hcore(mol)
         return hcore + _like(field_hcore, hcore)
 

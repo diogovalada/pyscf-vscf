@@ -31,6 +31,7 @@ These are the checks run by continuous integration:
 ```bash
 uv run ruff check src tests scripts
 uv run ruff format --check src tests scripts
+uv run mypy                                                   # strict on the 0.3 core modules
 uv run pytest -m "not pyscf and not slow and not cache" -q   # fast, no PySCF calculations
 uv run pytest -q --cov=pyscf_vscf --cov-fail-under=78        # everything, with coverage
 uv run python scripts/validate_archived_grids.py --nmax 12 --output /tmp/water-report.json

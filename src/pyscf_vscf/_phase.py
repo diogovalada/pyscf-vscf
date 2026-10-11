@@ -20,6 +20,7 @@ distinct.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -30,7 +31,7 @@ def phase_pivot(
     values: np.ndarray,
     *,
     rtol: float = PHASE_TIE_RTOL,
-    order_key: Callable[[int], object] | None = None,
+    order_key: Callable[[int], Any] | None = None,
 ) -> int:
     """Return the index whose component sign defines the vector's phase."""
 
@@ -48,7 +49,7 @@ def phase_canonical_columns(
     vectors: np.ndarray,
     *,
     rtol: float = PHASE_TIE_RTOL,
-    order_key: Callable[[int], object] | None = None,
+    order_key: Callable[[int], Any] | None = None,
 ) -> np.ndarray:
     """Return a copy whose columns have a positive pivot component."""
 

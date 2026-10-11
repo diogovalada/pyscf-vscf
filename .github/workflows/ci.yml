@@ -22,6 +22,7 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
+      - run: uv run mypy
       - run: uv run pytest -m "not pyscf and not slow and not cache" -q
 
   full:

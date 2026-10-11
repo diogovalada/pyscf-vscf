@@ -200,7 +200,9 @@ class PointStore:
             "VALUES (?, ?, 'in_progress', ?)",
             (run_id, point_key, time.time()),
         )
-        return int(cursor.lastrowid)
+        attempt_id = cursor.lastrowid
+        assert attempt_id is not None
+        return int(attempt_id)
 
     def record_success(
         self,
@@ -339,7 +341,7 @@ class PointStore:
                 f"{STORE_SCHEMA_VERSION}"
             )
 
-    def _transaction(self):
+    def _transaction(self) -> _Transaction:
         return _Transaction(self._connection)
 
 

@@ -160,6 +160,7 @@ def load_legacy_grid(path: Path | str) -> LegacyRelativeScan:
         raise ValueError(f"{path} is not a legacy grid cache (schema {version!r})")
     _validate_schema3_metadata_integrity(meta, "Grid cache")
     kind = meta["identity"]["scan"].get("kind")
+    axes: tuple[np.ndarray, ...]
     if kind == "1d":
         axes = (np.asarray(arrays["R_A"], dtype=float),)
     elif kind == "2d":

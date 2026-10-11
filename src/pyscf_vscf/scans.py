@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -137,10 +137,10 @@ class ScanResult:
     dipoles_au: np.ndarray
     point_keys: np.ndarray
     provider_scientific_fingerprint: str
-    provider_payload: FrozenJSONMapping
-    reference_geometry: FrozenJSONMapping
-    sampling: FrozenJSONMapping
-    provenance: FrozenJSONMapping = field(default_factory=lambda: immutable_json_mapping({}))
+    provider_payload: Mapping[str, Any]
+    reference_geometry: Mapping[str, Any]
+    sampling: Mapping[str, Any]
+    provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         shape = tuple(axis.values.size for axis in self.axes)
@@ -245,6 +245,7 @@ def plan_bond_scan(
     )
     if np.any(axes[0].values <= 0.0) or (len(axes) == 2 and np.any(axes[1].values <= 0.0)):
         raise ValueError("Bond lengths must be positive")
+    geometries: dict[tuple[int, ...], np.ndarray]
     if len(axes) == 1:
         geometries = {
             (index,): stretch_along_bond(coordinates, parsed[0], value)
@@ -290,8 +291,10 @@ def plan_normal_scan(
     if not np.isfinite(norm) or norm < 1e-14:
         raise ValueError("direction must have a finite non-zero norm")
     unit = unit / norm
-    axis = ScanAxis(label=label, coordinate="normal-displacement", values=displacements_A)
-    geometries = {
+    axis = ScanAxis(
+        label=label, coordinate="normal-displacement", values=np.asarray(displacements_A)
+    )
+    geometries: dict[tuple[int, ...], np.ndarray] = {
         (index,): coordinates + float(value) * unit for index, value in enumerate(axis.values)
     }
     sampling = {
@@ -392,7 +395,11 @@ def bond_spectrum(
     if scan.scan_kind not in {"bond-1d", "bond-2d"}:
         raise ValueError(f"bond_spectrum needs a bond scan, got {scan.scan_kind!r}")
     _check_same_system(scan, molecule)
-    bonds = [Bond(*axis.bond) for axis in scan.axes]
+    bonds = []
+    for axis_definition in scan.axes:
+        if axis_definition.bond is None:
+            raise ValueError("bond scan axes must name their bond")
+        bonds.append(Bond(*axis_definition.bond))
     coordinates = np.asarray(molecule.coords, dtype=float)
     axis = (
         coordinates[bonds[0].j] - coordinates[bonds[0].i]
@@ -508,7 +515,7 @@ def _plan(
         requests=requests,
         provider_scientific_fingerprint=provider_id,
         provider_payload=immutable_json_mapping(
-            to_jsonable(provider.scientific_settings_payload())
+            cast(Mapping[str, Any], to_jsonable(dict(provider.scientific_settings_payload())))
         ),
         reference_geometry=immutable_json_mapping(reference),
         sampling=immutable_json_mapping(sampling),
