@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 @pytest.mark.cache
 def test_archived_grid_and_log_hashes_match_manifest() -> None:

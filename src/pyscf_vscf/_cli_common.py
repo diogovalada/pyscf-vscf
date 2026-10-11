@@ -144,7 +144,23 @@ def _print_worker_traceback(exc: BaseException) -> None:
         print(first.traceback, file=sys.stderr)
 
 
+def _configure_logging(verbose: bool) -> None:
+    """Show the package's INFO log messages on standard output when verbose."""
+
+    import logging
+
+    logger = logging.getLogger("pyscf_vscf")
+    if verbose and not any(getattr(h, "_pyscf_vscf_cli", False) for h in logger.handlers):
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("[INFO] %(message)s"))
+        handler._pyscf_vscf_cli = True
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+
+
 def _log_fn(verbose: bool):
+    _configure_logging(verbose)
+
     def emit(message: str) -> None:
         if verbose:
             print(f"[INFO] {message}", flush=True)

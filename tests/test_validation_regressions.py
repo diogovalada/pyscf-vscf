@@ -13,6 +13,8 @@ from pyscf_vscf.spectra import (
 )
 from pyscf_vscf.variational import variational_1d, variational_2d
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 def _morse_potential_shifted(
     R_ang: np.ndarray,

@@ -4,11 +4,25 @@ Pure numerical modules are importable without PySCF; backend workflows import
 PySCF only when explicitly used.
 """
 
+import logging as _logging
+
 from .assignments import ProductStateAssignment, assign_product_states_2d
 from .constants import AMU, ANG_TO_BOHR, DEBYE_TO_CM, HARTREE_TO_CM, atomic_mass_amu
 from .coordinates import Bond
 from .electronic import EnergyDipoleEvaluator
+from .backends.pyscf import MethodRecipe, PySCFMeanFieldProvider
 from .harmonic import HarmonicResult, mass_weighted_freqs_modes
+from .io import read_geometry, read_midas_mmol, read_xyz, write_midas_mmol, write_xyz
+from .point_store import PointStore
+from .runner import PlanIncompleteError, RunnerSettings, run_plan
+from .scans import (
+    ScanResult,
+    bond_spectrum,
+    normal_coordinate_spectrum,
+    plan_bond_scan,
+    plan_normal_scan,
+    run_scan,
+)
 from .molecule import Molecule
 from .settings import ESSettings, HarmonicSettings, RuntimeSettings
 from .spectra import (
@@ -34,6 +48,23 @@ from .vscf import (
 
 __all__ = [
     "AMU",
+    "MethodRecipe",
+    "PlanIncompleteError",
+    "PointStore",
+    "PySCFMeanFieldProvider",
+    "RunnerSettings",
+    "ScanResult",
+    "bond_spectrum",
+    "normal_coordinate_spectrum",
+    "plan_bond_scan",
+    "plan_normal_scan",
+    "read_geometry",
+    "read_midas_mmol",
+    "read_xyz",
+    "run_plan",
+    "run_scan",
+    "write_midas_mmol",
+    "write_xyz",
     "ANG_TO_BOHR",
     "Bond",
     "ConvergenceReport",
@@ -71,5 +102,7 @@ __all__ = [
     "variational_2d",
     "vscf_spectrum",
 ]
+
+_logging.getLogger(__name__).addHandler(_logging.NullHandler())
 
 __version__ = "0.2.2"

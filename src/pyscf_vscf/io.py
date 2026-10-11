@@ -150,6 +150,38 @@ def read_xyz(path: Path) -> Molecule:
     return Molecule(symbols=symbols, coords=np.array(coords, dtype=float), label=path.stem)
 
 
+def read_geometry(
+    path: Path | str,
+    *,
+    charge: int | None = None,
+    spin: int | None = None,
+) -> Molecule:
+    """Read an ``.xyz`` or Midas ``.mmol`` geometry, choosing the reader by suffix.
+
+    ``charge`` and ``spin`` (unpaired electrons) override the file's values,
+    which are zero for both formats.
+    """
+
+    path = Path(path)
+    suffix = path.suffix.lower()
+    if suffix == ".xyz":
+        molecule = read_xyz(path)
+    elif suffix == ".mmol":
+        molecule = read_midas_mmol(path)
+    else:
+        raise ValueError(f"Unknown geometry format {path.suffix!r}; use .xyz or .mmol")
+    if charge is None and spin is None:
+        return molecule
+    return Molecule.from_arrays(
+        molecule.symbols,
+        molecule.coords,
+        charge=molecule.charge if charge is None else int(charge),
+        spin=molecule.spin if spin is None else int(spin),
+        label=molecule.label,
+        masses_amu=molecule.analysis_masses(),
+    )
+
+
 def write_xyz(path: Path, mol: MolLike, comment: Optional[str] = None) -> None:
     """Write ``mol`` as an XYZ file in angstrom; ``comment`` defaults to the label."""
 

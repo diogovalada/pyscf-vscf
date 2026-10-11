@@ -8,6 +8,8 @@ import sys
 import numpy as np
 import pytest
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 def test_pure_imports_do_not_request_pyscf(monkeypatch):
     real_import = builtins.__import__

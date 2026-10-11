@@ -1,4 +1,9 @@
-"""Scan workflow helpers.
+"""Scan workflow helpers (0.2 tuple API).
+
+The tuple-returning grid functions and schema-3 cache helpers are deprecated
+in favour of :mod:`pyscf_vscf.scans` (plans, runner, ``ScanResult``) and
+:mod:`pyscf_vscf.artifacts.scans` (schema-4 files). Normal-mode selection,
+constrained relaxed scans, and coordinate/mass helpers remain current.
 
 This module sits above the pure coordinate/surface helpers and below the CLI.
 All expensive electronic-structure work is injectable.
@@ -17,6 +22,7 @@ import warnings
 
 import numpy as np
 
+from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.cache import (
     dump_grid_npz,
     electronic_structure_provenance,
@@ -457,6 +463,10 @@ def grid_1d_pes_dms(
     With ``stop_on_error=False`` all points are attempted before raising.
     """
 
+    deprecated(
+        "grid_1d_pes_dms() is deprecated; use pyscf_vscf.scans.plan_bond_scan() and run_scan()."
+    )
+
     b = normalize_bond(bond)
     Rs = np.linspace(float(Rmin), float(Rmax), _npts(npts))
     energies = np.full(Rs.size, np.nan, dtype=float)
@@ -519,6 +529,10 @@ def grid_1d_pes_dms_normal(
 
     Failed points raise :class:`ScanFailedError` as in :func:`grid_1d_pes_dms`.
     """
+
+    deprecated(
+        "grid_1d_pes_dms_normal() is deprecated; use pyscf_vscf.scans.plan_normal_scan() and run_scan()."
+    )
 
     direction = _normal_mode_direction_for_molecule(molecule, u_dir)
     S = np.linspace(float(smin), float(smax), _npts(npts))
@@ -684,6 +698,10 @@ def grid_2d_pes_dms(
 
     Failed points raise :class:`ScanFailedError` as in :func:`grid_1d_pes_dms`.
     """
+
+    deprecated(
+        "grid_2d_pes_dms() is deprecated; use pyscf_vscf.scans.plan_bond_scan() with two bonds and run_scan()."
+    )
 
     bond1 = normalize_bond(b1)
     bond2 = normalize_bond(b2)
@@ -868,6 +886,8 @@ def dump_lbs_frozen_1d_grid_cache(
 ) -> None:
     """Write a frozen 1D local-bond grid cache."""
 
+    deprecated("Schema-3 grid caches are deprecated; use pyscf_vscf.artifacts.scans.dump_scan().")
+
     meta = lbs_frozen_1d_cache_metadata(
         molecule,
         cfg,
@@ -894,6 +914,10 @@ def load_lbs_frozen_1d_grid_cache(
     backend_identity: str = "pyscf",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load and validate a frozen 1D local-bond grid cache."""
+
+    deprecated(
+        "Schema-3 grid cache loaders are deprecated; use pyscf_vscf.artifacts.scans.load_scan() or load_legacy_grid()."
+    )
 
     meta, arrays = load_grid_npz(path)
     validate_lbs_frozen_1d_cache_metadata(
@@ -1012,6 +1036,10 @@ def load_lbs_frozen_2d_grid_cache(
     backend_identity: str = "pyscf",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load and validate a frozen 2D local-bond grid cache."""
+
+    deprecated(
+        "Schema-3 grid cache loaders are deprecated; use pyscf_vscf.artifacts.scans.load_scan() or load_legacy_grid()."
+    )
 
     meta, arrays = load_grid_npz(path)
     return validate_lbs_frozen_2d_cache(

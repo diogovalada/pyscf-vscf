@@ -321,9 +321,12 @@ def _build_parser() -> argparse.ArgumentParser:
     scan1d.add_argument("--bond", required=True, help="bond as zero-based atom indices, e.g. 0-1")
     scan1d.add_argument(
         "--coordinate",
-        choices=["bond", "normal"],
+        choices=["bond", "normal", "normal-relaxed"],
         default="bond",
-        help="scan the bond length, or the normal mode most aligned with it (default: bond)",
+        help=(
+            "scan the bond length, the normal mode most aligned with it, or that mode with "
+            "all other coordinates relaxed (default: bond)"
+        ),
     )
     scan1d.add_argument(
         "--range",
@@ -451,7 +454,7 @@ def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
                 parser.error("--range must satisfy MIN < MAX")
             if getattr(args, "coordinate", "bond") == "bond" and low <= 0.0:
                 parser.error("bond-length ranges must be positive")
-            if getattr(args, "coordinate", "bond") == "normal" and not low < 0.0 < high:
+            if getattr(args, "coordinate", "bond") != "bond" and not low < 0.0 < high:
                 parser.error("normal-coordinate ranges must satisfy MIN < 0 < MAX")
             grids.append(np.linspace(low, high, int(count)))
     context.grids = grids
@@ -461,6 +464,10 @@ def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
         parser.error("--boundary-warn must be a positive number")
     if args.output is not None and args.output.suffix.lower() != ".npz":
         parser.error("--output must end with .npz")
+    if getattr(args, "coordinate", "bond") == "normal-relaxed" and any(
+        getattr(args, name) is not None for name in ("store", "output", "reuse")
+    ):
+        parser.error("--coordinate normal-relaxed does not support --store, --output, or --reuse")
     if args.reuse is not None:
         if args.store is not None or args.output is not None:
             parser.error(
@@ -661,6 +668,8 @@ def _run_scan(context: _Context) -> dict[str, Any]:
 
     args = context.args
     source = "computed"
+    if getattr(args, "coordinate", "bond") == "normal-relaxed":
+        return _run_relaxed_scan(context)
     if args.reuse is not None:
         scan = _load_reused_scan(context)
         source = f"file:{args.reuse}"
@@ -691,6 +700,75 @@ def _run_scan(context: _Context) -> dict[str, Any]:
         ],
         "source": source,
         "keo": getattr(args, "keo", None),
+    }
+    payload["transitions"] = [record.as_dict(extended=True) for record in records]
+    return payload
+
+
+def _run_relaxed_scan(context: _Context) -> dict[str, Any]:
+    """Constrained relaxed normal-coordinate scan (not yet on the plan runner)."""
+
+    import multiprocessing as mp
+    from concurrent.futures import ProcessPoolExecutor
+    from functools import partial
+
+    import numpy as np
+
+    from ._cli_common import _worker_init
+    from .backends.pyscf import normal_relaxed_point
+    from .variational import parse_intensity_mode, variational_1d
+    from .workflows.scans import (
+        calc_normal_mode_direction,
+        grid_1d_pes_dms_normal_relaxed,
+        normal_mode_effective_mass_amu,
+    )
+
+    args = context.args
+    molecule = context.molecule
+    bond = context.bonds[0]
+    direction = calc_normal_mode_direction(molecule, context.factory, bond, log_fn=context.log)
+    grid = context.grids[0] if context.grids else _default_normal_grid()
+    parallel = context.parallel
+    executor_factory = None
+    if parallel.workers and parallel.workers > 1:
+        executor_factory = partial(
+            ProcessPoolExecutor,
+            max_workers=parallel.workers,
+            mp_context=mp.get_context("spawn"),
+            initializer=_worker_init,
+            initargs=(parallel.threads_per_worker, parallel.max_memory_mb),
+        )
+    relaxed = grid_1d_pes_dms_normal_relaxed(
+        molecule,
+        context.factory,
+        direction.u_dir,
+        float(grid[0]),
+        float(grid[-1]),
+        int(grid.size),
+        relaxed_point_fn=partial(normal_relaxed_point, strict=True),
+        executor_factory=executor_factory,
+        log_fn=context.log,
+        stop_on_error=not args.continue_on_error,
+    )
+    axis = np.asarray(molecule.coords[bond.j]) - np.asarray(molecule.coords[bond.i])
+    records = variational_1d(
+        relaxed.displacements_A,
+        relaxed.energies_hartree,
+        relaxed.dipoles_debye,
+        normal_mode_effective_mass_amu(molecule, direction.u_dir),
+        axis=axis,
+        vmax=args.states,
+    )
+    _print_records(records, parse_intensity_mode(args.intensity), args.boundary_warn, two_d=False)
+    _warn_boundary(records, args.boundary_warn, "--range")
+    payload = _base_payload(context)
+    payload["scan"] = {
+        "kind": "normal-relaxed-1d",
+        "bonds_zero_based": [[bond.i, bond.j]],
+        "axes_A": [[float(value) for value in relaxed.displacements_A]],
+        "normal_mode_index": int(direction.mode_index),
+        "harmonic_frequency_cm": float(direction.frequency_cm),
+        "source": "computed",
     }
     payload["transitions"] = [record.as_dict(extended=True) for record in records]
     return payload

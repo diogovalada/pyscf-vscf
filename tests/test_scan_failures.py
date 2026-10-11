@@ -14,6 +14,8 @@ from pyscf_vscf.coordinates import Bond
 from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.workflows import scans
 
+pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
+
 
 class _MapOnlyExecutor:
     """Executor fake that evaluates each map batch eagerly, like a test double."""

@@ -69,6 +69,10 @@ class BlockPySCF(importlib.abc.MetaPathFinder):
 
 sys.meta_path.insert(0, BlockPySCF())
 import pyscf_vscf.workflows.scans
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning"
+)
 print("scans-ok")
 """
     env = os.environ.copy()

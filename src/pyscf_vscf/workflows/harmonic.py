@@ -6,6 +6,8 @@ the analytic Hessian fallback path.
 
 from __future__ import annotations
 
+import logging
+
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -13,6 +15,7 @@ from typing import Any
 import numpy as np
 
 from pyscf_vscf import harmonic as harmonic_helpers
+from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.backends._pyscf_properties import to_numpy
 from pyscf_vscf.constants import ANG_TO_BOHR, atomic_mass_amu
@@ -21,6 +24,7 @@ from pyscf_vscf.settings import ESSettings
 
 _DEFAULT_ES = ESSettings()
 BOHR_TO_ANG = 1.0 / ANG_TO_BOHR
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -36,20 +40,31 @@ class StationarityDiagnostic:
 
 def harmonic_analysis(
     molecule: Any,
-    cfg: Any,
+    settings: Any = None,
     *,
     rtproj: str = "pyscf",
     strict: bool = True,
     allow_fd_hessian: bool = False,
     debug: bool = False,
+    cfg: Any = None,
 ) -> harmonic_helpers.HarmonicResult:
     """Run the PySCF harmonic workflow.
 
-    Analytic Hessians are preferred. If no analytic Hessian is available, finite
-    differences of analytic gradients are opt-in. Analytic Hessian failures
-    raise in strict mode and warn/fall back in non-strict mode.
+    ``settings`` is ``ESSettings`` (or compatible) or a method factory such as
+    :class:`~pyscf_vscf.backends.pyscf.MethodRecipe`. Analytic Hessians are
+    preferred. If no analytic Hessian is available, finite differences of
+    analytic gradients are opt-in. Analytic Hessian failures raise in strict
+    mode and warn/fall back in non-strict mode.
     """
 
+    if cfg is not None:
+        if settings is not None:
+            raise TypeError("Pass settings, not both settings and cfg")
+        deprecated("harmonic_analysis(cfg=...) is deprecated; use settings=.")
+        settings = cfg
+    if settings is None:
+        raise TypeError("harmonic_analysis() needs electronic settings or a method factory")
+    cfg = settings
     strict = bool(strict)
     allow_fd_hessian = bool(allow_fd_hessian)
     converged = pyscf_backend.converged_mean_field(molecule, cfg)
@@ -271,9 +286,9 @@ def molecule_analysis_masses(molecule: Any) -> np.ndarray:
 
 def _print_stationarity_diagnostic(mf: Any) -> None:
     try:
-        print(format_stationarity_diagnostic(stationarity_diagnostic(mf)))
+        _LOG.info("%s", format_stationarity_diagnostic(stationarity_diagnostic(mf)))
     except Exception as exc:
-        print(f"Geometry stationarity check (gradient) failed: {exc}")
+        _LOG.info("Geometry stationarity check (gradient) failed: %s", exc)
 
 
 def _cfg_get(cfg: Any, name: str, default: Any) -> Any:

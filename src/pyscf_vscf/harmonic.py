@@ -7,7 +7,9 @@ thermo helpers are imported lazily by call sites that request the
 
 from __future__ import annotations
 
-import sys
+import logging
+import warnings
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -22,6 +24,7 @@ IMAG_FREQ_WARN_CM: float = 1.0
 IMAG_FREQ_ERR_CM: float = 10.0
 
 _WARNED_ONCE: set[str] = set()
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass
@@ -40,12 +43,12 @@ class HarmonicResult:
 
 
 def warn_once(key: str, msg: str) -> None:
-    """Emit a warning once to stderr."""
+    """Emit a ``RuntimeWarning`` once per key."""
 
     if key in _WARNED_ONCE:
         return
     _WARNED_ONCE.add(key)
-    print(f"[WARN] {msg}", file=sys.stderr, flush=True)
+    warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
 
 def signed_freqs_from_evals(w2: np.ndarray) -> np.ndarray:
@@ -141,9 +144,9 @@ def format_low_mode_summary(tag: str, w2: np.ndarray, nshow: int = 10) -> str:
 
 
 def print_low_mode_summary(tag: str, w2: np.ndarray, nshow: int = 10) -> None:
-    """Print the low-mode diagnostic summary."""
+    """Log the low-mode diagnostic summary at INFO level (logger ``pyscf_vscf.harmonic``)."""
 
-    print(format_low_mode_summary(tag, w2, nshow=nshow))
+    _LOG.info("%s", format_low_mode_summary(tag, w2, nshow=nshow))
 
 
 def as_cart_hessian(H: np.ndarray, natm: int) -> np.ndarray:
@@ -353,7 +356,7 @@ def mass_weighted_freqs_modes_from_coords(
         if rtproj_lc == "pyscf":
             Wp, info = mw_rt_projector_pyscf_like(W, coords_bohr, masses_amu, thermo_mod)
             if debug:
-                print(
+                _LOG.info(
                     "PySCF-like RT projector: "
                     f"rt_rank={int(info['rt_rank'])} "
                     f"sv_max={info['sv_max']:.3e} "
@@ -379,7 +382,7 @@ def mass_weighted_freqs_modes_from_coords(
         Wp, info = mw_rt_projector_explicit(W, coords_bohr, masses_amu)
         rt_rank = int(info["rt_rank"])
         if debug:
-            print(
+            _LOG.info(
                 "Explicit MW RT projector: "
                 f"rt_rank={rt_rank} "
                 f"sv_max={info['sv_max']:.3e} "
