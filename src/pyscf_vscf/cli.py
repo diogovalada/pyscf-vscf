@@ -19,7 +19,7 @@ import importlib
 import math
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -55,7 +55,7 @@ examples:
 
 GEOMETRY is an .xyz or Midas .mmol file in angstrom; 'D' marks deuterium.
 Bonds are zero-based atom indices (0-1 is the first two atoms). Without
---range, a bond grid is centred on the bond's length in GEOMETRY, so start
+--range, a bond grid is placed around the bond's length in GEOMETRY, so start
 from an optimized geometry. Reported states marked '*' place a significant
 probability on the outermost grid points and are not converged.
 """
@@ -69,9 +69,7 @@ class _Context:
     settings: Any = None
     factory: Any = None
     provider: Any = None
-    runner: Any = None
     parallel: Any = None
-    adopted: dict[str, object] = field(default_factory=dict)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -899,6 +897,7 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
             kinetic_operator=getattr(args, "keo", "gmatrix"),
         )
     # A 0.2 relative-energy grid: check that it belongs to this geometry and bonds.
+    from .constants import atomic_number
     from .variational import variational_1d, variational_2d
     from .workflows.scans import bond_bond_g12_inv_amu, local_bond_reduced_mass_amu
 
@@ -910,8 +909,10 @@ def _spectrum(context: _Context, scan: Any) -> list[Any]:
     identity = scan.metadata["identity"]
     stored_molecule = identity["molecule"]
     reference = np.asarray(stored_molecule["coordinates_A"], dtype=float)
+    # Schema-3 identities store deuterium as hydrogen: compare nuclear charges.
     if (
-        list(stored_molecule["symbols"]) != list(molecule.symbols)
+        [atomic_number(symbol) for symbol in stored_molecule["symbols"]]
+        != [atomic_number(symbol) for symbol in molecule.symbols]
         or reference.shape != np.asarray(molecule.coords).shape
         or not np.allclose(reference, molecule.coords, rtol=0.0, atol=1e-10)
     ):

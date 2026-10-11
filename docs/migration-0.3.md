@@ -26,7 +26,7 @@ Python 3.11 or newer is required.
 Flag-style 0.2 invocations still run unchanged, with the 0.2 defaults, and
 print a deprecation notice. Two defaults differ in the subcommands:
 
-- Without `--range`, the bond grid is centred on the bond's length in the
+- Without `--range`, the bond grid is placed around the bond's length in the
   input geometry (see [scans](scans.md)); the 0.2 default of 0.75-1.25 A was
   too narrow for O-H overtones and meaningless for longer bonds. Start from
   an optimized geometry.

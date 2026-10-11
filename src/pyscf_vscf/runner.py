@@ -400,15 +400,16 @@ def _run_parallel(
                 and len(in_flight) < limit
                 and not (failures and policy.stop_on_error)
             ):
-                key = queue[0]
+                key = queue.pop(0)
+                attempt_id = begin(key)
+                attempted.add(key)
                 try:
                     future = executor.submit(_evaluate_point, provider, requests[key], provider_id)
                 except Exception as exc:
                     executor_error = f"{_type_name(exc)}: {exc}"
+                    abandon(key, attempt_id)
                     break
-                queue.pop(0)
-                attempted.add(key)
-                in_flight[future] = (key, begin(key))
+                in_flight[future] = (key, attempt_id)
             if not in_flight:
                 break
             done, _ = wait(in_flight, return_when=FIRST_COMPLETED)

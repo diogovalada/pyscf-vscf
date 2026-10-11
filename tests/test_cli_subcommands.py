@@ -313,3 +313,17 @@ def test_reuse_reads_matching_legacy_caches(tmp_path, capsys, dimension) -> None
     wrong = ["--bond", "0-2"] if dimension == 1 else ["--bond", "0-2", "--bond", "0-1"]
     assert cli.main([command, geometry, *wrong, "--reuse", str(cache)]) == 1
     assert "scans bond" in capsys.readouterr().err
+
+
+def test_legacy_reuse_serves_isotopologues(tmp_path, capsys) -> None:
+    geometry = str(_water(tmp_path / "w.xyz"))
+    cache = _legacy_cache(tmp_path, geometry, 1)
+    heavy = tmp_path / "d2o.xyz"
+    heavy.write_text(Path(geometry).read_text().replace("\nH ", "\nD "))
+
+    argv = ["scan1d", "--bond", "0-1", "--reuse", str(cache), "--states", "2"]
+    assert cli.main([argv[0], geometry, *argv[1:]]) == 0
+    light = capsys.readouterr().out
+    assert cli.main([argv[0], str(heavy), *argv[1:]]) == 0
+    deuterated = capsys.readouterr().out
+    assert deuterated != light

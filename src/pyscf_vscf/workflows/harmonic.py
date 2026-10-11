@@ -220,12 +220,19 @@ def gradient_at(molecule: Any, cfg: Any, xflat_bohr: np.ndarray) -> np.ndarray:
     return pyscf_backend.energy_gradient_at_coords_bohr(molecule, cfg, xflat_bohr)[1]
 
 
-def _guarded_gradient(cfg: Any, reference: Any) -> Callable[[Any, Any, np.ndarray], np.ndarray]:
-    """Return a gradient function that rejects method-configuration changes."""
+def _guarded_gradient(
+    cfg: Any, reference: Any = None
+) -> Callable[[Any, Any, np.ndarray], np.ndarray]:
+    """Return a gradient function that rejects method-configuration changes.
+
+    The configuration of ``reference`` (a converged mean field), or else of
+    the first evaluated geometry, is the one every later build must match.
+    """
 
     factory = pyscf_backend.method_factory(cfg)
     guard = ConfigurationGuard(factory)
-    guard.check(reference.build.configuration_snapshot)
+    if reference is not None:
+        guard.check(reference.build.configuration_snapshot)
 
     def gradient(molecule: Any, settings: Any, xflat_bohr: np.ndarray) -> np.ndarray:
         coords = pyscf_backend._coords_from_flat_bohr(molecule, xflat_bohr)
@@ -247,14 +254,18 @@ def finite_difference_hessian_from_gradients(
     gradient_fn: Callable[[Any, Any, np.ndarray], np.ndarray] | None = None,
     progress_fn: Callable[[int, int, str], None] | None = None,
 ) -> np.ndarray:
-    """Build a central-difference Hessian from flattened gradients."""
+    """Build a central-difference Hessian from flattened gradients.
+
+    Without ``gradient_fn``, gradients come from the package's PySCF method
+    and every displaced build must share the method configuration.
+    """
 
     x0 = np.asarray(x0_bohr, dtype=float).reshape(-1)
     step = float(h)
     if step <= 0.0:
         raise ValueError("h must be positive")
 
-    gradient = gradient_fn or gradient_at
+    gradient = gradient_fn or _guarded_gradient(cfg)
     size = x0.size
     hessian = np.zeros((size, size), dtype=float)
     for column in range(size):

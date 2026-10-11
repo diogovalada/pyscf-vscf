@@ -151,6 +151,12 @@ def test_optimization_and_finite_difference_hessians_reject_configuration_drift(
     tolerant = harmonic._guarded_gradient(declared, converged_mean_field(_h2(), declared))
     assert np.all(np.isfinite(tolerant(_h2(), declared, displaced)))
 
+    # The public helper guards its default gradients too: x0 sits just below the
+    # 1.5 bohr switch, so the + displacement of the bond coordinate crosses it.
+    x0 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.499])
+    with pytest.raises(ValueError, match="grids_level"):
+        harmonic.finite_difference_hessian_from_gradients(_h2(), recipe, x0, h=2e-3)
+
 
 def test_runner_memory_budget_reaches_the_calculation(monkeypatch) -> None:
     from pyscf_vscf.settings import MAX_MEMORY_ENV_VAR
