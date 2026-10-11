@@ -368,6 +368,108 @@ def run_scan(
     )
 
 
+def bond_spectrum(
+    scan: ScanResult,
+    molecule: Any,
+    *,
+    max_state_index: int = 8,
+    kinetic_operator: str = "gmatrix",
+    intensity_axis: Sequence[float] | np.ndarray | None = None,
+) -> list[Any]:
+    """Return DVR transition records for a one- or two-bond scan.
+
+    Masses come from ``molecule``, so one scan serves every isotopologue on
+    the same surface. ``max_state_index`` is the highest reported state (the
+    vibrational quantum number in 1D, the eigenstate index in 2D).
+    ``kinetic_operator`` (2D only) is ``"gmatrix"`` (with the Wilson-G cross
+    term) or ``"reduced"``. Polarized intensities use ``intensity_axis``,
+    default the first bond's direction.
+    """
+
+    from .variational import variational_1d, variational_2d
+    from .workflows.scans import bond_bond_g12_inv_amu, local_bond_reduced_mass_amu
+
+    if scan.scan_kind not in {"bond-1d", "bond-2d"}:
+        raise ValueError(f"bond_spectrum needs a bond scan, got {scan.scan_kind!r}")
+    _check_same_system(scan, molecule)
+    bonds = [Bond(*axis.bond) for axis in scan.axes]
+    coordinates = np.asarray(molecule.coords, dtype=float)
+    axis = (
+        coordinates[bonds[0].j] - coordinates[bonds[0].i]
+        if intensity_axis is None
+        else np.asarray(intensity_axis, dtype=float)
+    )
+    energies = scan.relative_energies_Eh
+    dipoles = scan.dipoles_debye
+    if scan.scan_kind == "bond-1d":
+        return variational_1d(
+            scan.axes[0].values,
+            energies,
+            dipoles,
+            local_bond_reduced_mass_amu(molecule, bonds[0]),
+            axis=axis,
+            vmax=int(max_state_index),
+        )
+    keo = str(kinetic_operator).lower()
+    if keo not in {"gmatrix", "reduced"}:
+        raise ValueError("kinetic_operator must be 'gmatrix' or 'reduced'")
+    g12 = bond_bond_g12_inv_amu(molecule, bonds[0], bonds[1]) if keo == "gmatrix" else 0.0
+    return variational_2d(
+        scan.axes[0].values,
+        scan.axes[1].values,
+        energies,
+        dipoles,
+        local_bond_reduced_mass_amu(molecule, bonds[0]),
+        local_bond_reduced_mass_amu(molecule, bonds[1]),
+        axis=axis,
+        nmax=int(max_state_index),
+        g12_inv_amu=g12,
+    )
+
+
+def normal_coordinate_spectrum(
+    scan: ScanResult,
+    molecule: Any,
+    *,
+    max_state_index: int = 8,
+    intensity_axis: Sequence[float] | np.ndarray | None = None,
+) -> list[Any]:
+    """Return DVR transition records for a rigid normal-coordinate scan.
+
+    The effective mass of the unit Cartesian direction uses ``molecule``'s
+    masses. Polarized intensities default to the z axis.
+    """
+
+    from .variational import variational_1d
+
+    if scan.scan_kind != "normal-1d":
+        raise ValueError(f"normal_coordinate_spectrum needs a normal scan, got {scan.scan_kind!r}")
+    _check_same_system(scan, molecule)
+    direction = np.asarray(scan.sampling["direction"], dtype=float)
+    masses = np.asarray(molecule.analysis_masses(), dtype=float)
+    effective_mass = float(np.sum(masses * np.sum(direction * direction, axis=1)))
+    return variational_1d(
+        scan.axes[0].values,
+        scan.relative_energies_Eh,
+        scan.dipoles_debye,
+        effective_mass,
+        axis=None if intensity_axis is None else np.asarray(intensity_axis, dtype=float),
+        vmax=int(max_state_index),
+    )
+
+
+def _check_same_system(scan: ScanResult, molecule: Any) -> None:
+    charges = [atomic_number(symbol) for symbol in molecule.symbols]
+    reference = scan.reference_geometry
+    if list(reference["nuclear_charges"]) != charges or not np.allclose(
+        np.asarray(reference["coordinates_A"], dtype=float),
+        np.asarray(molecule.coords, dtype=float),
+        rtol=0.0,
+        atol=1e-10,
+    ):
+        raise ValueError("The molecule does not match the scan's reference geometry")
+
+
 def _plan(
     molecule: Any,
     provider: ElectronicProvider,
@@ -430,7 +532,9 @@ __all__ = [
     "ScanPlan",
     "ScanResult",
     "assemble_scan",
+    "bond_spectrum",
     "default_bond_grid",
+    "normal_coordinate_spectrum",
     "plan_bond_scan",
     "plan_normal_scan",
     "run_scan",

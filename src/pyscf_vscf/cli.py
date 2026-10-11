@@ -1,403 +1,118 @@
-"""Command-line entry point for package-native PySCF local-stretch DVR workflows."""
+"""The ``pyscf-vscf`` command line.
+
+Subcommands::
+
+    pyscf-vscf harmonic GEOMETRY [electronic options]
+    pyscf-vscf opt      GEOMETRY [--output FILE]
+    pyscf-vscf scan1d   GEOMETRY --bond I-J [--range RMIN RMAX NPTS] [--store FILE]
+    pyscf-vscf scan2d   GEOMETRY --bond I-J --bond K-L [--range ... --range ...]
+    pyscf-vscf inspect  FILE
+
+Flag-style 0.2 invocations (``pyscf-vscf --xyz ... --task ...``) still work
+for one release through :mod:`pyscf_vscf._cli_legacy`, with a notice.
+"""
 
 from __future__ import annotations
 
 import argparse
-import json
+import importlib
 import math
-import multiprocessing as mp
-import os
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
-from functools import partial
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Sequence
 
-CLI_RESULT_SCHEMA = "pyscf-vscf-cli-result"
-CLI_RESULT_SCHEMA_VERSION = 1
-DEFAULT_BOUNDARY_WARN = 1e-5
-MIN_GRID_POINTS = 3
+from ._cli_common import (
+    CLI_RESULT_SCHEMA,
+    CLI_RESULT_SCHEMA_VERSION,
+    DEFAULT_BOUNDARY_WARN,
+    _CLIError,
+    _describe_exception,
+    _log_fn,
+    _package_version,
+    _print_error,
+    _print_records,
+    _warn_boundary,
+    _write_json,
+)
 
-# Defaults for options whose omission matters when settings are adopted from a
-# reused grid cache. The parser stores ``None`` for an omitted option.
-_DEFAULT_RMIN = 0.75
-_DEFAULT_RMAX = 1.25
-_DEFAULT_NPTS = 41
-_DEFAULT_BOND = "0-1"
+SUBCOMMANDS = ("harmonic", "opt", "scan1d", "scan2d", "inspect")
+_LEGACY_NOTICE = (
+    "pyscf-vscf: note: flag-style options (--xyz/--mmol/--task) are deprecated and will be "
+    "removed in 0.4; use subcommands such as 'pyscf-vscf scan1d GEOMETRY --bond 0-1'. "
+    "Run 'pyscf-vscf --help' for details."
+)
 
 _EPILOG = """\
 examples:
-  pyscf-vscf --xyz water.xyz --task opt --method b3lyp --basis cc-pvdz
-  pyscf-vscf --xyz water.xyz --task harmonic --method b3lyp --basis cc-pvdz
-  pyscf-vscf --xyz water.xyz --task 1d --bond 0-1 --rmin 0.65 --rmax 1.6 \\
-      --npts 41 --method b3lyp --basis cc-pvdz --dump-grid oh.npz
-  pyscf-vscf --xyz water.xyz --task 1d --reuse-grid oh.npz --vmax 4
+  pyscf-vscf opt water.xyz --method b3lyp --basis cc-pvdz --output water-opt.xyz
+  pyscf-vscf harmonic water-opt.xyz --method b3lyp --basis cc-pvdz
+  pyscf-vscf scan1d water-opt.xyz --bond 0-1 --method b3lyp --basis cc-pvdz \\
+      --store water.sqlite --output oh.npz
+  pyscf-vscf scan1d water-opt.xyz --bond 0-1 --reuse oh.npz --states 4
+  pyscf-vscf scan2d water-opt.xyz --bond 0-1 --bond 0-2 --store water.sqlite
 
-Bonds are written as zero-based atom indices, e.g. 0-1 for the first two atoms
-in the geometry file. Scan grids are bond lengths (or normal-coordinate
-displacements) in angstrom. Check that reported states are converged with
-respect to the grid: states flagged with '*' place a significant probability
-on the outermost grid points.
+GEOMETRY is an .xyz or Midas .mmol file in angstrom; 'D' marks deuterium.
+Bonds are zero-based atom indices (0-1 is the first two atoms). Without
+--range, a bond grid is centred on the bond's length in GEOMETRY, so start
+from an optimized geometry. Reported states marked '*' place a significant
+probability on the outermost grid points and are not converged.
 """
 
 
-class _CLIError(RuntimeError):
-    """A user-facing error whose message needs no traceback."""
-
-
-def _package_version() -> str:
-    try:
-        return version("pyscf-vscf")
-    except PackageNotFoundError:
-        from . import __version__
-
-        return __version__
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    from .settings import ESSettings, HarmonicSettings
-
-    defaults = ESSettings()
-    harmonic_defaults = HarmonicSettings()
-    parser = argparse.ArgumentParser(
-        prog="pyscf-vscf",
-        description=(
-            "Variational anharmonic vibrational spectroscopy on PySCF potential and dipole "
-            "surfaces: geometry optimization, harmonic analysis, and 1D/2D local-stretch or "
-            "normal-coordinate DVR spectra."
-        ),
-        epilog=_EPILOG,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument("--version", action="version", version=_package_version())
-
-    geometry = parser.add_argument_group("geometry")
-    geometry.add_argument("--xyz", type=Path, help="XYZ geometry file (angstrom)")
-    geometry.add_argument("--mmol", type=Path, help="Midas MMOL geometry file")
-    geometry.add_argument(
-        "--charge",
-        type=int,
-        default=None,
-        help="total molecular charge (default: from the file, usually 0)",
-    )
-    geometry.add_argument(
-        "--spin",
-        type=int,
-        default=None,
-        help="number of unpaired electrons, N(alpha) - N(beta) (default: from the file)",
-    )
-
-    task = parser.add_argument_group("task")
-    task.add_argument(
-        "--task",
-        choices=["harmonic", "opt", "1d", "2d"],
-        default="harmonic",
-        help="calculation to run (default: harmonic)",
-    )
-
-    electronic = parser.add_argument_group("electronic structure")
-    electronic.add_argument(
-        "--method",
-        default=None,
-        help=f"'hf' or a PySCF exchange-correlation functional (default: {defaults.method})",
-    )
-    electronic.add_argument(
-        "--basis",
-        default=None,
-        help=f"PySCF basis set name (default: {defaults.basis})",
-    )
-    ri = electronic.add_mutually_exclusive_group()
-    ri.add_argument(
-        "--ri",
-        dest="use_ri",
-        action="store_true",
-        default=None,
-        help="use RI density fitting (default)",
-    )
-    ri.add_argument(
-        "--no-ri",
-        dest="use_ri",
-        action="store_false",
-        help="disable RI density fitting",
-    )
-    electronic.add_argument(
-        "--ri-aux",
-        dest="ri_aux",
-        default=None,
-        help="auxiliary basis for RI (default: chosen from the main basis)",
-    )
-    electronic.add_argument(
-        "--scf-conv-tol",
-        type=float,
-        default=None,
-        help="SCF energy convergence threshold in Hartree (default: 1e-10)",
-    )
-    electronic.add_argument(
-        "--scf-max-cycle",
-        type=int,
-        default=None,
-        help="maximum SCF iterations (default: 50)",
-    )
-    electronic.add_argument(
-        "--dft-grid-level",
-        type=int,
-        default=None,
-        help="PySCF DFT integration grid level (default: 3; ignored for HF)",
-    )
-
-    scan = parser.add_argument_group("scans (--task 1d/2d)")
-    scan.add_argument(
-        "--bond",
-        default=None,
-        help=f"scanned bond as zero-based atom indices i-j (default: {_DEFAULT_BOND})",
-    )
-    scan.add_argument("--bond2", default=None, help="second bond for --task 2d, e.g. 0-2")
-    scan.add_argument(
-        "--scan",
-        choices=["lbs-frozen", "normal", "normal-relaxed"],
-        default="lbs-frozen",
-        help=(
-            "1D scan type: frozen local bond stretch, rigid normal-mode displacement, or "
-            "normal-mode displacement with all other coordinates relaxed "
-            "(default: lbs-frozen)"
-        ),
-    )
-    scan.add_argument(
-        "--rmin",
-        type=float,
-        default=None,
-        help=f"smallest bond length in angstrom (default: {_DEFAULT_RMIN})",
-    )
-    scan.add_argument(
-        "--rmax",
-        type=float,
-        default=None,
-        help=f"largest bond length in angstrom (default: {_DEFAULT_RMAX})",
-    )
-    scan.add_argument(
-        "--npts",
-        type=int,
-        default=None,
-        help=f"grid points per scanned coordinate, at least 3 (default: {_DEFAULT_NPTS})",
-    )
-    scan.add_argument(
-        "--rmin2",
-        type=float,
-        default=None,
-        help="smallest second-bond length for --task 2d (default: --rmin)",
-    )
-    scan.add_argument(
-        "--rmax2",
-        type=float,
-        default=None,
-        help="largest second-bond length for --task 2d (default: --rmax)",
-    )
-    scan.add_argument(
-        "--npts2",
-        type=int,
-        default=None,
-        help="grid points for the second bond in --task 2d (default: --npts)",
-    )
-    scan.add_argument(
-        "--smin",
-        type=float,
-        default=-0.15,
-        help="smallest normal-coordinate displacement in angstrom, < 0 (default: -0.15)",
-    )
-    scan.add_argument(
-        "--smax",
-        type=float,
-        default=0.15,
-        help="largest normal-coordinate displacement in angstrom, > 0 (default: 0.15)",
-    )
-    scan.add_argument(
-        "--keo",
-        choices=["reduced", "gmatrix"],
-        default="gmatrix",
-        help=(
-            "2D kinetic energy operator: separable reduced masses, or including the "
-            "Wilson G-matrix cross term (default: gmatrix)"
-        ),
-    )
-    scan.add_argument(
-        "--vmax",
-        type=int,
-        default=8,
-        help=(
-            "number of excited states to report: highest quantum number in 1D, number of "
-            "eigenstates above the ground state in 2D (default: 8)"
-        ),
-    )
-    scan.add_argument(
-        "--dump-grid",
-        type=Path,
-        default=None,
-        help="write the computed PES/DMS grid to this .npz cache (lbs-frozen scans)",
-    )
-    scan.add_argument(
-        "--reuse-grid",
-        type=Path,
-        default=None,
-        help=(
-            "load a PES/DMS grid cache instead of computing it; omitted electronic and "
-            "grid options are taken from the cache"
-        ),
-    )
-    scan.add_argument(
-        "--partial-out",
-        type=Path,
-        default=None,
-        help=(
-            "if scan points fail, write the completed points to this diagnostic .npz "
-            "(default with --dump-grid: <dump-grid>.partial.npz)"
-        ),
-    )
-    scan.add_argument(
-        "--continue-on-error",
-        action="store_true",
-        help="keep evaluating the remaining points after a scan point fails",
-    )
-    scan.add_argument(
-        "--intensity",
-        choices=["axis", "isotropic", "vector", "both"],
-        default="axis",
-        help=(
-            "intensity convention to print: light polarized along the first bond axis, "
-            "isotropic average ('vector' is an alias), or both (default: axis)"
-        ),
-    )
-    scan.add_argument(
-        "--boundary-warn",
-        type=float,
-        default=DEFAULT_BOUNDARY_WARN,
-        help=(
-            "flag states whose probability on the outermost grid points exceeds this "
-            f"value (default: {DEFAULT_BOUNDARY_WARN:g})"
-        ),
-    )
-
-    harmonic = parser.add_argument_group("harmonic analysis and optimization")
-    harmonic.add_argument(
-        "--rtproj",
-        choices=["pyscf", "mw_explicit", "none"],
-        default=harmonic_defaults.rtproj,
-        help="projection of rotations and translations (default: pyscf)",
-    )
-    harmonic.add_argument(
-        "--allow-fd-hessian",
-        action="store_true",
-        help="allow a finite-difference Hessian when no analytic Hessian is available",
-    )
-    harmonic.add_argument(
-        "--opt-out",
-        type=Path,
-        default=None,
-        help=(
-            "optimized geometry output (.xyz or .mmol; default: "
-            "<label>.pyscf_opt.xyz or .mmol, matching the input format)"
-        ),
-    )
-    harmonic.add_argument(
-        "--opt-maxsteps",
-        type=int,
-        default=50,
-        help="maximum optimization steps (default: 50)",
-    )
-
-    execution = parser.add_argument_group("execution and output")
-    execution.add_argument(
-        "--max-parallel",
-        type=int,
-        default=None,
-        help="total CPU threads to use (default: all CPUs available to this process)",
-    )
-    execution.add_argument(
-        "--pes-workers",
-        type=int,
-        default=None,
-        help=(
-            "parallel processes for scan points (default: automatic, up to one worker per "
-            "CPU, limited by points and available memory; CPUs left over are split among "
-            "the workers as threads)"
-        ),
-    )
-    execution.add_argument(
-        "--max-memory",
-        type=int,
-        default=None,
-        help="PySCF memory budget per process in MB (default: automatic for scans)",
-    )
-    execution.add_argument(
-        "--json",
-        dest="json_out",
-        type=Path,
-        default=None,
-        help="also write machine-readable results to this JSON file",
-    )
-    strict_group = execution.add_mutually_exclusive_group()
-    strict_group.add_argument(
-        "--strict", dest="strict", action="store_true", help=argparse.SUPPRESS
-    )
-    strict_group.add_argument(
-        "--no-strict",
-        dest="strict",
-        action="store_false",
-        help="downgrade some failures (Hessian, optimization) to warnings",
-    )
-    parser.set_defaults(strict=True)
-    execution.add_argument("-v", "--verbose", action="store_true", help="print progress")
-    execution.add_argument(
-        "--debug",
-        action="store_true",
-        help="show full tracebacks instead of one-line error messages",
-    )
-    return parser
-
-
 @dataclass
-class _Prepared:
+class _Context:
     args: argparse.Namespace
     molecule: Any
-    cfg: Any
-    runtime: Any
-    bond: Any = None
-    bond2: Any = None
-    grid1: tuple[float, float, int] | None = None
-    grid2: tuple[float, float, int] | None = None
-    opt_out: Path | None = None
-    partial_out: Path | None = None
+    log: Any
+    settings: Any = None
+    factory: Any = None
+    provider: Any = None
+    runner: Any = None
+    parallel: Any = None
     adopted: dict[str, object] = field(default_factory=dict)
 
 
 def main(argv: list[str] | None = None) -> int:
     """Run the ``pyscf-vscf`` command line and return its exit code."""
 
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if (
+        arguments
+        and arguments[0].startswith("-")
+        and arguments[0]
+        not in {
+            "-h",
+            "--help",
+            "--version",
+        }
+    ):
+        from . import _cli_legacy
+
+        print(_LEGACY_NOTICE, file=sys.stderr)
+        return _cli_legacy.main(arguments)
+
     parser = _build_parser()
-    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+    if not arguments:
+        parser.print_help(sys.stderr)
+        return 2
+    args = parser.parse_args(arguments)
+    log = _log_fn(getattr(args, "verbose", False))
     try:
-        prepared = _prepare(args, parser)
-    except _CLIError as exc:
-        if args.debug:
-            raise
-        _print_error(str(exc))
-        return 1
+        context = _prepare(args, parser, log)
     except Exception as exc:
-        if args.debug:
+        if getattr(args, "debug", False):
             raise
         _print_error(_describe_exception(exc))
         return 1
 
     from .settings import format_runtime
 
-    log = _log_fn(args.verbose)
     start = time.perf_counter()
-    payload: dict[str, Any] | None = None
     try:
-        payload = _run(prepared, log)
-        if args.json_out is not None and payload is not None:
+        payload = args.handler(context)
+        if getattr(args, "json_out", None) is not None and payload is not None:
             payload["runtime_seconds"] = time.perf_counter() - start
             _write_json(args.json_out, payload)
             log(f"Wrote JSON results: {args.json_out}")
@@ -407,210 +122,449 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except Exception as exc:
         if args.debug:
-            _print_worker_traceback(exc)
+            _print_first_traceback(exc)
             raise
         _print_error(_describe_exception(exc))
         return 1
     finally:
-        elapsed = time.perf_counter() - start
-        sys.stdout.flush()
-        print(f"Runtime: {elapsed:.2f} s ({format_runtime(elapsed)})", file=sys.stderr)
+        if args.command != "inspect":
+            elapsed = time.perf_counter() - start
+            sys.stdout.flush()
+            print(f"Runtime: {elapsed:.2f} s ({format_runtime(elapsed)})", file=sys.stderr)
 
 
-def _prepare(args: argparse.Namespace, parser: argparse.ArgumentParser) -> _Prepared:
-    """Validate everything that can be checked before any expensive work."""
+def _build_parser() -> argparse.ArgumentParser:
+    from .settings import ESSettings
 
+    defaults = ESSettings()
+    parser = argparse.ArgumentParser(
+        prog="pyscf-vscf",
+        description=(
+            "Variational anharmonic vibrational spectroscopy (DVR, VSCF, VCI) on PySCF "
+            "potential and dipole surfaces."
+        ),
+        epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--version", action="version", version=_package_version())
+    commands = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    def electronic_parent() -> argparse.ArgumentParser:
+        parent = argparse.ArgumentParser(add_help=False)
+        group = parent.add_argument_group("electronic structure")
+        group.add_argument(
+            "--method",
+            default=None,
+            help=f"'hf' or a PySCF exchange-correlation functional (default: {defaults.method})",
+        )
+        group.add_argument(
+            "--basis", default=None, help=f"PySCF basis set (default: {defaults.basis})"
+        )
+        ri = group.add_mutually_exclusive_group()
+        ri.add_argument(
+            "--ri", dest="use_ri", action="store_true", default=None, help="use RI (default)"
+        )
+        ri.add_argument("--no-ri", dest="use_ri", action="store_false", help="disable RI")
+        group.add_argument(
+            "--ri-aux", default=None, help="RI auxiliary basis (default: automatic)"
+        )
+        group.add_argument(
+            "--scf-conv-tol", type=float, default=None, help="SCF threshold in Eh (default: 1e-10)"
+        )
+        group.add_argument(
+            "--scf-max-cycle", type=int, default=None, help="maximum SCF cycles (default: 50)"
+        )
+        group.add_argument(
+            "--dft-grid-level", type=int, default=None, help="DFT grid level (default: 3)"
+        )
+        group.add_argument(
+            "--recipe",
+            default=None,
+            metavar="MODULE:NAME",
+            help=(
+                "use a MethodRecipe object from an importable module instead of the "
+                "options above (any PySCF method; see the Python documentation)"
+            ),
+        )
+        geometry = parent.add_argument_group("molecule")
+        geometry.add_argument("--charge", type=int, default=None, help="total charge")
+        geometry.add_argument(
+            "--spin", type=int, default=None, help="unpaired electrons, N(alpha) - N(beta)"
+        )
+        return parent
+
+    def execution_parent() -> argparse.ArgumentParser:
+        parent = argparse.ArgumentParser(add_help=False)
+        group = parent.add_argument_group("execution and output")
+        group.add_argument(
+            "--max-parallel",
+            type=int,
+            default=None,
+            help="total CPU threads (default: all CPUs available to this process)",
+        )
+        group.add_argument(
+            "--workers",
+            type=int,
+            default=None,
+            help=(
+                "worker processes for scan points (default: automatic, limited by CPUs, "
+                "points, and available memory)"
+            ),
+        )
+        group.add_argument(
+            "--max-memory", type=int, default=None, help="PySCF memory per process in MB"
+        )
+        group.add_argument(
+            "--json", dest="json_out", type=Path, default=None, help="write JSON results"
+        )
+        group.add_argument("-v", "--verbose", action="store_true", help="print progress")
+        group.add_argument("--debug", action="store_true", help="show full tracebacks")
+        return parent
+
+    electronic = electronic_parent()
+    execution = execution_parent()
+
+    harmonic = commands.add_parser(
+        "harmonic",
+        parents=[electronic, execution],
+        help="harmonic frequencies and zero-point energy",
+        description="Harmonic frequencies from the analytic Hessian.",
+    )
+    harmonic.add_argument("geometry", type=Path, help="geometry file (.xyz or .mmol)")
+    harmonic.add_argument(
+        "--rtproj",
+        choices=["pyscf", "mw_explicit", "none"],
+        default="pyscf",
+        help="projection of rotations and translations (default: pyscf)",
+    )
+    harmonic.add_argument(
+        "--allow-fd-hessian",
+        action="store_true",
+        help="allow finite differences of gradients when no analytic Hessian exists",
+    )
+    harmonic.add_argument(
+        "--no-strict", dest="strict", action="store_false", help="downgrade Hessian failures"
+    )
+    harmonic.set_defaults(handler=_run_harmonic, strict=True)
+
+    opt = commands.add_parser(
+        "opt",
+        parents=[electronic, execution],
+        help="geometry optimization (geomeTRIC)",
+        description="Optimize the geometry; the method is rebuilt at every step.",
+    )
+    opt.add_argument("geometry", type=Path, help="geometry file (.xyz or .mmol)")
+    opt.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="optimized geometry (.xyz or .mmol; default: GEOMETRY stem + -opt + same suffix)",
+    )
+    opt.add_argument("--max-steps", type=int, default=50, help="optimization steps (default: 50)")
+    opt.add_argument(
+        "--no-strict", dest="strict", action="store_false", help="warn instead of failing"
+    )
+    opt.set_defaults(handler=_run_opt, strict=True)
+
+    def scan_parent() -> argparse.ArgumentParser:
+        parent = argparse.ArgumentParser(add_help=False)
+        group = parent.add_argument_group("scan and spectrum")
+        group.add_argument(
+            "--store",
+            type=Path,
+            default=None,
+            help="SQLite point store: completed points are kept and reused (resume)",
+        )
+        group.add_argument(
+            "--retry-failed", action="store_true", help="re-evaluate points that failed before"
+        )
+        group.add_argument(
+            "--continue-on-error",
+            action="store_true",
+            help="keep evaluating the remaining points after a point fails",
+        )
+        group.add_argument("--output", type=Path, default=None, help="write the scan (.npz, v4)")
+        group.add_argument(
+            "--reuse",
+            type=Path,
+            default=None,
+            help="read a scan (.npz, v4 or a 0.2 grid cache) instead of computing it",
+        )
+        group.add_argument(
+            "--states",
+            type=int,
+            default=4,
+            help="highest reported state (1D: quantum number; 2D: eigenstate index; default: 4)",
+        )
+        group.add_argument(
+            "--intensity",
+            choices=["axis", "isotropic", "both"],
+            default="axis",
+            help="intensity convention to print (default: axis, along the first bond)",
+        )
+        group.add_argument(
+            "--boundary-warn",
+            type=float,
+            default=DEFAULT_BOUNDARY_WARN,
+            help=f"flag states above this grid-edge probability (default: {DEFAULT_BOUNDARY_WARN:g})",
+        )
+        return parent
+
+    scan = scan_parent()
+    scan1d = commands.add_parser(
+        "scan1d",
+        parents=[electronic, scan, execution],
+        help="1D bond or normal-coordinate scan and DVR spectrum",
+        description="Scan one coordinate, then solve the 1D vibrational problem.",
+    )
+    scan1d.add_argument("geometry", type=Path, help="geometry file (.xyz or .mmol)")
+    scan1d.add_argument("--bond", required=True, help="bond as zero-based atom indices, e.g. 0-1")
+    scan1d.add_argument(
+        "--coordinate",
+        choices=["bond", "normal"],
+        default="bond",
+        help="scan the bond length, or the normal mode most aligned with it (default: bond)",
+    )
+    scan1d.add_argument(
+        "--range",
+        nargs=3,
+        type=float,
+        metavar=("MIN", "MAX", "NPTS"),
+        default=None,
+        help=(
+            "grid in angstrom: bond lengths, or normal displacements (default: centred on "
+            "the input geometry)"
+        ),
+    )
+    scan1d.set_defaults(handler=_run_scan, dimension=1)
+
+    scan2d = commands.add_parser(
+        "scan2d",
+        parents=[electronic, scan, execution],
+        help="2D two-bond scan and DVR spectrum",
+        description="Scan two bond lengths, then solve the coupled 2D vibrational problem.",
+    )
+    scan2d.add_argument("geometry", type=Path, help="geometry file (.xyz or .mmol)")
+    scan2d.add_argument(
+        "--bond", action="append", required=True, help="a bond (give exactly two), e.g. 0-1"
+    )
+    scan2d.add_argument(
+        "--range",
+        nargs=3,
+        type=float,
+        action="append",
+        metavar=("MIN", "MAX", "NPTS"),
+        default=None,
+        help="grid for the corresponding --bond (give none or two)",
+    )
+    scan2d.add_argument(
+        "--keo",
+        choices=["gmatrix", "reduced"],
+        default="gmatrix",
+        help="kinetic operator with or without the Wilson G cross term (default: gmatrix)",
+    )
+    scan2d.set_defaults(handler=_run_scan, dimension=2)
+
+    inspect = commands.add_parser(
+        "inspect", help="describe a scan file or a point store", description="Describe a file."
+    )
+    inspect.add_argument("path", type=Path, help="a .npz scan/grid file or a .sqlite point store")
+    inspect.add_argument("--debug", action="store_true", help="show full tracebacks")
+    inspect.set_defaults(handler=_run_inspect, verbose=False, json_out=None)
+    return parser
+
+
+def _prepare(args: argparse.Namespace, parser: argparse.ArgumentParser, log) -> _Context:
+    if args.command is None:
+        parser.error("choose a command: " + ", ".join(SUBCOMMANDS))
+    if args.command == "inspect":
+        return _Context(args=args, molecule=None, log=log)
+    for name in ("max_parallel", "workers", "max_memory"):
+        value = getattr(args, name, None)
+        if value is not None and value < 1:
+            parser.error(f"--{name.replace('_', '-')} must be at least 1")
+    for option in ("json_out", "output"):
+        path = getattr(args, option, None)
+        if path is not None:
+            if not path.parent.is_dir():
+                parser.error(f"output directory does not exist: {path.parent}")
+            if path.is_dir():
+                parser.error(f"output path is a directory: {path}")
+    if args.json_out is not None and args.json_out.suffix.lower() != ".json":
+        parser.error("--json must end with .json")
+    if args.recipe is not None and any(
+        getattr(args, name) is not None
+        for name in ("method", "basis", "use_ri", "ri_aux", "scf_conv_tol", "scf_max_cycle")
+    ):
+        parser.error("--recipe replaces --method/--basis/--ri/... ; do not combine them")
+
+    molecule = _load_molecule(args)
+    context = _Context(args=args, molecule=molecule, log=log)
+    if args.command in {"scan1d", "scan2d"}:
+        _prepare_scan(context, parser)
+    if args.command == "opt":
+        if args.output is not None and args.output.suffix.lower() not in {".xyz", ".mmol"}:
+            parser.error("--output must end with .xyz or .mmol")
+        if args.max_steps < 1:
+            parser.error("--max-steps must be at least 1")
+    _prepare_method(context)
+    return context
+
+
+def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
+    import numpy as np
+
+    from .coordinates import parse_bond
+
+    args = context.args
+    n_atoms = len(context.molecule.symbols)
+    bonds_text = [args.bond] if args.dimension == 1 else list(args.bond)
+    if args.dimension == 2 and len(bonds_text) != 2:
+        parser.error("scan2d needs exactly two --bond options")
+    bonds = []
+    for text in bonds_text:
+        try:
+            bond = parse_bond(text)
+        except ValueError:
+            parser.error(f"--bond must be two zero-based atom indices such as 0-1 (got {text!r})")
+        if not (0 <= bond.i < n_atoms and 0 <= bond.j < n_atoms) or bond.i == bond.j:
+            parser.error(
+                f"--bond {text} must name two different atoms in 0..{n_atoms - 1} "
+                "(indices are zero-based)"
+            )
+        bonds.append(bond)
+    if args.dimension == 2 and {bonds[0].i, bonds[0].j} == {bonds[1].i, bonds[1].j}:
+        parser.error("the two --bond options must be different bonds")
+    context.bonds = bonds
+    ranges = args.range
+    if args.dimension == 1 and ranges is not None:
+        ranges = [ranges]
+    if args.dimension == 2 and ranges is not None and len(ranges) != 2:
+        parser.error("give either no --range or one --range per --bond")
+    grids = None
+    if ranges is not None:
+        grids = []
+        for low, high, count in ranges:
+            if not count.is_integer() or count < 3:
+                parser.error("the NPTS of --range must be an integer of at least 3")
+            if not (math.isfinite(low) and math.isfinite(high) and low < high):
+                parser.error("--range must satisfy MIN < MAX")
+            if getattr(args, "coordinate", "bond") == "bond" and low <= 0.0:
+                parser.error("bond-length ranges must be positive")
+            if getattr(args, "coordinate", "bond") == "normal" and not low < 0.0 < high:
+                parser.error("normal-coordinate ranges must satisfy MIN < 0 < MAX")
+            grids.append(np.linspace(low, high, int(count)))
+    context.grids = grids
+    if args.states < 1:
+        parser.error("--states must be at least 1")
+    if not (math.isfinite(args.boundary_warn) and args.boundary_warn > 0.0):
+        parser.error("--boundary-warn must be a positive number")
+    if args.output is not None and args.output.suffix.lower() != ".npz":
+        parser.error("--output must end with .npz")
+    if args.reuse is not None:
+        if args.store is not None or args.output is not None:
+            parser.error(
+                "--reuse reads a finished scan; it cannot be combined with --store/--output"
+            )
+        if not args.reuse.is_file():
+            parser.error(f"scan file not found: {args.reuse}")
+
+
+def _prepare_method(context: _Context) -> None:
+    from .backends.pyscf import PySCFMeanFieldProvider, SettingsFactory
     from .settings import (
         DEFAULT_MAX_PARALLEL,
+        MAX_MEMORY_ENV_VAR,
+        ESSettings,
         apply_thread_env_updates,
         available_cpu_count,
         available_memory_mb,
         derive_parallel_settings,
-        MAX_MEMORY_ENV_VAR,
     )
+    import os
 
-    if bool(args.mmol) == bool(args.xyz):
-        parser.error("provide exactly one of --mmol or --xyz")
-    for name in ("max_parallel", "pes_workers", "max_memory", "opt_maxsteps"):
-        value = getattr(args, name)
-        if value is not None and value < 1:
-            parser.error(f"--{name.replace('_', '-')} must be at least 1")
-    if args.vmax < 1:
-        parser.error("--vmax must be at least 1")
-    if not (math.isfinite(args.boundary_warn) and args.boundary_warn > 0.0):
-        parser.error("--boundary-warn must be a positive number")
-    if args.task not in {"1d", "2d"}:
-        for option in ("dump_grid", "reuse_grid", "partial_out"):
-            if getattr(args, option) is not None:
-                parser.error(f"--{option.replace('_', '-')} applies only to --task 1d or 2d")
-    if args.dump_grid is not None and args.reuse_grid is not None:
-        parser.error("use only one of --dump-grid or --reuse-grid")
-    for option in ("dump_grid", "reuse_grid", "partial_out"):
-        path = getattr(args, option)
-        if path is not None and path.suffix.lower() != ".npz":
-            parser.error(f"--{option.replace('_', '-')} must end with .npz")
-    if args.task == "1d" and args.scan != "lbs-frozen":
-        if args.dump_grid is not None or args.reuse_grid is not None:
-            parser.error("grid caching is only available for --scan lbs-frozen")
-    if args.task == "2d" and args.scan != "lbs-frozen":
-        parser.error("--scan applies only to --task 1d")
-    if args.json_out is not None and args.json_out.suffix.lower() != ".json":
-        parser.error("--json must end with .json")
-    for option in ("json_out", "dump_grid", "partial_out", "opt_out"):
-        path = getattr(args, option)
-        if path is None:
-            continue
-        if not path.parent.is_dir():
-            parser.error(f"output directory does not exist: {path.parent}")
-        if path.is_dir():
-            parser.error(f"output path is a directory: {path}")
+    args = context.args
+    if args.recipe is not None:
+        context.factory = _load_recipe(args.recipe)
+    else:
+        defaults = ESSettings()
+        context.settings = ESSettings(
+            method=defaults.method if args.method is None else args.method,
+            basis=defaults.basis if args.basis is None else args.basis,
+            use_density_fit=defaults.use_density_fit if args.use_ri is None else args.use_ri,
+            auxbasis=args.ri_aux,
+            scf_conv_tol=args.scf_conv_tol,
+            scf_max_cycle=args.scf_max_cycle,
+            dft_grid_level=args.dft_grid_level,
+        )
+        context.factory = SettingsFactory(context.settings)
 
-    molecule = _load_molecule(args)
-    prepared = _Prepared(args=args, molecule=molecule, cfg=None, runtime=None)
-    n_atoms = len(molecule.symbols)
-
-    if args.reuse_grid is not None:
-        _adopt_cache_settings(prepared, parser)
-
-    if args.task in {"1d", "2d"}:
-        prepared.bond = _parse_bond_option(args.bond or _DEFAULT_BOND, "--bond", n_atoms, parser)
-        if args.task == "2d":
-            if not args.bond2:
-                parser.error("--bond2 is required for --task 2d")
-            prepared.bond2 = _parse_bond_option(args.bond2, "--bond2", n_atoms, parser)
-            if {prepared.bond.i, prepared.bond.j} == {prepared.bond2.i, prepared.bond2.j}:
-                parser.error("--bond and --bond2 must be different bonds")
-        rmin = _DEFAULT_RMIN if args.rmin is None else args.rmin
-        rmax = _DEFAULT_RMAX if args.rmax is None else args.rmax
-        npts = _DEFAULT_NPTS if args.npts is None else args.npts
-        if npts < MIN_GRID_POINTS:
-            parser.error(f"--npts must be at least {MIN_GRID_POINTS}")
-        if args.task == "1d" and args.scan != "lbs-frozen":
-            if not (
-                math.isfinite(args.smin)
-                and math.isfinite(args.smax)
-                and args.smin < 0.0 < args.smax
-            ):
-                parser.error("normal-coordinate bounds must satisfy --smin < 0 < --smax")
-        else:
-            _check_bond_range(rmin, rmax, "--rmin", "--rmax", parser)
-        prepared.grid1 = (float(rmin), float(rmax), int(npts))
-        if args.task == "2d":
-            rmin2 = rmin if args.rmin2 is None else args.rmin2
-            rmax2 = rmax if args.rmax2 is None else args.rmax2
-            npts2 = npts if args.npts2 is None else args.npts2
-            if npts2 < MIN_GRID_POINTS:
-                parser.error(f"--npts2 must be at least {MIN_GRID_POINTS}")
-            _check_bond_range(rmin2, rmax2, "--rmin2", "--rmax2", parser)
-            prepared.grid2 = (float(rmin2), float(rmax2), int(npts2))
-            from .workflows import scans
-
-            try:
-                scans.stretch_two_bonds(
-                    molecule.coords, prepared.bond, prepared.bond2, rmin, rmin2
-                )
-            except (ValueError, IndexError) as exc:
-                parser.error(f"invalid --bond/--bond2 pair: {exc}")
-        elif any(value is not None for value in (args.rmin2, args.rmax2, args.npts2)):
-            parser.error("--rmin2, --rmax2 and --npts2 apply only to --task 2d")
-        if args.partial_out is not None:
-            prepared.partial_out = args.partial_out
-        elif args.dump_grid is not None:
-            prepared.partial_out = args.dump_grid.with_name(args.dump_grid.stem + ".partial.npz")
-
-    if args.task == "opt":
-        prepared.opt_out = args.opt_out
-        if prepared.opt_out is None:
-            suffix = ".xyz" if args.xyz else ".mmol"
-            prepared.opt_out = Path(f"{molecule.label}.pyscf_opt{suffix}")
-        elif prepared.opt_out.suffix.lower() not in {".xyz", ".mmol"}:
-            parser.error("--opt-out must end with .xyz or .mmol")
-
-    prepared.cfg = _build_es_settings(args)
-
-    max_parallel = args.max_parallel
-    if max_parallel is None:
-        max_parallel = available_cpu_count() or DEFAULT_MAX_PARALLEL
-    computing_grid = args.task in {"1d", "2d"} and args.reuse_grid is None
+    max_parallel = args.max_parallel or available_cpu_count() or DEFAULT_MAX_PARALLEL
+    computing = args.command in {"scan1d", "scan2d"} and args.reuse is None
     n_points = None
-    memory = None
-    if computing_grid:
-        n_points = prepared.grid1[2] * (prepared.grid2[2] if prepared.grid2 else 1)
-        if args.pes_workers is None:
-            memory = available_memory_mb()
-    # Reusing a cached grid runs no electronic points, so it uses one process.
-    parallel_task = args.task if computing_grid else "harmonic"
+    if computing:
+        from .scans import DEFAULT_BOND_GRID_POINTS
+
+        if context.grids:
+            n_points = int(math.prod(grid.size for grid in context.grids))
+        else:
+            n_points = DEFAULT_BOND_GRID_POINTS ** int(args.dimension)
+    parallel = derive_parallel_settings(
+        args.command if computing else "harmonic",
+        max_parallel=max_parallel,
+        pes_workers=args.workers,
+        n_points=n_points,
+        available_memory_mb=available_memory_mb() if computing and args.workers is None else None,
+        max_memory_mb=args.max_memory,
+    )
+    context.parallel = parallel
+    apply_thread_env_updates(parallel.threads_per_worker, os.environ)
+    if parallel.max_memory_mb is not None:
+        os.environ[MAX_MEMORY_ENV_VAR] = str(parallel.max_memory_mb)
+    provider_kwargs = {"threads": parallel.threads_per_worker or 1}
+    if parallel.max_memory_mb is not None:
+        provider_kwargs["max_memory_mb"] = parallel.max_memory_mb
+    if args.recipe is not None:
+        context.provider = PySCFMeanFieldProvider(factory=context.factory, **provider_kwargs)
+    else:
+        context.provider = PySCFMeanFieldProvider(context.settings, **provider_kwargs)
+
+
+def _load_recipe(spec: str) -> Any:
+    from .backends.pyscf import MeanFieldFactory
+
+    module_name, _, name = spec.partition(":")
+    if not module_name or not name:
+        raise _CLIError("--recipe must look like MODULE:NAME")
     try:
-        prepared.runtime = derive_parallel_settings(
-            parallel_task,
-            max_parallel=max_parallel,
-            pes_workers=args.pes_workers,
-            verbose=args.verbose,
-            strict=args.strict,
-            allow_fd_hessian=args.allow_fd_hessian,
-            n_points=n_points,
-            available_memory_mb=memory,
-            max_memory_mb=args.max_memory,
-        )
-    except ValueError as exc:
-        parser.error(str(exc))
-    apply_thread_env_updates(prepared.runtime.threads_per_worker, os.environ)
-    if prepared.runtime.max_memory_mb is not None:
-        os.environ[MAX_MEMORY_ENV_VAR] = str(prepared.runtime.max_memory_mb)
-    return prepared
-
-
-def _run(prepared: _Prepared, log) -> dict[str, Any] | None:
-    from .settings import default_auxbasis
-
-    args = prepared.args
-    cfg = prepared.cfg
-    runtime = prepared.runtime
-    log(f"Selected task: {args.task}")
-    for name, value in prepared.adopted.items():
-        log(f"Using {name}={value!r} from {args.reuse_grid}")
-    log(
-        f"Method: {cfg.method} | Basis: {cfg.basis} | "
-        f"RI {'enabled' if cfg.use_density_fit else 'disabled'}"
-    )
-    log(
-        "Parallel: "
-        f"max_parallel={runtime.max_parallel} "
-        f"pes_workers={'auto' if runtime.auto_workers else runtime.pes_workers} "
-        f"=> workers={runtime.workers} threads={runtime.threads_per_worker} (BLAS=1)"
-        + (
-            ""
-            if runtime.max_memory_mb is None
-            else f" max_memory={runtime.max_memory_mb} MB per process"
-        )
-    )
-    if cfg.use_density_fit:
-        log(f"RI auxiliary basis: {cfg.auxbasis or default_auxbasis(cfg.basis)}")
-    executor_factory = _executor_factory(
-        runtime.workers, runtime.threads_per_worker, runtime.max_memory_mb
-    )
-    if args.task == "harmonic":
-        return _run_harmonic(prepared)
-    if args.task == "opt":
-        return _run_opt(prepared, log)
-    if args.task == "1d":
-        return _run_1d(prepared, log, executor_factory)
-    return _run_2d(prepared, log, executor_factory)
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        raise _CLIError(f"cannot import recipe module {module_name!r}: {exc}") from exc
+    recipe = getattr(module, name, None)
+    if recipe is None:
+        raise _CLIError(f"module {module_name!r} has no attribute {name!r}")
+    if not isinstance(recipe, MeanFieldFactory):
+        raise _CLIError(f"{spec} is not a method recipe (MethodRecipe or MeanFieldFactory)")
+    return recipe
 
 
 def _load_molecule(args: argparse.Namespace) -> Any:
-    if args.mmol:
+    path = args.geometry
+    if not path.is_file():
+        raise _CLIError(f"geometry file not found: {path}")
+    suffix = path.suffix.lower()
+    if suffix == ".mmol":
         from .io import read_midas_mmol
 
-        molecule = read_midas_mmol(args.mmol)
-    else:
+        molecule = read_midas_mmol(path)
+    elif suffix == ".xyz":
         from .io import read_xyz
 
-        molecule = read_xyz(args.xyz)
-
+        molecule = read_xyz(path)
+    else:
+        raise _CLIError(f"unknown geometry format {path.suffix!r}; use .xyz or .mmol")
     if args.charge is None and args.spin is None:
         return molecule
-
     from .molecule import Molecule
 
     return Molecule.from_arrays(
@@ -623,141 +577,34 @@ def _load_molecule(args: argparse.Namespace) -> Any:
     )
 
 
-def _parse_bond_option(text: str, option: str, n_atoms: int, parser) -> Any:
-    from .coordinates import parse_bond
+def _base_payload(context: _Context) -> dict[str, Any]:
+    from .cache import molecule_provenance
 
-    try:
-        bond = parse_bond(text)
-    except ValueError:
-        parser.error(f"{option} must be two zero-based atom indices such as 0-1 (got {text!r})")
-    if not (0 <= bond.i < n_atoms and 0 <= bond.j < n_atoms):
-        parser.error(
-            f"{option} {bond.i}-{bond.j} refers to an atom outside 0..{n_atoms - 1} "
-            "(indices are zero-based)"
-        )
-    if bond.i == bond.j:
-        parser.error(f"{option} must reference two different atoms")
-    return bond
+    return {
+        "schema": CLI_RESULT_SCHEMA,
+        "schema_version": CLI_RESULT_SCHEMA_VERSION,
+        "package_version": _package_version(),
+        "command": context.args.command,
+        "input": str(context.args.geometry),
+        "molecule": molecule_provenance(context.molecule),
+        "method": dict(context.provider.scientific_settings_payload()),
+        "provider_scientific_fingerprint": _provider_fingerprint(context.provider),
+    }
 
 
-def _check_bond_range(rmin: float, rmax: float, low: str, high: str, parser) -> None:
-    if not (math.isfinite(rmin) and math.isfinite(rmax) and 0.0 < rmin < rmax):
-        parser.error(f"bond-length grid must satisfy 0 < {low} < {high}")
+def _provider_fingerprint(provider: Any) -> str:
+    from .contracts import provider_scientific_fingerprint
+
+    return provider_scientific_fingerprint(provider)
 
 
-def _build_es_settings(args: argparse.Namespace) -> Any:
-    from .settings import ESSettings
-
-    defaults = ESSettings()
-    return ESSettings(
-        method=defaults.method if args.method is None else args.method,
-        basis=defaults.basis if args.basis is None else args.basis,
-        use_density_fit=defaults.use_density_fit if args.use_ri is None else args.use_ri,
-        auxbasis=args.ri_aux,
-        scf_conv_tol=args.scf_conv_tol,
-        scf_max_cycle=args.scf_max_cycle,
-        dft_grid_level=args.dft_grid_level,
-    )
-
-
-_ADOPTED_ELECTRONIC_OPTIONS = (
-    ("method", "method"),
-    ("basis", "basis"),
-    ("use_density_fit", "use_ri"),
-    ("auxbasis", "ri_aux"),
-    ("scf_conv_tol", "scf_conv_tol"),
-    ("scf_max_cycle", "scf_max_cycle"),
-    ("dft_grid_level", "dft_grid_level"),
-)
-
-
-def _adopt_cache_settings(prepared: _Prepared, parser) -> None:
-    """Fill omitted electronic and grid options from a verified grid cache."""
-
-    from .cache import (
-        _validate_schema3_metadata_integrity,
-        load_grid_npz,
-        migrate_cache_metadata_v2,
-    )
-
-    args = prepared.args
-    path = args.reuse_grid
-    if not path.exists():
-        raise _CLIError(f"grid cache not found: {path}")
-    meta, _arrays = load_grid_npz(path)
-    if meta.get("grid_cache_version") == 2:
-        meta = migrate_cache_metadata_v2(meta)
-    if meta.get("grid_cache_version") != 3:
-        raise _CLIError(
-            f"{path} is not a reusable grid cache (schema {meta.get('grid_cache_version')!r})"
-        )
-    _validate_schema3_metadata_integrity(meta, "Grid cache")
-    identity = meta["identity"]
-    electronic = identity.get("electronic_structure", {})
-    if electronic.get("backend") != "pyscf":
-        raise _CLIError(
-            f"{path} was produced by backend {electronic.get('backend')!r}; the CLI can "
-            "only reuse grids from the built-in PySCF backend"
-        )
-    for key, option in _ADOPTED_ELECTRONIC_OPTIONS:
-        if getattr(args, option) is None and electronic.get(key) is not None:
-            setattr(args, option, electronic[key])
-            prepared.adopted[option] = electronic[key]
-
-    scan = identity.get("scan", {})
-    kind = scan.get("kind")
-    if args.task == "1d":
-        if kind != "1d":
-            raise _CLIError(f"{path} holds a {kind!r} grid, not a 1D grid")
-        _adopt_bond(args, "bond", scan.get("bond_zero_based"), prepared)
-        _adopt_grid(args, ("rmin", "rmax", "npts"), scan.get("grid_A"), path, prepared)
-    else:
-        if kind != "2d":
-            raise _CLIError(f"{path} holds a {kind!r} grid, not a 2D grid")
-        _adopt_bond(args, "bond", scan.get("bond1_zero_based"), prepared)
-        _adopt_bond(args, "bond2", scan.get("bond2_zero_based"), prepared)
-        _adopt_grid(args, ("rmin", "rmax", "npts"), scan.get("grid1_A"), path, prepared)
-        _adopt_grid(args, ("rmin2", "rmax2", "npts2"), scan.get("grid2_A"), path, prepared)
-
-
-def _adopt_bond(args, option: str, value, prepared: _Prepared) -> None:
-    if getattr(args, option) is None and isinstance(value, list) and len(value) == 2:
-        text = f"{int(value[0])}-{int(value[1])}"
-        setattr(args, option, text)
-        prepared.adopted[option] = text
-
-
-def _adopt_grid(args, options: tuple[str, str, str], grid, path: Path, prepared) -> None:
-    import numpy as np
-
-    if not isinstance(grid, list) or len(grid) < 2:
-        return
-    values = np.asarray(grid, dtype=float)
-    expressible = np.allclose(
-        values, np.linspace(values[0], values[-1], values.size), rtol=0.0, atol=1e-12
-    )
-    omitted = [option for option in options if getattr(args, option) is None]
-    if not omitted:
-        return
-    if not expressible:
-        raise _CLIError(
-            f"the grid stored in {path} is not uniform and cannot be expressed with "
-            f"--{options[0]}/--{options[1]}/--{options[2]}"
-        )
-    adopted = {options[0]: float(values[0]), options[1]: float(values[-1])}
-    adopted[options[2]] = int(values.size)
-    for option in omitted:
-        setattr(args, option, adopted[option])
-        prepared.adopted[option] = adopted[option]
-
-
-def _run_harmonic(prepared: _Prepared) -> dict[str, Any]:
+def _run_harmonic(context: _Context) -> dict[str, Any]:
     from .workflows import harmonic as harmonic_workflow
 
-    args = prepared.args
+    args = context.args
     result = harmonic_workflow.harmonic_analysis(
-        prepared.molecule,
-        prepared.cfg,
+        context.molecule,
+        context.factory,
         rtproj=args.rtproj,
         strict=args.strict,
         allow_fd_hessian=args.allow_fd_hessian,
@@ -766,7 +613,7 @@ def _run_harmonic(prepared: _Prepared) -> dict[str, Any]:
     print(f"ZPE (harmonic): {result.zpe_cm:.2f} cm^-1")
     print("Frequencies (cm^-1):")
     print(" ".join(f"{float(freq):.1f}" for freq in result.freqs_cm if float(freq) > 1e-2))
-    payload = _base_payload(prepared)
+    payload = _base_payload(context)
     payload["harmonic"] = {
         "zpe_cm": float(result.zpe_cm),
         "frequencies_cm": [float(freq) for freq in result.freqs_cm],
@@ -776,541 +623,294 @@ def _run_harmonic(prepared: _Prepared) -> dict[str, Any]:
     return payload
 
 
-def _run_opt(prepared: _Prepared, log) -> dict[str, Any]:
-    from .settings import warn_once
+def _run_opt(context: _Context) -> dict[str, Any]:
     from .workflows import optimization
+    from .workflows.optimization import format_optimization_stationarity_diagnostic
 
-    args = prepared.args
-    result = optimization.run_opt(
-        prepared.molecule,
-        prepared.cfg,
-        opt_out=prepared.opt_out,
-        opt_maxsteps=args.opt_maxsteps,
+    args = context.args
+    output = args.output
+    if output is None:
+        output = args.geometry.with_name(f"{args.geometry.stem}-opt{args.geometry.suffix}")
+    result = optimization.optimize_geometry(
+        context.molecule,
+        context.factory,
+        output_path=output,
+        max_steps=args.max_steps,
         strict=args.strict,
-        verbose=args.verbose,
-        log_fn=log,
-        warn_fn=warn_once,
     )
-    payload = _base_payload(prepared)
-    payload["optimization"] = None
-    if result is not None:
-        stationarity = getattr(result, "stationarity", None)
-        payload["optimization"] = {
-            "converged": bool(result.converged),
-            "backend": result.backend,
-            "output_path": None if result.output_path is None else str(result.output_path),
-            "coordinates_A": [[float(x) for x in row] for row in result.molecule.coords],
-            "max_gradient_component_Eh_per_bohr": (
-                None if stationarity is None else float(stationarity.max_component)
-            ),
-        }
-    return payload
-
-
-def _run_1d(prepared: _Prepared, log, executor_factory: Any = None) -> dict[str, Any]:
-    import numpy as np
-
-    from .variational import parse_intensity_mode, variational_1d
-    from .workflows import scans
-
-    args = prepared.args
-    molecule = prepared.molecule
-    cfg = prepared.cfg
-    b = prepared.bond
-    rmin, rmax, npts = prepared.grid1
-    axis_vec = np.asarray(molecule.coords[b.j], dtype=float) - np.asarray(
-        molecule.coords[b.i],
-        dtype=float,
-    )
-    scan_options = _scan_options(prepared)
-    grid_source = "computed"
-
-    if args.scan == "lbs-frozen":
-        if args.reuse_grid is not None:
-            R, E, MU = scans.load_lbs_frozen_1d_grid_cache(
-                args.reuse_grid,
-                molecule,
-                cfg,
-                b,
-                rmin,
-                rmax,
-                npts,
-                scan=args.scan,
-            )
-            grid_source = f"cache:{args.reuse_grid}"
-            log(f"Reusing cached 1D grid from {args.reuse_grid}")
-        else:
-            R, E, MU = _guarded_scan(
-                prepared,
-                scans.grid_1d_pes_dms,
-                molecule,
-                cfg,
-                b,
-                rmin,
-                rmax,
-                npts,
-                executor_factory=executor_factory,
-                log_fn=log,
-                **scan_options,
-            )
-            if args.dump_grid is not None:
-                scans.dump_lbs_frozen_1d_grid_cache(
-                    args.dump_grid,
-                    molecule,
-                    cfg,
-                    b,
-                    rmin,
-                    rmax,
-                    npts,
-                    R,
-                    E,
-                    MU,
-                    scan=args.scan,
-                )
-                log(f"Wrote 1D grid cache: {args.dump_grid}")
-        redmass_amu = scans.local_bond_reduced_mass_amu(molecule, b)
-        normal_summary = None
-    else:
-        selected_mode = scans.calc_normal_mode_direction(
-            molecule,
-            cfg,
-            b,
-            rtproj=args.rtproj,
-            strict=args.strict,
-            allow_fd_hessian=args.allow_fd_hessian,
-            log_fn=log,
-        )
-        u_dir = selected_mode.u_dir
-        smin = float(args.smin)
-        smax = float(args.smax)
-        if args.scan == "normal":
-            R, E, MU = _guarded_scan(
-                prepared,
-                scans.grid_1d_pes_dms_normal,
-                molecule,
-                cfg,
-                u_dir,
-                smin,
-                smax,
-                npts,
-                executor_factory=executor_factory,
-                log_fn=log,
-                **scan_options,
-            )
-        else:
-            from .backends import pyscf as pyscf_backend
-
-            relaxed_grid = _guarded_scan(
-                prepared,
-                scans.grid_1d_pes_dms_normal_relaxed,
-                molecule,
-                cfg,
-                u_dir,
-                smin,
-                smax,
-                npts,
-                relaxed_point_fn=partial(pyscf_backend.normal_relaxed_point, strict=args.strict),
-                executor_factory=executor_factory,
-                log_fn=log,
-                strict=args.strict,
-                **scan_options,
-            )
-            if relaxed_grid.failed_indices:
-                raise _CLIError(
-                    relaxed_grid.failure_summary()
-                    + "; refusing to compute a spectrum from unconverged points"
-                )
-            R = relaxed_grid.displacements_A
-            E = relaxed_grid.energies_hartree
-            MU = relaxed_grid.dipoles_debye
-        redmass_amu = scans.normal_mode_effective_mass_amu(molecule, u_dir)
-        normal_summary = (selected_mode.mode_index, selected_mode.frequency_cm, redmass_amu)
-
-    records = variational_1d(
-        R,
-        E,
-        MU,
-        redmass_amu,
-        axis=axis_vec,
-        vmax=args.vmax,
-    )
-
-    if normal_summary is not None:
-        mode_index, freq_cm, mu_eff = normal_summary
-        if records:
-            print(
-                f"Harmonic nu (mode {mode_index}) = {freq_cm:.1f} cm^-1; "
-                f"DVR v=1 = {records[0].frequency_cm:.1f} cm^-1; "
-                f"mu_eff = {mu_eff:.6f} amu"
-            )
-        else:
-            print(
-                f"Harmonic nu (mode {mode_index}) = {freq_cm:.1f} cm^-1; mu_eff = {mu_eff:.6f} amu"
-            )
-
-    _print_records(records, parse_intensity_mode(args.intensity), args.boundary_warn, two_d=False)
-    _warn_boundary(
-        records, args.boundary_warn, "--rmin/--rmax" if normal_summary is None else "--smin/--smax"
-    )
-    payload = _base_payload(prepared)
-    payload["scan"] = {
-        "type": args.scan,
-        "bond_zero_based": [b.i, b.j],
-        "grid_A": [float(value) for value in np.asarray(R, dtype=float)],
-        "grid_source": grid_source,
-        "mass_amu": float(redmass_amu),
-        "intensity_axis": [float(value) for value in axis_vec],
+    if result.stationarity is not None:
+        print(format_optimization_stationarity_diagnostic(result.stationarity))
+    print(f"Optimized geometry written to: {result.output_path}")
+    payload = _base_payload(context)
+    payload["optimization"] = {
+        "converged": bool(result.converged),
+        "backend": result.backend,
+        "output_path": str(result.output_path),
+        "coordinates_A": [[float(x) for x in row] for row in result.molecule.coords],
+        "max_gradient_component_Eh_per_bohr": None
+        if result.stationarity is None
+        else float(result.stationarity.max_component),
     }
-    if normal_summary is not None:
-        payload["scan"]["normal_mode"] = {
-            "index": int(normal_summary[0]),
-            "harmonic_frequency_cm": float(normal_summary[1]),
-        }
-    payload["transitions"] = [record.as_dict(extended=True) for record in records]
     return payload
 
 
-def _run_2d(prepared: _Prepared, log, executor_factory: Any = None) -> dict[str, Any]:
+def _run_scan(context: _Context) -> dict[str, Any]:
     import numpy as np
 
-    from .cache import dump_grid_npz
-    from .variational import parse_intensity_mode, variational_2d
-    from .workflows import scans
+    from .variational import parse_intensity_mode
 
-    args = prepared.args
-    molecule = prepared.molecule
-    cfg = prepared.cfg
-    b1 = prepared.bond
-    b2 = prepared.bond2
-    r1 = prepared.grid1
-    r2 = prepared.grid2
-    R1_req = np.linspace(*r1)
-    R2_req = np.linspace(*r2)
-    keo = args.keo
-    grid_source = "computed"
-
-    if args.reuse_grid is not None:
-        R1, R2, E, MU = scans.load_lbs_frozen_2d_grid_cache(
-            args.reuse_grid,
-            molecule,
-            cfg,
-            b1,
-            b2,
-            r1,
-            r2,
-            keo=keo,
-        )
-        grid_source = f"cache:{args.reuse_grid}"
-        log(f"Reusing cached 2D grid from {args.reuse_grid}")
+    args = context.args
+    source = "computed"
+    if args.reuse is not None:
+        scan = _load_reused_scan(context)
+        source = f"file:{args.reuse}"
     else:
-        R1, R2, E, MU = _guarded_scan(
-            prepared,
-            scans.grid_2d_pes_dms,
-            molecule,
-            cfg,
-            b1,
-            b2,
-            R1_req,
-            R2_req,
-            executor_factory=executor_factory,
-            log_fn=log,
-            **_scan_options(prepared),
-        )
-        if args.dump_grid is not None:
-            meta = scans.lbs_frozen_2d_cache_metadata(
-                molecule,
-                cfg,
-                b1,
-                b2,
-                r1,
-                r2,
-                keo=keo,
-            )
-            dump_grid_npz(
-                args.dump_grid,
-                meta=meta,
-                arrays={"R1_A": R1, "R2_A": R2, "E_Eh": E, "MU_Debye": MU},
-            )
-            log(f"Wrote 2D grid cache: {args.dump_grid}")
+        scan = _compute_scan(context)
+        if args.output is not None:
+            from .artifacts.scans import dump_scan
 
-    axis_vec = np.asarray(molecule.coords[b1.j], dtype=float) - np.asarray(
-        molecule.coords[b1.i],
-        dtype=float,
+            dump_scan(args.output, scan)
+            context.log(f"Wrote scan: {args.output}")
+    records = _spectrum(context, scan)
+    normal = getattr(args, "coordinate", "bond") == "normal"
+    _print_records(
+        records,
+        parse_intensity_mode(args.intensity),
+        args.boundary_warn,
+        two_d=args.dimension == 2,
     )
-    mu1 = scans.local_bond_reduced_mass_amu(molecule, b1)
-    mu2 = scans.local_bond_reduced_mass_amu(molecule, b2)
-    g12_inv_amu = 0.0
-    if keo == "gmatrix":
-        g12_inv_amu = scans.bond_bond_g12_inv_amu(molecule, b1, b2)
-
-    records = variational_2d(
-        R1,
-        R2,
-        E,
-        MU,
-        mu1,
-        mu2,
-        axis=axis_vec,
-        nmax=args.vmax,
-        g12_inv_amu=g12_inv_amu,
-    )
-    _print_records(records, parse_intensity_mode(args.intensity), args.boundary_warn, two_d=True)
-    _warn_boundary(records, args.boundary_warn, "--rmin/--rmax (and --rmin2/--rmax2)")
-    payload = _base_payload(prepared)
+    _warn_boundary(records, args.boundary_warn, "--range" if not normal else "--range (normal)")
+    payload = _base_payload(context)
+    axes = getattr(scan, "axes", ())
     payload["scan"] = {
-        "type": "lbs-frozen-2d",
-        "bond1_zero_based": [b1.i, b1.j],
-        "bond2_zero_based": [b2.i, b2.j],
-        "grid1_A": [float(value) for value in np.asarray(R1, dtype=float)],
-        "grid2_A": [float(value) for value in np.asarray(R2, dtype=float)],
-        "grid_source": grid_source,
-        "keo": keo,
-        "reduced_masses_amu": [float(mu1), float(mu2)],
-        "g12_inv_amu": float(g12_inv_amu),
-        "intensity_axis": [float(value) for value in axis_vec],
+        "kind": getattr(scan, "scan_kind", "legacy"),
+        "bonds_zero_based": [[bond.i, bond.j] for bond in context.bonds],
+        "axes_A": [
+            [float(v) for v in np.asarray(getattr(axis, "values", axis), dtype=float)]
+            for axis in axes
+        ],
+        "source": source,
+        "keo": getattr(args, "keo", None),
     }
     payload["transitions"] = [record.as_dict(extended=True) for record in records]
     return payload
 
 
-def _scan_options(prepared: _Prepared) -> dict[str, Any]:
-    # A serial run stops right after a failing point; parallel runs submit
-    # bounded batches so that work already scheduled is kept.
-    workers = int(prepared.runtime.workers or 1)
-    return {
-        "stop_on_error": not prepared.args.continue_on_error,
-        "batch_size": 1 if workers <= 1 else max(16, 4 * workers),
-    }
+def _compute_scan(context: _Context) -> Any:
+    from . import scans
+    from .point_store import PointStore
+    from .runner import RunnerSettings
 
+    args = context.args
+    molecule = context.molecule
+    provider = context.provider
+    if getattr(args, "coordinate", "bond") == "normal":
+        from .workflows.scans import calc_normal_mode_direction
 
-def _guarded_scan(prepared: _Prepared, scan_fn, *args: Any, **kwargs: Any) -> Any:
-    """Run a scan; on point failures, save completed points and explain."""
+        direction = calc_normal_mode_direction(
+            molecule, context.factory, context.bonds[0], log_fn=context.log
+        )
+        grid = context.grids[0] if context.grids else _default_normal_grid()
+        plan = scans.plan_normal_scan(molecule, provider, direction.u_dir, grid)
+        context.normal_direction = direction
+    else:
+        plan = scans.plan_bond_scan(molecule, provider, context.bonds, context.grids)
+    parallel = context.parallel
+    workers = parallel.workers if parallel.workers and parallel.workers > 1 else None
+    runner = RunnerSettings(
+        workers=workers,
+        threads_per_worker=parallel.threads_per_worker if workers else None,
+        max_memory_mb=parallel.max_memory_mb,
+        stop_on_error=not args.continue_on_error,
+        retry_failed=args.retry_failed,
+    )
+    context.log(
+        f"Evaluating {len(plan.requests)} point(s) "
+        f"({'serial' if workers is None else f'{workers} workers x {parallel.threads_per_worker} threads'})"
+    )
 
-    from .workflows import scans
+    def progress(event: Any) -> None:
+        if args.verbose:
+            print(f"[INFO] point {event.completed}/{event.total}: {event.status}", flush=True)
 
+    store = PointStore(args.store) if args.store is not None else None
     try:
-        return scan_fn(*args, **kwargs)
-    except scans.ScanFailedError as exc:
+        return scans.run_scan(plan, provider, store=store, settings=runner, progress=progress)
+    except scans.PlanIncompleteError as exc:
         message = str(exc)
-        if prepared.partial_out is not None:
-            try:
-                scans.dump_partial_scan_npz(
-                    prepared.partial_out, exc.partial, prepared.molecule, prepared.cfg
-                )
-            except Exception as write_error:
-                message += (
-                    f"\ncould not write completed points to {prepared.partial_out}: "
-                    f"{_describe_exception(write_error)}"
-                )
-            else:
-                message += (
-                    f"\ncompleted points were written to {prepared.partial_out} "
-                    "(diagnostic only; not a reusable grid cache)"
-                )
-        if not prepared.args.continue_on_error and exc.partial.stopped_early:
+        if args.store is not None:
+            message += f"\ncompleted points are kept in {args.store}; rerun to resume"
+        else:
+            message += "\nuse --store FILE to keep completed points and resume later"
+        if not args.continue_on_error and exc.run.not_attempted:
             message += "\nuse --continue-on-error to attempt the remaining points"
         error = _CLIError(message)
-        error.scan_failure = exc
+        error.plan_run = exc.run
         raise error from exc
+    finally:
+        if store is not None:
+            store.close()
 
 
-def _base_payload(prepared: _Prepared) -> dict[str, Any]:
-    from .cache import electronic_structure_provenance, molecule_provenance
+def _default_normal_grid():
+    import numpy as np
 
-    args = prepared.args
-    return {
-        "schema": CLI_RESULT_SCHEMA,
-        "schema_version": CLI_RESULT_SCHEMA_VERSION,
-        "package_version": _package_version(),
-        "task": args.task,
-        "input": str(args.xyz or args.mmol),
-        "molecule": molecule_provenance(prepared.molecule),
-        "electronic_structure": electronic_structure_provenance(prepared.cfg),
-        "settings_from_cache": dict(prepared.adopted),
-        "boundary_warning_threshold": float(args.boundary_warn),
-    }
+    return np.linspace(-0.15, 0.15, 41)
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    from .io import _json_default
+def _load_reused_scan(context: _Context) -> Any:
+    from .artifacts.scans import load_legacy_grid, load_scan
 
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, default=_json_default) + "\n",
-        encoding="utf-8",
+    path = context.args.reuse
+    try:
+        scan = load_scan(path)
+    except ValueError as exc:
+        if "load_legacy_grid" not in str(exc):
+            raise
+        scan = load_legacy_grid(path)
+        context.log(f"Read legacy (relative-energy) grid cache {path}")
+    return scan
+
+
+def _spectrum(context: _Context, scan: Any) -> list[Any]:
+    import numpy as np
+
+    from . import scans
+
+    args = context.args
+    molecule = context.molecule
+    if isinstance(scan, scans.ScanResult):
+        if scan.scan_kind == "normal-1d":
+            bond = context.bonds[0]
+            axis = np.asarray(molecule.coords[bond.j]) - np.asarray(molecule.coords[bond.i])
+            return scans.normal_coordinate_spectrum(
+                scan, molecule, max_state_index=args.states, intensity_axis=axis
+            )
+        _check_scan_bonds(scan, context.bonds)
+        return scans.bond_spectrum(
+            scan,
+            molecule,
+            max_state_index=args.states,
+            kinetic_operator=getattr(args, "keo", "gmatrix"),
+        )
+    # A 0.2 relative-energy grid: check that it belongs to this geometry and bonds.
+    from .variational import variational_1d, variational_2d
+    from .workflows.scans import bond_bond_g12_inv_amu, local_bond_reduced_mass_amu
+
+    identity = scan.metadata["identity"]
+    reference = np.asarray(identity["molecule"]["coordinates_A"], dtype=float)
+    if reference.shape != np.asarray(molecule.coords).shape or not np.allclose(
+        reference, molecule.coords, rtol=0.0, atol=1e-10
+    ):
+        raise _CLIError("the grid cache was computed for a different geometry")
+    stored = identity["scan"]
+    keys = ["bond_zero_based"] if args.dimension == 1 else ["bond1_zero_based", "bond2_zero_based"]
+    for key, bond in zip(keys, context.bonds):
+        if stored.get(key) != [bond.i, bond.j]:
+            raise _CLIError(f"the grid cache scans bond {stored.get(key)}, not {bond.i}-{bond.j}")
+    bond0 = context.bonds[0]
+    axis = np.asarray(molecule.coords[bond0.j]) - np.asarray(molecule.coords[bond0.i])
+    if args.dimension == 1:
+        return variational_1d(
+            scan.axes[0],
+            scan.relative_energies_Eh,
+            scan.dipoles_debye,
+            local_bond_reduced_mass_amu(molecule, bond0),
+            axis=axis,
+            vmax=args.states,
+        )
+    g12 = (
+        bond_bond_g12_inv_amu(molecule, context.bonds[0], context.bonds[1])
+        if args.keo == "gmatrix"
+        else 0.0
+    )
+    return variational_2d(
+        scan.axes[0],
+        scan.axes[1],
+        scan.relative_energies_Eh,
+        scan.dipoles_debye,
+        local_bond_reduced_mass_amu(molecule, context.bonds[0]),
+        local_bond_reduced_mass_amu(molecule, context.bonds[1]),
+        axis=axis,
+        nmax=args.states,
+        g12_inv_amu=g12,
     )
 
 
-def _flag(record: Any, threshold: float) -> str:
-    weights = (record.grid_boundary_weight, record.ground_grid_boundary_weight)
-    return " *" if any(w is not None and w > threshold for w in weights) else ""
+def _check_scan_bonds(scan: Any, bonds: Sequence[Any]) -> None:
+    stored = [axis.bond for axis in scan.axes]
+    wanted = [(bond.i, bond.j) for bond in bonds]
+    if stored != wanted:
+        raise _CLIError(f"the scan file covers bonds {stored}, not {wanted}")
 
 
-def _print_records(
-    records: Sequence[Any], intensity: str, threshold: float, *, two_d: bool
-) -> None:
-    label = "n assignment weight " if two_d else "v "
-    if intensity == "both":
-        print(
-            f"{label} nu/cm^-1   mu_axis/D   I_axis/(km/mol)   |mu|/D   I_iso/(km/mol)   "
-            "int_axis/(m^2/s)   int_iso/(m^2/s)"
-        )
-    elif intensity == "axis":
-        print(
-            f"{label} nu/cm^-1   mu_axis/D   I_axis/(km/mol)   int_axis/(m^2/s)   "
-            "orientation: polarized along bond axis"
-        )
-    else:
-        print(
-            f"{label} nu/cm^-1   |mu|/D   I_iso/(km/mol)   int_iso/(m^2/s)   "
-            "orientation: isotropic"
-        )
-    for record in records:
-        if two_d:
-            prefix = (
-                f"{record.state_index:>1d} {str(record.quanta):>10s} "
-                f"{_format_optional(record.assignment_weight, '6.3f')}"
-            )
-        else:
-            prefix = f"{record.quanta[0]:>1d}"
-        if intensity == "both":
-            columns = (
-                f"{record.transition_dipole_axis_D:>12.4e}   "
-                f"{record.integrated_cross_section_axis_km_per_mol:>12.4e}   "
-                f"{record.transition_dipole_norm_D:>12.4e}   "
-                f"{record.integrated_cross_section_isotropic_km_per_mol:>12.4e}   "
-                f"{record.integrated_cross_section_axis_omega_m2_per_s:>12.4e}   "
-                f"{record.integrated_cross_section_isotropic_omega_m2_per_s:>12.4e}"
-            )
-        elif intensity == "axis":
-            columns = (
-                f"{record.transition_dipole_axis_D:>12.4e}   "
-                f"{record.integrated_cross_section_axis_km_per_mol:>12.4e}   "
-                f"{record.integrated_cross_section_axis_omega_m2_per_s:>12.4e}"
-            )
-        else:
-            columns = (
-                f"{record.transition_dipole_norm_D:>12.4e}   "
-                f"{record.integrated_cross_section_isotropic_km_per_mol:>12.4e}   "
-                f"{record.integrated_cross_section_isotropic_omega_m2_per_s:>12.4e}"
-            )
-        print(f"{prefix} {record.frequency_cm:8.1f}   {columns}{_flag(record, threshold)}")
-
-
-def _format_optional(value: float | None, spec: str) -> str:
-    return "     -" if value is None else format(value, spec)
-
-
-def _warn_boundary(records: Sequence[Any], threshold: float, options: str) -> None:
-    flagged = [record for record in records if _flag(record, threshold)]
-    if not flagged:
-        return
-    ground = records[0].ground_grid_boundary_weight if records else None
-    note = (
-        f"* {len(flagged)} state(s) place more than {threshold:g} of their probability on "
-        f"the outermost grid points; widen {options} and check that frequencies converge."
-    )
-    if ground is not None and ground > threshold:
-        note += " The ground state is affected too, so every transition is suspect."
-    sys.stdout.flush()
-    print(note, file=sys.stderr)
-
-
-def _describe_exception(exc: BaseException) -> str:
-    if isinstance(exc, FileNotFoundError) and exc.filename:
-        return f"{exc.strerror or 'file not found'}: {exc.filename}"
-    if isinstance(exc, KeyError) and len(exc.args) == 1 and isinstance(exc.args[0], str):
-        return exc.args[0]
-    text = str(exc).strip()
-    name = type(exc).__name__
-    if not text:
-        return name
-    if isinstance(exc, (_CLIError, ValueError, RuntimeError)):
-        return text
-    return f"{name}: {text}"
-
-
-def _print_error(message: str) -> None:
-    sys.stdout.flush()
-    lines = message.splitlines() or [""]
-    print(f"pyscf-vscf: error: {lines[0]}", file=sys.stderr)
-    for line in lines[1:]:
-        print(f"  {line}", file=sys.stderr)
-    print("  (run with --debug for a full traceback)", file=sys.stderr)
-
-
-def _print_worker_traceback(exc: BaseException) -> None:
-    failure = getattr(exc, "scan_failure", None)
-    if failure is None or not failure.partial.failures:
-        return
-    first = failure.partial.failures[0]
-    if first.traceback:
-        print(f"Traceback of the first failed scan point {list(first.index)}:", file=sys.stderr)
-        print(first.traceback, file=sys.stderr)
-
-
-def _log_fn(verbose: bool):
-    def emit(message: str) -> None:
-        if verbose:
-            print(f"[INFO] {message}", flush=True)
-
-    return emit
-
-
-class _SequentialExecutor:
-    def __enter__(self) -> "_SequentialExecutor":
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+def _run_inspect(context: _Context) -> None:
+    path = context.args.path
+    if not path.is_file():
+        raise _CLIError(f"file not found: {path}")
+    if path.suffix.lower() in {".sqlite", ".db"}:
+        _inspect_store(path)
         return None
+    from .artifacts.scans import load_legacy_grid, load_scan
 
-    def map(self, fn, iterable):
-        return (fn(item) for item in iterable)
-
-
-def _executor_factory(
-    workers: int | None,
-    threads_per_worker: int | None,
-    max_memory_mb: int | None = None,
-):
-    if workers is None or int(workers) <= 1:
-        return _SequentialExecutor
-
-    worker_count = int(workers)
-    initargs: tuple[Any, ...] = (threads_per_worker,)
-    if max_memory_mb is not None:
-        initargs = (threads_per_worker, int(max_memory_mb))
-
-    def make_executor():
-        return ProcessPoolExecutor(
-            max_workers=worker_count,
-            initializer=_worker_init,
-            initargs=initargs,
-            mp_context=_multiprocessing_context(),
+    try:
+        scan = load_scan(path)
+    except ValueError as exc:
+        if "load_legacy_grid" not in str(exc):
+            raise
+        legacy = load_legacy_grid(path)
+        identity = legacy.metadata["identity"]
+        print(f"{path}: 0.2 grid cache ({legacy.scan_kind}), energies relative to the minimum")
+        print(f"  method: {identity['electronic_structure']}")
+        print(
+            f"  scan: { {k: v for k, v in identity['scan'].items() if not k.startswith('grid')} }"
         )
+        for index, axis in enumerate(legacy.axes):
+            print(f"  axis {index}: {axis.size} points, {axis[0]:.4f}-{axis[-1]:.4f} A")
+        return None
+    print(f"{path}: scan ({scan.scan_kind}), schema 4")
+    method = scan.provider_payload.get("settings") or scan.provider_payload.get("method")
+    print(f"  method: {dict(method) if method is not None else '?'}")
+    for axis in scan.axes:
+        print(
+            f"  axis {axis.label}: {axis.values.size} points, "
+            f"{axis.values[0]:.4f}-{axis.values[-1]:.4f} {axis.unit}"
+        )
+    print(f"  energy range: {float(scan.relative_energies_Eh.max()):.6f} Eh above the minimum")
+    return None
 
-    return make_executor
 
+def _inspect_store(path: Path) -> None:
+    import sqlite3
 
-def _multiprocessing_context():
-    method = os.environ.get("VSCF_PYSCF_START_METHOD", "spawn")
+    connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
-        return mp.get_context(method)
-    except ValueError:
-        return mp.get_context("spawn")
+        counts = {
+            table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in ("providers", "points", "results", "runs")
+        }
+        failed = connection.execute(
+            "SELECT COUNT(DISTINCT point_key) FROM attempts a WHERE status = 'failed' AND "
+            "attempt_id = (SELECT MAX(attempt_id) FROM attempts b WHERE b.point_key = a.point_key)"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+    print(
+        f"{path}: point store with {counts['results']} stored result(s) for "
+        f"{counts['providers']} method(s), {failed} point(s) whose latest attempt failed, "
+        f"{counts['runs']} run(s)"
+    )
 
 
-def _worker_init(threads_per_worker: int | None, max_memory_mb: int | None = None) -> None:
-    from .settings import MAX_MEMORY_ENV_VAR, apply_thread_env_updates
-
-    apply_thread_env_updates(threads_per_worker, os.environ)
-    if max_memory_mb is not None:
-        os.environ[MAX_MEMORY_ENV_VAR] = str(int(max_memory_mb))
-    try:
-        from pyscf import lib
-    except Exception:
+def _print_first_traceback(exc: BaseException) -> None:
+    run = getattr(exc, "plan_run", None)
+    if run is None:
         return
-    if threads_per_worker is not None:
-        lib.num_threads(int(threads_per_worker))
+    for failure in run.failures.values():
+        if failure.traceback:
+            print(f"Traceback of failed point {failure.point_key[:12]}:", file=sys.stderr)
+            print(failure.traceback, file=sys.stderr)
+            return
 
 
 if __name__ == "__main__":

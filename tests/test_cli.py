@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pyscf_vscf import cli
+from pyscf_vscf import _cli_legacy as cli
 from pyscf_vscf.variational import TransitionRecord
 from pyscf_vscf.workflows import harmonic, optimization, scans
 
@@ -92,7 +92,9 @@ sys.meta_path.insert(0, BlockExpensiveImports())
 from pyscf_vscf.cli import main
 raise SystemExit(main(ARGV))
 """
-    for argv, expected in ((["--help"], "--task"), (["--version"], "0.2.2")):
+    import pyscf_vscf
+
+    for argv, expected in ((["--help"], "scan1d"), (["--version"], pyscf_vscf.__version__)):
         code = blocker.replace("ARGV", repr(argv))
         proc = subprocess.run(
             [sys.executable, "-c", code],

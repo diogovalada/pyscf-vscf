@@ -8,7 +8,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pyscf_vscf import cli, settings, variational
+from pyscf_vscf import _cli_legacy as cli
+from pyscf_vscf import settings, variational
 from pyscf_vscf.settings import ESSettings
 from pyscf_vscf.variational import TransitionRecord
 from pyscf_vscf.workflows import optimization, scans
