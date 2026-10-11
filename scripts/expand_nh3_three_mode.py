@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import warnings
 import argparse
 import contextlib
 import json
@@ -15,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from generate_nh3_three_mode import PAIRS, _Tee, _cpu_model, _executor_factory, _settings
+from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
 from pyscf_vscf import Bond, __version__
 from pyscf_vscf.cache import runtime_provenance
 from pyscf_vscf.io import dump_grid_npz, read_xyz
@@ -26,6 +28,10 @@ from pyscf_vscf.workflows.scans import (
     molecule_with_coords,
     stretch_along_bond,
 )
+
+# These scripts regenerate the archived schema-3 NH3 grids, so they keep using
+# the 0.2 grid API on purpose.
+warnings.filterwarnings("ignore", category=PyscfVscfDeprecationWarning)
 
 
 def _ring_worker(task):

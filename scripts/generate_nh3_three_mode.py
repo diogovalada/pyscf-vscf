@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import warnings
 import argparse
 import contextlib
 import json
@@ -19,6 +20,7 @@ from typing import TextIO
 
 import numpy as np
 
+from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
 from pyscf_vscf import Bond, ESSettings, __version__
 from pyscf_vscf.cache import runtime_provenance
 from pyscf_vscf.io import dump_grid_npz, read_xyz
@@ -29,6 +31,10 @@ from pyscf_vscf.workflows.scans import (
     lbs_frozen_2d_cache_metadata,
     load_lbs_frozen_2d_grid_cache,
 )
+
+# These scripts regenerate the archived schema-3 NH3 grids, so they keep using
+# the 0.2 grid API on purpose.
+warnings.filterwarnings("ignore", category=PyscfVscfDeprecationWarning)
 
 
 PAIRS = ((0, 1), (0, 2), (1, 2))
