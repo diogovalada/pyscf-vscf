@@ -23,8 +23,8 @@ once a public release is tagged.
 
 ## [0.3.0] - 2026-10-11
 
-0.3 builds every calculation through one PySCF code path and runs scans as
-resumable plans; results stored by 0.2 remain valid. The 0.2 interfaces it
+0.3 builds every calculation through one PySCF code path and runs
+fixed-geometry scans as resumable plans; results stored by 0.2 remain valid. The 0.2 interfaces it
 replaces are deprecated, not removed: they still work, with a
 `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
 [migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md).
@@ -37,6 +37,7 @@ replaces are deprecated, not removed: they still work, with a
 - Resumable, parallel scans: `run_plan` evaluates any scan or n-mode plan in
   worker processes, and `PointStore` (`--store`) keeps every point, resumes
   interrupted runs, and retries failed points on request (`--retry-failed`).
+  Relaxed normal-coordinate scans do not use the runner and cannot resume.
 - Typed scans (`plan_bond_scan`, `plan_normal_scan`, `run_scan`,
   `ScanResult`) and scan files (`dump_scan`, `load_scan`; `load_legacy_grid`
   reads 0.1/0.2 caches).
@@ -70,14 +71,15 @@ replaces are deprecated, not removed: they still work, with a
 - Optimization let geomeTRIC replace and close the caller's logging handlers.
 - Fitted surfaces could change if the caller later modified the input arrays.
 - Multilevel composition accepted models of different molecules or charge
-  states.
+  states, and rejected cubic fits.
 - Fractional charge or spin was truncated, and negative bond indices,
   non-finite masses, and invalid kinetic G matrices were accepted.
 
 ### Deprecated
 
-- The 0.2 tuple scan functions (`grid_1d_pes_dms` and relatives), schema-3
-  cache files, `energy_dipole_fn` evaluators, `make_mean_field`, `run_opt`,
+- The 0.2 tuple scan functions (`grid_1d_pes_dms` and relatives), the
+  schema-3 cache writers and loaders (`load_legacy_grid` still reads existing
+  caches), `energy_dipole_fn` evaluators, `make_mean_field`, `run_opt`,
   the flag-style command line, and several older spellings. The migration
   guide lists each with its replacement.
 
@@ -103,8 +105,10 @@ replaces are deprecated, not removed: they still work, with a
 - SCF defaults (convergence 1e-10 Eh, 50 cycles, DFT grid level 3) are set
   explicitly, so a PySCF configuration file can no longer change them. Cache
   identities are unchanged.
-- Command-line errors are a single line instead of a traceback, and inputs
-  are checked before any calculation.
+- Command-line errors are short messages without a traceback (`--debug`
+  shows it), and inputs are checked before any calculation.
+- Options that were silently ignored are now errors: cache options for
+  harmonic and optimization tasks, and `--scan` for 2D scans.
 - `--reuse-grid` takes omitted options from the cache and lists each field
   that does not match.
 - The default optimization output keeps the input format.

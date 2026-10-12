@@ -87,13 +87,21 @@ def test_the_changelog_has_notes_and_absolute_links_for_every_version() -> None:
     assert release_notes.relative_links(unreleased) == []
 
 
-def _rendered(markdown: str) -> str:
+def _rendered(markdown: str) -> tuple[str, list[str]]:
+    """Whitespace-normalized HTML, plus the exact content of every code span."""
+
     import re
 
     from markdown_it import MarkdownIt
 
-    html = MarkdownIt("commonmark").enable("table").render(markdown)
-    return re.sub(r"\s+", " ", html).strip()
+    parser = MarkdownIt("commonmark").enable("table")
+    code = [
+        child.content
+        for token in parser.parse(markdown)
+        for child in token.children or []
+        if child.type == "code_inline"
+    ]
+    return re.sub(r"\s+", " ", parser.render(markdown)).strip(), code
 
 
 def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> None:
@@ -102,7 +110,8 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
         [
             "Intro sentence that",
             "continues here with a `code",
-            "span` and a [link](https://e.org/x).",
+            "span` and a [link](https://e.org/x). A `spaced   ",
+            "code` span.",
             "",
             "- A list item",
             "  wrapped over lines.",
@@ -127,6 +136,7 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
     )
     unwrapped = release_notes.unwrap_paragraphs(text)
     assert "Intro sentence that continues here with a `code span` and a [link]" in unwrapped
+    assert "A `spaced    code` span." in unwrapped
     assert "- A list item wrapped over lines." in unwrapped
     assert "  - Nested item also wrapped." in unwrapped
     assert "> A quote\n> wrapped." in unwrapped

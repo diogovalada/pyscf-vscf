@@ -103,9 +103,9 @@ def unwrap_paragraphs(markdown: str) -> str:
                 spans.append((start, end))
     lines = markdown.split("\n")
     for start, end in reversed(spans):
-        joined = " ".join(
-            [lines[start].rstrip()] + [line.strip() for line in lines[start + 1 : end]]
-        )
+        # CommonMark ignores a paragraph line's leading whitespace but keeps
+        # trailing whitespace inside code spans, so only the former is removed.
+        joined = " ".join([lines[start]] + [line.lstrip() for line in lines[start + 1 : end]])
         lines[start:end] = [joined]
     return "\n".join(lines)
 
