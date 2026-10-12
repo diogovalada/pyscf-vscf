@@ -115,12 +115,16 @@ def unwrap_paragraphs(markdown: str) -> str:
 
 
 def _code_spans(parser, markdown: str) -> list[str]:
-    return [
-        child.content
-        for token in parser.parse(markdown)
-        for child in token.children or []
-        if child.type == "code_inline"
-    ]
+    found: list[str] = []
+
+    def walk(tokens: list) -> None:
+        for token in tokens:
+            if token.type == "code_inline":
+                found.append(token.content)
+            walk(token.children or [])
+
+    walk(parser.parse(markdown))
+    return found
 
 
 def main(argv: list[str] | None = None) -> int:

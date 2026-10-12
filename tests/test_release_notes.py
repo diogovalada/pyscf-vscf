@@ -95,12 +95,15 @@ def _rendered(markdown: str) -> tuple[str, list[str]]:
     from markdown_it import MarkdownIt
 
     parser = MarkdownIt("commonmark").enable("table")
-    code = [
-        child.content
-        for token in parser.parse(markdown)
-        for child in token.children or []
-        if child.type == "code_inline"
-    ]
+    code: list[str] = []
+
+    def walk(tokens: list) -> None:
+        for token in tokens:
+            if token.type == "code_inline":
+                code.append(token.content)
+            walk(token.children or [])
+
+    walk(parser.parse(markdown))
     return re.sub(r"\s+", " ", parser.render(markdown)).strip(), code
 
 
@@ -115,6 +118,9 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
             "",
             "An indented `split",
             " code` span stays wrapped.",
+            "",
+            "So does ![an image `label",
+            " code`](https://e.org/i.png) span.",
             "",
             "- A list item",
             "  wrapped over lines.",
@@ -141,6 +147,7 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
     assert "Intro sentence that continues here with a `code span` and a [link]" in unwrapped
     assert "A `spaced    code` span." in unwrapped
     assert "An indented `split\n code` span stays wrapped." in unwrapped
+    assert "So does ![an image `label\n code`](https://e.org/i.png) span." in unwrapped
     assert "- A list item wrapped over lines." in unwrapped
     assert "  - Nested item also wrapped." in unwrapped
     assert "> A quote\n> wrapped." in unwrapped
