@@ -24,9 +24,9 @@ once a public release is tagged.
 ## [0.3.0] - 2026-10-11
 
 0.3 builds every calculation through one PySCF code path and runs
-fixed-geometry scans as resumable plans; results stored by 0.2 remain valid. The 0.2 interfaces it
-replaces are deprecated, not removed: they still work, with a
-`PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
+fixed-geometry scans as resumable plans; results stored by 0.2 remain valid.
+The 0.2 interfaces it replaces are deprecated, not removed: they still work,
+with a `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
 [migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md).
 
 ### Added
