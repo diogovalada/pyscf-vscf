@@ -108,6 +108,8 @@ def fake_gpu(monkeypatch):
     monkeypatch.setattr(_gpu, "require_gpu", lambda: (None, None))
     from pyscf import dft, scf
 
+    # PySCF older than 2.5 has no to_gpu(); newer versions also define it on subclasses.
+    monkeypatch.setattr(scf.hf.SCF, "to_gpu", _fake_to_gpu, raising=False)
     for method in (scf.hf.RHF, dft.rks.RKS):
         for cls in method.__mro__:
             if "to_gpu" in vars(cls):
