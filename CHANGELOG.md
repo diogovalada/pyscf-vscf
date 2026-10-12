@@ -31,11 +31,10 @@ once a public release is tagged.
 
 ## [0.3.0] - 2026-10-11
 
-0.3 replaces the two parallel electronic-structure paths of 0.2 with one. See
-the
-[migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md);
-everything removed in 0.4 still works in 0.3 with a
-`PyscfVscfDeprecationWarning`.
+0.3 replaces the two parallel electronic-structure paths of 0.2 with one. The
+0.2 interfaces it replaces are deprecated, not removed: they still work, with
+a `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
+[migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md).
 
 ### Added
 
@@ -133,7 +132,7 @@ everything removed in 0.4 still works in 0.3 with a
   `run_opt`, `harmonic_analysis(cfg=...)`, `ElectronicResult.provider_fingerprint`
   and `.point_fingerprint`, `ElectronicPointRequest.fingerprint()`,
   `provider_fingerprint()`, `NModeSurfaceModel.fingerprint()`, `Bond.O`,
-  `Bond.H`, and the flag-style command line. All are removed in 0.4.
+  `Bond.H`, and the flag-style command line. All will be removed in 0.4.
 
 ## [0.2.2] - 2026-10-10
 

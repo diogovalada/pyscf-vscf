@@ -2,9 +2,10 @@
 
 0.3 replaces the two parallel electronic-structure code paths of 0.2 with one:
 every calculation is built through a single PySCF construction seam, and scans
-are plans of electronic points evaluated by a resumable runner. Everything
-removed in 0.4 still works in 0.3 and emits a `PyscfVscfDeprecationWarning`
-(a `DeprecationWarning`) naming its replacement.
+are plans of electronic points evaluated by a resumable runner. The 0.2
+interfaces that 0.3 replaces are deprecated, not removed: they still work in
+0.3, emit a `PyscfVscfDeprecationWarning` (a `DeprecationWarning`) naming
+their replacement, and will be removed in 0.4.
 
 Python 3.11 or newer is required.
 

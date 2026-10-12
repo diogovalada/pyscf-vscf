@@ -2,7 +2,8 @@
 
 The 0.2 tuple-returning scan functions, the `energy_dipole` evaluator API,
 and the schema-3 cache writers and loaders still work in 0.3; each emits a
-`PyscfVscfDeprecationWarning` naming its replacement and is removed in 0.4.
+`PyscfVscfDeprecationWarning` naming its replacement, and will be removed in
+0.4.
 See the [migration guide](../migration-0.3.md). Functions on this page that
 do not warn, such as the provenance helpers in `cache`, are not deprecated.
 `pyscf_vscf.surfaces` re-exports the 0.2 scan functions and the evaluator API
