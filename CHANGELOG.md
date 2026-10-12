@@ -108,7 +108,8 @@ replaces are deprecated, not removed: they still work, with a
 - Command-line errors are short messages without a traceback (`--debug`
   shows it), and inputs are checked before any calculation.
 - Options that were silently ignored are now errors: cache options for
-  harmonic and optimization tasks, and `--scan` for 2D scans.
+  harmonic and optimization tasks, and `--scan` values other than
+  `lbs-frozen` for 2D scans.
 - `--reuse-grid` takes omitted options from the cache and lists each field
   that does not match.
 - The default optimization output keeps the input format.

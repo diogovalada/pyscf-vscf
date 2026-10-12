@@ -11,8 +11,8 @@ parser (``markdown-it-py``):
   relative path;
 - GitHub renders every newline of a release body as a line break, so
   ``--unwrap`` joins the lines of each wrapped paragraph (outside block
-  quotes, and only where the paragraph has no hard line break), which renders
-  identically as CommonMark.
+  quotes, and only where the paragraph has no hard line break and joining
+  leaves every code span unchanged), which renders identically as CommonMark.
 
 Exits with status 1 if the version has no section, the section is empty, or
 a checked link is relative.
@@ -87,7 +87,8 @@ def unwrap_paragraphs(markdown: str) -> str:
 
     from markdown_it import MarkdownIt
 
-    tokens = MarkdownIt("commonmark").enable("table").parse(markdown)
+    parser = MarkdownIt("commonmark").enable("table")
+    tokens = parser.parse(markdown)
     spans: list[tuple[int, int]] = []
     quote_depth = 0
     for index, token in enumerate(tokens):
@@ -102,12 +103,24 @@ def unwrap_paragraphs(markdown: str) -> str:
             if end - start > 1 and not hard_break:
                 spans.append((start, end))
     lines = markdown.split("\n")
+    expected = _code_spans(parser, markdown)
     for start, end in reversed(spans):
-        # CommonMark ignores a paragraph line's leading whitespace but keeps
-        # trailing whitespace inside code spans, so only the former is removed.
         joined = " ".join([lines[start]] + [line.lstrip() for line in lines[start + 1 : end]])
-        lines[start:end] = [joined]
+        candidate = lines[:start] + [joined] + lines[end:]
+        # A code span split across lines keeps the whitespace around the line
+        # break; keep the paragraph wrapped if joining would change one.
+        if _code_spans(parser, "\n".join(candidate)) == expected:
+            lines = candidate
     return "\n".join(lines)
+
+
+def _code_spans(parser, markdown: str) -> list[str]:
+    return [
+        child.content
+        for token in parser.parse(markdown)
+        for child in token.children or []
+        if child.type == "code_inline"
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -113,6 +113,9 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
             "span` and a [link](https://e.org/x). A `spaced   ",
             "code` span.",
             "",
+            "An indented `split",
+            " code` span stays wrapped.",
+            "",
             "- A list item",
             "  wrapped over lines.",
             "  - Nested item",
@@ -137,6 +140,7 @@ def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> No
     unwrapped = release_notes.unwrap_paragraphs(text)
     assert "Intro sentence that continues here with a `code span` and a [link]" in unwrapped
     assert "A `spaced    code` span." in unwrapped
+    assert "An indented `split\n code` span stays wrapped." in unwrapped
     assert "- A list item wrapped over lines." in unwrapped
     assert "  - Nested item also wrapped." in unwrapped
     assert "> A quote\n> wrapped." in unwrapped
