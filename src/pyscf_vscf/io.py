@@ -47,7 +47,7 @@ def _atom_symbol_from_mmol(sym: str, attrs: Sequence[str], *, path: Path, line_n
 
 
 def read_midas_mmol(path: Path) -> Molecule:
-    """Read the ``#1 Xyz`` block of a Midas MMOL file into a :class:`Molecule`.
+    """Read the ``#1 Xyz`` block of a Midas MMOL file into a ``Molecule``.
 
     Coordinates in angstrom (``AA``) or bohr (``AU``) are converted to angstrom.
     Hydrogen atoms marked ``ISO=2`` and ``D`` symbols become deuterium. Charge and
@@ -231,7 +231,7 @@ def dump_grid_npz(path: Path, *, meta: dict, arrays: dict[str, np.ndarray]) -> N
     """Write arrays and JSON metadata to a compressed NPZ grid file.
 
     The metadata gains a SHA-256 checksum of every array, which
-    :func:`load_grid_npz` verifies.
+    ``load_grid_npz`` verifies.
     """
 
     from .cache import array_sha256

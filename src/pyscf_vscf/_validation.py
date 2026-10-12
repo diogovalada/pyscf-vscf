@@ -17,7 +17,7 @@ def nonempty(name: str, value: object) -> str:
 
 
 def nonempty_string(name: str, value: object) -> str:
-    """Like :func:`nonempty`, but ``value`` must already be a string."""
+    """Like ``nonempty``, but ``value`` must already be a string."""
 
     if not isinstance(value, str):
         raise TypeError(f"{name} must be a string")

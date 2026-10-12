@@ -95,7 +95,7 @@ class PointStore:
     """SQLite store of electronic point results and evaluation attempts.
 
     Open with a path (created if missing). Use as a context manager or call
-    :meth:`close`.
+    ``close``.
     """
 
     def __init__(self, path: Path | str) -> None:
@@ -212,7 +212,7 @@ class PointStore:
     ) -> None:
         """Store a validated result and close its attempt in one transaction.
 
-        Raises :class:`StoreConflictError` (after recording the conflict) if a
+        Raises ``StoreConflictError`` (after recording the conflict) if a
         different scientific result is already stored under the same key.
         """
 

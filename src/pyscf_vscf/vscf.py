@@ -1,7 +1,7 @@
 """Reduced-dimensional vibrational self-consistent-field solver.
 
 The implemented Hamiltonian uses one-mode reference potentials plus optional
-two-mode coupling corrections on direct-product uniform sinc-DVR grids::
+two-mode coupling corrections on direct-product uniform sinc-DVR grids:
 
     H = sum_i [T_i + V_i(q_i)] + sum_{i<j} V_ij(q_i, q_j)
 
@@ -343,7 +343,7 @@ class NModeDipole:
         """Evaluate a fitted n-mode dipole surface (body frame) on VSCF grids.
 
         Requires every one-mode increment and no increment above rank two,
-        matching :func:`~pyscf_vscf.nmode.nmode_potential_from_surface`.
+        matching ``nmode_potential_from_surface``.
         """
 
         from .nmode import nmode_dms_fingerprint
@@ -540,8 +540,8 @@ def vscf_spectrum(
 ) -> VSCFSpectrum:
     """Solve a ground state and selected fundamental/overtone/combination states.
 
-    With ``dipole`` (an :class:`NModeDipole` on the same grids), each
-    transition carries a :class:`VSCFTransitionMoment`.
+    With ``dipole`` (an ``NModeDipole`` on the same grids), each
+    transition carries a ``VSCFTransitionMoment``.
     """
 
     if dipole is not None:

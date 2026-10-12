@@ -53,7 +53,7 @@ def harmonic_analysis(
     """Run the PySCF harmonic workflow.
 
     ``settings`` is ``ESSettings`` (or compatible) or a method factory such as
-    :class:`~pyscf_vscf.backends.pyscf.MethodRecipe`. Analytic Hessians are
+    ``MethodRecipe``. Analytic Hessians are
     preferred. If no analytic Hessian is available, finite differences of
     analytic gradients are opt-in. Analytic Hessian failures raise in strict
     mode and warn/fall back in non-strict mode.

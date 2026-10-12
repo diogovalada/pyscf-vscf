@@ -1,18 +1,18 @@
 """The single construction seam for PySCF mean-field calculations.
 
 Every package workflow builds its PySCF molecule and configured, unconverged
-mean-field object through :func:`build_mean_field`. A *factory* decides the
+mean-field object through ``build_mean_field``. A *factory* decides the
 electronic-structure method; the seam validates the electronic system,
 applies execution resources, records a canonical snapshot of the configured
-object, and returns an immutable :class:`MeanFieldBuild` envelope.
+object, and returns an immutable ``MeanFieldBuild`` envelope.
 Convergence and property extraction live in
-:mod:`pyscf_vscf.backends._pyscf_properties`.
+``pyscf_vscf.backends._pyscf_properties``.
 
 Two factories exist:
 
-- :class:`SettingsFactory` reproduces the built-in method defined by
-  :class:`~pyscf_vscf.settings.ESSettings`.
-- :class:`MethodRecipe` wraps a user-supplied PySCF method (any functional,
+- ``SettingsFactory`` reproduces the built-in method defined by
+  ``ESSettings``.
+- ``MethodRecipe`` wraps a user-supplied PySCF method (any functional,
   dispersion, solvent model, ECP, relativistic Hamiltonian, ...). Its
   scientific identity is a required, user-declared manifest; the snapshot of
   readable attributes is provenance and a consistency guard, never identity.
@@ -283,7 +283,7 @@ class MethodRecipe:
     worker processes it must be an importable module-level function (or a
     picklable callable object). ``molecule`` optionally replaces the default
     molecule builder, for example to attach ECPs or per-element bases; it
-    receives an :class:`ElectronicSystem` and returns a built ``gto.Mole``.
+    receives an ``ElectronicSystem`` and returns a built ``gto.Mole``.
 
     The identity is the manifest: ``recipe_id`` and ``recipe_version`` name
     the method, ``configuration`` must list every setting that can change a
@@ -506,7 +506,7 @@ class ConfigurationGuard:
 
 
 def require_pyscf() -> tuple[Any, Any, Any, Any]:
-    """Import PySCF lazily; raise :class:`BackendUnavailableError` if it is missing."""
+    """Import PySCF lazily; raise ``BackendUnavailableError`` if it is missing."""
 
     try:
         from pyscf import dft, gto, scf

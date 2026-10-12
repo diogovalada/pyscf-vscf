@@ -3,8 +3,8 @@
 PySCF is imported only when a calculation runs, so this module imports in
 environments without PySCF. Every calculation builds its molecule and mean
 field through the construction seam in
-:mod:`pyscf_vscf.backends._pyscf_factory`; convergence and properties come
-from :mod:`pyscf_vscf.backends._pyscf_properties`.
+``pyscf_vscf.backends._pyscf_factory``; convergence and properties come
+from ``pyscf_vscf.backends._pyscf_properties``.
 """
 
 from __future__ import annotations
@@ -83,9 +83,9 @@ class PySCFMeanFieldProvider:
     """Mean-field electronic points with split scientific and execution identity.
 
     Pass ``ESSettings`` (or a mapping/object with the same fields) for the
-    built-in method, or ``factory=`` a :class:`MethodRecipe` (any
-    :class:`MeanFieldFactory`) for a user-supplied PySCF method. ``threads``
-    is advisory: worker processes apply it at start-up, and :meth:`evaluate`
+    built-in method, or ``factory=`` a ``MethodRecipe`` (any
+    ``MeanFieldFactory``) for a user-supplied PySCF method. ``threads``
+    is advisory: worker processes apply it at start-up, and ``evaluate``
     never changes PySCF's process-wide thread count. ``max_memory_mb`` is the
     PySCF memory budget of each calculation; by default the runner's worker
     budget (``RunnerSettings.max_memory_mb``) applies, else 4000 MB.
@@ -298,7 +298,7 @@ def converged_mean_field(
 ) -> ConvergedMeanField:
     """Build through the seam and converge the mean field for a package molecule.
 
-    ``cfg`` is ``ESSettings`` (or compatible) or a :class:`MeanFieldFactory`.
+    ``cfg`` is ``ESSettings`` (or compatible) or a ``MeanFieldFactory``.
     """
 
     return converge(
@@ -399,7 +399,7 @@ def make_mean_field(
 ):
     """Deprecated: create and run the built-in mean field on an existing molecule.
 
-    Use :func:`converged_mean_field` or :class:`PySCFMeanFieldProvider`.
+    Use ``converged_mean_field`` or ``PySCFMeanFieldProvider``.
     """
 
     deprecated(

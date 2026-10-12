@@ -1056,7 +1056,7 @@ class NModeSurfaceModel:
         return payload_fingerprint(self.artifact_payload())
 
     def fingerprint(self) -> str:
-        """Deprecated spelling of :meth:`artifact_integrity_fingerprint`."""
+        """Deprecated spelling of ``artifact_integrity_fingerprint``."""
 
         deprecated(
             "NModeSurfaceModel.fingerprint() is deprecated; use artifact_integrity_fingerprint()."

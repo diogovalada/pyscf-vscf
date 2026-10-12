@@ -2,10 +2,10 @@
 
 A *plan* is anything with a ``provider_scientific_fingerprint`` and a
 ``requests`` mapping from point causal fingerprint to
-:class:`~pyscf_vscf.contracts.ElectronicPointRequest`: scan plans and n-mode
-point plans both qualify. :func:`run_plan` evaluates every point that is not
-already in the optional :class:`~pyscf_vscf.point_store.PointStore`, keeps
-going or stops at the first failure, and returns a :class:`PlanRun` report.
+``ElectronicPointRequest``: scan plans and n-mode
+point plans both qualify. ``run_plan`` evaluates every point that is not
+already in the optional ``PointStore``, keeps
+going or stops at the first failure, and returns a ``PlanRun`` report.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ class ElectronicPlan(Protocol):
 
 @dataclass(frozen=True)
 class RunnerSettings:
-    """Execution policy for :func:`run_plan`.
+    """Execution policy for ``run_plan``.
 
     ``workers=None`` evaluates points in the calling process and leaves its
     PySCF thread settings alone. ``workers >= 1`` uses that many spawned worker
@@ -104,7 +104,7 @@ class ProgressEvent:
 
 @dataclass(frozen=True)
 class PlanRun:
-    """Outcome of :func:`run_plan`.
+    """Outcome of ``run_plan``.
 
     ``results`` holds every available result, both newly computed and
     ``reused`` from the store. ``failures`` lists failed points; ``not_attempted``
@@ -170,7 +170,7 @@ def run_plan(
     settings: RunnerSettings | None = None,
     progress: Callable[[ProgressEvent], None] | None = None,
 ) -> PlanRun:
-    """Evaluate every point of ``plan`` with ``provider``; return a :class:`PlanRun`."""
+    """Evaluate every point of ``plan`` with ``provider``; return a ``PlanRun``."""
 
     policy = settings or RunnerSettings()
     started = time.perf_counter()

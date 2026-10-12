@@ -65,14 +65,14 @@ class Bond:
 
     @property
     def O(self) -> int:  # noqa: E743 - retained compatibility spelling
-        """Deprecated water-specific spelling of :attr:`i`."""
+        """Deprecated water-specific spelling of ``i``."""
 
         deprecated("Bond.O is deprecated; use Bond.i.")
         return self.i
 
     @property
     def H(self) -> int:
-        """Deprecated water-specific spelling of :attr:`j`."""
+        """Deprecated water-specific spelling of ``j``."""
 
         deprecated("Bond.H is deprecated; use Bond.j.")
         return self.j

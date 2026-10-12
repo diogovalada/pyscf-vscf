@@ -865,7 +865,7 @@ def dump_vci_result(result: VCIResult, path: Path | str) -> None:
 
 
 def load_vci_result(path: Path | str) -> VCIResult:
-    """Load and fingerprint-check a result written by :func:`dump_vci_result`."""
+    """Load and fingerprint-check a result written by ``dump_vci_result``."""
 
     with np.load(Path(path), allow_pickle=False) as archive:
         manifest = json.loads(str(archive["manifest_json"].item()))

@@ -1,13 +1,13 @@
 """Scan artifacts: schema-v4 files and read-only access to v2/v3 grid caches.
 
-A v4 file stores a :class:`~pyscf_vscf.scans.ScanResult`: absolute energies,
+A v4 file stores a ``ScanResult``: absolute energies,
 atomic-unit dipoles, axis definitions, point keys, the provider identity, the
 sampling definition, array checksums, and a fingerprint of its complete
-content. :func:`load_scan` verifies all of them.
+content. ``load_scan`` verifies all of them.
 
 Grid caches written by 0.1/0.2 (schema 2 and 3) hold energies relative to
-the grid minimum and Debye dipoles. :func:`load_legacy_grid` returns them as a
-:class:`LegacyRelativeScan` after the original checksum and identity checks;
+the grid minimum and Debye dipoles. ``load_legacy_grid`` returns them as a
+``LegacyRelativeScan`` after the original checksum and identity checks;
 it does not invent absolute energies or modern point identities.
 """
 

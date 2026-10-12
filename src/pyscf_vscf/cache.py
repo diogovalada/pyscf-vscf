@@ -1,6 +1,6 @@
 """NPZ cache helpers.
 
-These names mirror :mod:`pyscf_vscf.io` for callers that prefer a cache-focused
+These names mirror ``pyscf_vscf.io`` for callers that prefer a cache-focused
 module.
 """
 

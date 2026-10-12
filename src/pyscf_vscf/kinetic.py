@@ -338,7 +338,7 @@ class TriatomicJ0Hamiltonian:
     """Triatomic Jacobi kinetic operator plus one grid-diagonal potential.
 
     Direct construction from an array is an explicitly unbound analytical-
-    potential path. Use :meth:`from_projection` for a provenance-bound
+    potential path. Use ``from_projection`` for a provenance-bound
     valence-PES projection.
     """
 

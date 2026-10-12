@@ -1,8 +1,8 @@
 """Scan workflow helpers (0.2 tuple API).
 
 The tuple-returning grid functions and schema-3 cache helpers are deprecated
-in favour of :mod:`pyscf_vscf.scans` (plans, runner, ``ScanResult``) and
-:mod:`pyscf_vscf.artifacts.scans` (schema-4 files). Normal-mode selection,
+in favour of ``pyscf_vscf.scans`` (plans, runner, ``ScanResult``) and
+``pyscf_vscf.artifacts.scans`` (schema-4 files). Normal-mode selection,
 constrained relaxed scans, and coordinate/mass helpers remain current.
 
 This module sits above the pure coordinate/surface helpers and below the CLI.
@@ -460,7 +460,7 @@ def grid_1d_pes_dms(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build a frozen local-bond 1D PES/DMS grid with injectable execution.
 
-    If any point raises, :class:`ScanFailedError` is raised after the active
+    If any point raises, ``ScanFailedError`` is raised after the active
     batch finishes; its ``partial`` attribute holds every completed point.
     With ``stop_on_error=False`` all points are attempted before raising.
     """
@@ -529,7 +529,7 @@ def grid_1d_pes_dms_normal(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build a 1D PES/DMS grid along a fixed normal-mode displacement direction.
 
-    Failed points raise :class:`ScanFailedError` as in :func:`grid_1d_pes_dms`.
+    Failed points raise ``ScanFailedError`` as in ``grid_1d_pes_dms``.
     """
 
     deprecated(
@@ -600,8 +600,8 @@ def grid_1d_pes_dms_normal_relaxed(
     """Orchestrate an exactly constrained relaxed normal-coordinate scan.
 
     Points whose optimizer does not converge are reported through
-    :class:`NormalRelaxedGrid` (``strict`` decides between raising and
-    warning). Points that raise an exception produce :class:`ScanFailedError`.
+    ``NormalRelaxedGrid`` (``strict`` decides between raising and
+    warning). Points that raise an exception produce ``ScanFailedError``.
     """
 
     if relaxed_point_fn is None:
@@ -715,7 +715,7 @@ def grid_2d_pes_dms(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Build a frozen two-local-bond PES/DMS grid with injectable execution.
 
-    Failed points raise :class:`ScanFailedError` as in :func:`grid_1d_pes_dms`.
+    Failed points raise ``ScanFailedError`` as in ``grid_1d_pes_dms``.
     """
 
     deprecated(

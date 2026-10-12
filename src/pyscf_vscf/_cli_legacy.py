@@ -1,7 +1,7 @@
 """The 0.2 flag-style command line (``pyscf-vscf --task ...``), deprecated.
 
 ``pyscf-vscf`` routes flag-style invocations here unchanged for one release;
-the subcommand interface in :mod:`pyscf_vscf.cli` replaces it in 0.4.
+the subcommand interface in ``pyscf_vscf.cli`` replaces it in 0.4.
 """
 
 from __future__ import annotations

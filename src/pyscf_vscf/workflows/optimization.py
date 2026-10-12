@@ -31,7 +31,7 @@ _LOG = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class OptimizationResult:
-    """Result returned by :func:`run_opt`."""
+    """Result returned by ``run_opt``."""
 
     molecule: Molecule
     converged: bool
@@ -60,7 +60,7 @@ def optimize_geometry(
     """Optimize a geometry with geomeTRIC on the package's PySCF method.
 
     ``settings`` is ``ESSettings`` (or compatible) or a method factory such as
-    :class:`~pyscf_vscf.backends.pyscf.MethodRecipe`; the method is rebuilt
+    ``MethodRecipe``; the method is rebuilt
     through the construction seam at every geometry. The optimized geometry is
     written only when ``output_path`` (``.xyz`` or ``.mmol``) is given. A
     non-converged optimization raises in strict mode and warns otherwise.
@@ -109,7 +109,7 @@ def run_opt(
     """Deprecated: optimize, print a summary, and always write the geometry.
 
     ``opt_out=None`` writes ``<label>.pyscf_opt.mmol``. Use
-    :func:`optimize_geometry`, which writes a file only when asked.
+    ``optimize_geometry``, which writes a file only when asked.
     """
 
     deprecated("run_opt() is deprecated; use optimize_geometry().")

@@ -369,7 +369,7 @@ def apply_thread_env_updates(
     threads: int | None,
     environ: MutableMapping[str, str],
 ) -> dict[str, str]:
-    """Apply :func:`thread_env_updates` to an explicit environment mapping."""
+    """Apply ``thread_env_updates`` to an explicit environment mapping."""
 
     updates = thread_env_updates(threads)
     environ.update(updates)

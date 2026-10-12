@@ -1,12 +1,12 @@
 """Typed potential and dipole scans built on electronic point plans.
 
-A scan is planned (:func:`plan_bond_scan`, :func:`plan_normal_scan`),
-evaluated by :func:`pyscf_vscf.runner.run_plan`, and assembled into a
-:class:`ScanResult` with absolute energies in Hartree and dipoles in atomic
-units in the input Cartesian frame. :func:`run_scan` does all three.
+A scan is planned (``plan_bond_scan``, ``plan_normal_scan``),
+evaluated by ``pyscf_vscf.runner.run_plan``, and assembled into a
+``ScanResult`` with absolute energies in Hartree and dipoles in atomic
+units in the input Cartesian frame. ``run_scan`` does all three.
 Planning is pure: it needs no electronic-structure backend.
 
-The 0.2 tuple-returning functions in :mod:`pyscf_vscf.workflows.scans` remain
+The 0.2 tuple-returning functions in ``pyscf_vscf.workflows.scans`` remain
 available (deprecated) for one release.
 """
 
@@ -134,7 +134,7 @@ class ScanResult:
 
     ``total_energies_Eh`` and ``dipoles_au`` (input Cartesian frame) have the
     grid shape (dipoles with a trailing axis of 3). Use
-    :attr:`relative_energies_Eh` and :attr:`dipoles_debye` for the 0.2
+    ``relative_energies_Eh`` and ``dipoles_debye`` for the 0.2
     conventions.
     """
 
@@ -258,7 +258,7 @@ def plan_bond_scan(
     """Plan a frozen scan of one or two bond lengths (angstrom).
 
     The second atom of each bond moves (two bonds sharing an atom are
-    stretched about that atom). ``grids`` defaults to :func:`default_bond_grid`
+    stretched about that atom). ``grids`` defaults to ``default_bond_grid``
     around each bond's length in ``molecule``.
     """
 
@@ -383,8 +383,8 @@ def run_scan(
 ) -> ScanResult:
     """Evaluate a scan plan and assemble it.
 
-    Raises :class:`~pyscf_vscf.runner.PlanIncompleteError` (carrying the
-    :class:`~pyscf_vscf.runner.PlanRun`) when any point is missing.
+    Raises ``PlanIncompleteError`` (carrying the
+    ``PlanRun``) when any point is missing.
     """
 
     run = run_plan(plan, provider, store=store, settings=settings, progress=progress)

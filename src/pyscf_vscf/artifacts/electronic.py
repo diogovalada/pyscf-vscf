@@ -43,7 +43,7 @@ def request_to_json(request: ElectronicPointRequest) -> dict[str, Any]:
 
 
 def request_from_json(payload: Mapping[str, Any]) -> ElectronicPointRequest:
-    """Rebuild a request written by :func:`request_to_json`."""
+    """Rebuild a request written by ``request_to_json``."""
 
     _require_schema(payload, REQUEST_SCHEMA)
     return ElectronicPointRequest(
@@ -85,7 +85,7 @@ def result_to_json(result: ElectronicResult) -> dict[str, Any]:
 
 
 def result_from_json(payload: Mapping[str, Any]) -> ElectronicResult:
-    """Rebuild a result written by :func:`result_to_json` and verify its fingerprints."""
+    """Rebuild a result written by ``result_to_json`` and verify its fingerprints."""
 
     _require_schema(payload, RESULT_SCHEMA)
     result = ElectronicResult(

@@ -1,6 +1,6 @@
 """Public PES/DMS surface construction API.
 
-Grid semantics and execution live in :mod:`pyscf_vscf.workflows.scans`. This
+Grid semantics and execution live in ``pyscf_vscf.workflows.scans``. This
 module provides the compact public import surface.
 """
 

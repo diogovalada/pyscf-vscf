@@ -1,6 +1,6 @@
 """Electronic point contracts (re-exported) and the legacy scan evaluator API.
 
-The contracts live in :mod:`pyscf_vscf.contracts`; they are re-exported here
+The contracts live in ``pyscf_vscf.contracts``; they are re-exported here
 so existing imports keep working. ``energy_dipole`` and the
 ``EnergyDipoleEvaluator`` callable boundary belong to the 0.2 scan API.
 """
@@ -38,7 +38,7 @@ class EnergyDipoleEvaluator(Protocol):
 
 
 def provider_fingerprint(provider: ElectronicProvider) -> str:
-    """Deprecated spelling of :func:`provider_scientific_fingerprint`."""
+    """Deprecated spelling of ``provider_scientific_fingerprint``."""
 
     deprecated("provider_fingerprint() is deprecated; use provider_scientific_fingerprint().")
     return provider_scientific_fingerprint(provider)
