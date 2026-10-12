@@ -9,15 +9,15 @@ interfaces remain evolving alpha APIs.
 
 0.3 added one PySCF construction seam with user-supplied method recipes, a
 resumable point store and plan runner, typed scans with schema-4 files, a
-subcommand command line, and VSCF intensities. Planned for 0.4:
-
-- Remove the APIs deprecated in 0.3 (the 0.2 tuple scan functions, schema-3
-  writers, the flag-style command line, compatibility spellings).
-- Optional GPU4PySCF execution (`device="gpu"`) once a benchmark on supported
-  hardware shows a worthwhile speed-up and CPU/GPU parity tests pass; the
-  construction seam already converts arrays to NumPy at its boundary.
+subcommand command line, and VSCF intensities. 0.4 added optional GPU
+execution through GPU4PySCF (`device="gpu"`) and removed the APIs deprecated
+in 0.3.
 
 Later:
+
+- GPU: reuse worker processes across scans, to amortize CUDA start-up; verify
+  multi-GPU runs on hardware (pinning is unit-tested only); measure datacenter
+  GPUs.
 
 - Backend-neutral VPT2/GVPT2 support, staged from a solver that consumes
   user-supplied harmonic, cubic, and semi-diagonal quartic force fields to

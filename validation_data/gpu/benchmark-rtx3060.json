@@ -1,0 +1,175 @@
+{
+  "schema": "pyscf-vscf-gpu-benchmark",
+  "schema_version": 1,
+  "package_version": "0.3.1",
+  "gpu": {
+    "device_name": "NVIDIA GeForce RTX 3060",
+    "compute_capability": "8.6",
+    "cuda_runtime_version": 12090,
+    "cuda_driver_version": 12060,
+    "cuda_visible_devices": null,
+    "gpu4pyscf": "1.8.1",
+    "cupy": "14.2.0"
+  },
+  "cpu": "x86_64",
+  "available_cpus": 3,
+  "python": "3.12.3",
+  "points": [
+    {
+      "molecule": "water",
+      "method": "hf",
+      "basis": "cc-pvdz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 0.05494212359189987,
+      "gpu_seconds": 1.849244300276041,
+      "cores_replaced": 0.029710581551447006
+    },
+    {
+      "molecule": "water",
+      "method": "hf",
+      "basis": "cc-pvdz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 0.053907766938209534,
+      "gpu_seconds": 0.21408900991082191,
+      "cores_replaced": 0.2518007204604507
+    },
+    {
+      "molecule": "water",
+      "method": "b3lyp",
+      "basis": "cc-pvdz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 0.4467290788888931,
+      "gpu_seconds": 1.6198047921061516,
+      "cores_replaced": 0.2757919232403514
+    },
+    {
+      "molecule": "water",
+      "method": "b3lyp",
+      "basis": "cc-pvdz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 0.4751604385674,
+      "gpu_seconds": 0.3102341815829277,
+      "cores_replaced": 1.5316185861369578
+    },
+    {
+      "molecule": "water",
+      "method": "b3lyp",
+      "basis": "aug-cc-pvtz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 2.03679034486413,
+      "gpu_seconds": 4.143622152507305,
+      "cores_replaced": 0.4915482806828003
+    },
+    {
+      "molecule": "water",
+      "method": "b3lyp",
+      "basis": "aug-cc-pvtz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 1.7154971845448017,
+      "gpu_seconds": 0.4554360769689083,
+      "cores_replaced": 3.766713423236155
+    },
+    {
+      "molecule": "water",
+      "method": "wb97x",
+      "basis": "aug-cc-pvtz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 4.619966972619295,
+      "gpu_seconds": 4.617334101349115,
+      "cores_replaced": 1.0005702145897155
+    },
+    {
+      "molecule": "water",
+      "method": "wb97x",
+      "basis": "aug-cc-pvtz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 1.8851987235248089,
+      "gpu_seconds": 0.5506710186600685,
+      "cores_replaced": 3.4234573087067615
+    },
+    {
+      "molecule": "water dimer",
+      "method": "b3lyp",
+      "basis": "aug-cc-pvtz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 15.414503369480371,
+      "gpu_seconds": 10.913216885179281,
+      "cores_replaced": 1.4124619286558917
+    },
+    {
+      "molecule": "water dimer",
+      "method": "b3lyp",
+      "basis": "aug-cc-pvtz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 6.028551444411278,
+      "gpu_seconds": 1.20366882532835,
+      "cores_replaced": 5.008480171252041
+    },
+    {
+      "molecule": "water dimer",
+      "method": "wb97x",
+      "basis": "aug-cc-pvtz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 53.15721879899502,
+      "gpu_seconds": 12.663345567882061,
+      "cores_replaced": 4.197723146229006
+    },
+    {
+      "molecule": "water dimer",
+      "method": "wb97x",
+      "basis": "aug-cc-pvtz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 7.227237615734339,
+      "gpu_seconds": 1.425535973161459,
+      "cores_replaced": 5.069838819785271
+    },
+    {
+      "molecule": "pyridine",
+      "method": "b3lyp",
+      "basis": "cc-pvdz",
+      "density_fit": false,
+      "cpu_one_core_seconds": 11.23928453028202,
+      "gpu_seconds": 6.6320002265274525,
+      "cores_replaced": 1.6947050884174901
+    },
+    {
+      "molecule": "pyridine",
+      "method": "b3lyp",
+      "basis": "cc-pvdz",
+      "density_fit": true,
+      "cpu_one_core_seconds": 9.487612999975681,
+      "gpu_seconds": 1.7228045798838139,
+      "cores_replaced": 5.50707440109982
+    }
+  ],
+  "throughput": [
+    {
+      "device": "gpu",
+      "workers": 1,
+      "points": 24,
+      "seconds": 15.149985164403915,
+      "points_per_minute": 95.04959802755408
+    },
+    {
+      "device": "gpu",
+      "workers": 2,
+      "points": 24,
+      "seconds": 11.959409896284342,
+      "points_per_minute": 120.40727866074666
+    },
+    {
+      "device": "gpu",
+      "workers": 3,
+      "points": 24,
+      "seconds": 11.648389406502247,
+      "points_per_minute": 123.62224078774166
+    },
+    {
+      "device": "cpu",
+      "workers": 3,
+      "points": 24,
+      "seconds": 11.835039269179106,
+      "points_per_minute": 121.67260008592099
+    }
+  ]
+}

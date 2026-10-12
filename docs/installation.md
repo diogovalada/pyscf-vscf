@@ -16,6 +16,10 @@ those dependencies or configuration options.
 
 PySCF does not support native Windows installations. Use WSL on Windows.
 
+For optional GPU execution on Linux with an NVIDIA GPU, install the GPU extra
+for your CUDA version (`pip install "pyscf-vscf[gpu-cuda12]"` or
+`gpu-cuda13`); see [GPU execution](gpu.md).
+
 For a source checkout, use `uv`:
 
 ```bash

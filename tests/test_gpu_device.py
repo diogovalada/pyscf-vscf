@@ -327,6 +327,8 @@ def test_gpu_workers_need_spawn() -> None:
 
 def test_workers_are_pinned_to_gpus_round_robin(monkeypatch) -> None:
     monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    for name in ("cupy", "gpu4pyscf"):
+        monkeypatch.delitem(sys.modules, name, raising=False)
     counter = mp.get_context("spawn").Value("i", 0)
     pinned = []
     for _ in range(3):
@@ -342,7 +344,12 @@ def test_pinning_refuses_a_worker_where_cuda_may_already_run(monkeypatch) -> Non
         _worker_init(None, None, ("0", "1"), counter)
 
 
+def _cupy_without_runtime():
+    raise BackendUnavailableError("no CuPy in this test")
+
+
 def test_visible_gpu_ids_honour_cuda_visible_devices(monkeypatch) -> None:
+    monkeypatch.setattr(_gpu, "require_gpu", _cupy_without_runtime)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "2, 3")
     assert _gpu.visible_gpu_ids() == ("2", "3")
     # CUDA stops at the first invalid entry.
@@ -380,3 +387,17 @@ def test_cli_reuse_refuses_device(tmp_path, capsys) -> None:
         )
     assert exc.value.code == 2
     assert "--device" in capsys.readouterr().err
+
+
+def test_visible_gpu_ids_are_cut_to_the_devices_cuda_reports(monkeypatch) -> None:
+    class Runtime:
+        @staticmethod
+        def getDeviceCount() -> int:
+            return 1
+
+    fake_cupy = type("cupy", (), {"cuda": type("cuda", (), {"runtime": Runtime})})
+    monkeypatch.setattr(_gpu, "require_gpu", lambda: (None, fake_cupy))
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "4,5")
+    assert _gpu.visible_gpu_ids() == ("4",)
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES")
+    assert _gpu.visible_gpu_ids() == ("0",)

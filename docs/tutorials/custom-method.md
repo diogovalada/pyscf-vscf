@@ -92,5 +92,7 @@ legitimately changes with geometry, declare it in
   spatial-orbital integrals. They need a restricted or unrestricted HF or KS
   mean field (with or without density fitting or solvent); generalized
   (GHF/GKS), Dirac, and X2C methods are refused for them.
-- GPU execution (GPU4PySCF) is not supported yet; the roadmap describes the
-  plan.
+- `MethodRecipe(device="gpu")` (or `recipe.on_device("gpu")`, or `--device
+  gpu` with `--recipe`) runs the recipe through GPU4PySCF; see
+  [GPU execution](../gpu.md). The recipe's function still returns the CPU
+  object, and features without a GPU implementation fail.

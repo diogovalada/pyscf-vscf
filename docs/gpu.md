@@ -73,25 +73,34 @@ dipoles, and the observed differences are far smaller for energies
 
 ## When the GPU helps
 
-Measured with `scripts/gpu_benchmark.py` on an RTX 3060 (a consumer card
-with slow double precision) against one core of an AMD EPYC 7402.
-*Cores replaced* is the number of single-threaded CPU workers that match one
-GPU:
+The speed-up depends on the molecule's size, the method, the basis set,
+density fitting, and the GPU's double-precision throughput, so measure it
+for your own calculations (`scripts/gpu_benchmark.py`). As one example, an
+RTX 3060 (a consumer card, whose double precision is 1/64 of its single
+precision) against one core of an AMD EPYC 7402, energy and dipole of one
+point (`validation_data/gpu/benchmark-rtx3060.json`):
 
-BENCHMARK_TABLE
+| Molecule | Method | Density fitting | CPU, 1 core (s) | GPU (s) | CPU cores matched |
+| --- | --- | --- | --- | --- | --- |
+| Water | HF/cc-pVDZ | no / yes | 0.05 / 0.05 | 1.85 / 0.21 | 0.0 / 0.3 |
+| Water | B3LYP/cc-pVDZ | no / yes | 0.45 / 0.48 | 1.62 / 0.31 | 0.3 / 1.5 |
+| Water | B3LYP/aug-cc-pVTZ | no / yes | 2.04 / 1.72 | 4.14 / 0.46 | 0.5 / 3.8 |
+| Water | ωB97X/aug-cc-pVTZ | no / yes | 4.62 / 1.89 | 4.62 / 0.55 | 1.0 / 3.4 |
+| Water dimer | B3LYP/aug-cc-pVTZ | no / yes | 15.4 / 6.03 | 10.9 / 1.20 | 1.4 / 5.0 |
+| Water dimer | ωB97X/aug-cc-pVTZ | no / yes | 53.2 / 7.23 | 12.7 / 1.43 | 4.2 / 5.1 |
+| Pyridine | B3LYP/cc-pVDZ | no / yes | 11.2 / 9.49 | 6.63 / 1.72 | 1.7 / 5.5 |
 
-- With density fitting (the default), the GPU replaces many CPU cores, even
-  for water.
-- Without density fitting, small molecules gain little or nothing; the GPU
-  pays off for larger molecules and basis sets.
-- Datacenter GPUs (V100, A100, H100) have much faster double precision than
-  consumer cards.
+A 24-point water bond scan at ωB97X/aug-cc-pVTZ with density fitting ran at
+95, 120, and 124 points per minute with one, two, and three workers sharing
+the GPU, and at 122 points per minute on three CPU cores.
 
-Run the benchmark on your own hardware:
-
-```bash
-python scripts/gpu_benchmark.py --output gpu-benchmark.json
-```
+- On this card the GPU matched one to six CPU cores; it helps most with
+  density fitting and larger molecules or basis sets.
+- For small molecules without density fitting, the CPU is faster.
+- GPUs with fast double precision (V100, A100, H100) can be expected to do
+  considerably better; these numbers do not measure them.
+- Several workers can share one GPU (`--workers`); for small molecules this
+  raises throughput.
 
 ## Parity suite
 
@@ -113,7 +122,7 @@ was raised to 0.5 cm⁻¹; the first report is archived alongside the final
 one. The analytic-Hessian check and HDO were added afterwards; its
 tolerance, 1e-4 Eh/bohr², was set from the NH3 difference (3.5e-5), and
 water at ωB97X later came closest to it (9.0e-5). Harmonic frequencies
-agree within 0.002 cm⁻¹ for HF and B3LYP and within 0.24 cm⁻¹ for ωB97X.
+agree within 0.001 cm⁻¹ for HF, 0.021 cm⁻¹ for B3LYP, and 0.24 cm⁻¹ for ωB97X.
 
 ```bash
 python scripts/gpu_parity.py --output gpu-parity.json
