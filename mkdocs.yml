@@ -1,6 +1,7 @@
 site_name: pyscf-vscf
 site_description: Anharmonic vibrational spectra (DVR, VSCF, VCI) on PySCF potential and dipole surfaces
-site_url: https://diogovalada.github.io/pyscf-vscf/
+# Read the Docs sets the canonical URL of each version it builds.
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://pyscf-vscf.readthedocs.io/"]
 repo_url: https://github.com/diogovalada/pyscf-vscf
 repo_name: diogovalada/pyscf-vscf
 edit_uri: ""

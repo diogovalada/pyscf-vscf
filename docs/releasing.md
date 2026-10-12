@@ -37,5 +37,7 @@ committed.
    repository variable `PUBLISH_TO_PYPI` to `true`.
 10. Review the generated GitHub release notes against the matching changelog
    section.
+11. Read the Docs builds the documentation for the new tag; confirm the build
+   passed and that `stable` now shows the release.
 
 Never release from a dirty worktree or by uploading an unreviewed local build.

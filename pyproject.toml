@@ -35,7 +35,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/diogovalada/pyscf-vscf"
-Documentation = "https://diogovalada.github.io/pyscf-vscf/"
+Documentation = "https://pyscf-vscf.readthedocs.io/"
 Repository = "https://github.com/diogovalada/pyscf-vscf"
 Issues = "https://github.com/diogovalada/pyscf-vscf/issues"
 Changelog = "https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md"

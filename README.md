@@ -178,7 +178,7 @@ flag-style command line) keep working with a warning and are removed in 0.4.
 
 ## Documentation
 
-The [documentation site](https://diogovalada.github.io/pyscf-vscf/) has
+The [documentation site](https://pyscf-vscf.readthedocs.io/) has
 tutorials, guides, and the API reference. The guides are also in `docs/`:
 
 - [Scans, the point store, and parallel runs](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/scans.md)

@@ -7,8 +7,8 @@ once a public release is tagged.
 
 ### Added
 
-- Documentation site (MkDocs) with tutorials and an API reference generated
-  from the docstrings.
+- Documentation site on Read the Docs (MkDocs), with tutorials and an API
+  reference generated from the docstrings, built for every release.
 
 ### Changed
 
