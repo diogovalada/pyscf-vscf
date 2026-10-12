@@ -12,12 +12,17 @@ committed.
 1. Run `git status --short --branch` and
    `git ls-files --others --exclude-standard`; account for every local file and
    verify that the release branch is synchronized with its upstream.
-2. Confirm `CHANGELOG.md`, `CITATION.cff`, `pyproject.toml`, and
-   `pyscf_vscf.__version__` agree. The archived reports record the package
-   version, so step 3's regenerated reports must be committed with the
-   version bump, together with the new SHA-256 of
+2. Make one release commit, the last commit before the tag, and let no
+   earlier commit carry the new version number. It changes the version in
+   `pyproject.toml`, `pyscf_vscf.__version__`, `CITATION.cff` (with
+   `date-released`), and `uv.lock`; renames the changelog's `Unreleased`
+   section to the version and date and updates the comparison links at its
+   end; and contains the reports regenerated in step 3 (they record the
+   package version) with the new SHA-256 of
    `validation_data/nh3_three_mode/report.json` in that directory's
-   `manifest.json`; CI fails otherwise.
+   `manifest.json`. CI fails if the reports or the hash do not match. If CI
+   then finds a problem, fix it in a further commit and tag that one; never
+   tag a commit whose CI has not passed.
 3. Run the pure and PySCF test suites, regenerate both archived
    validation reports, and compare them with the committed reports using
    `scripts/compare_validation_reports.py`. The comparison requires identical
