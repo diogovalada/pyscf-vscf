@@ -44,8 +44,8 @@ from pyscf_vscf.workflows.optimization import optimize_geometry
 # geometry: A.
 #
 # harmonic_frequencies was raised to 0.5 cm^-1 after the first run, where
-# NH3 at wB97X/aug-cc-pVDZ (density fitting) differed by 0.24 cm^-1. Neither
-# implementation is wrong: both analytic DFT Hessians omit the grid response,
+# NH3 at wB97X/aug-cc-pVDZ (density fitting) differed by 0.24 cm^-1. Both
+# analytic DFT Hessians are approximate (neither includes the grid response),
 # and each differs from a finite-difference Hessian of its own gradients by
 # 4.4e-4 Eh/bohr^2 (about 1.8 cm^-1); those finite-difference Hessians agree
 # between CPU and GPU to 1.2e-5 Eh/bohr^2. The CPU-GPU difference (3.5e-5) is

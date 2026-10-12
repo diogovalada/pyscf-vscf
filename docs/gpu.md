@@ -106,8 +106,8 @@ that run 47 of 48 checks passed: for NH3 at ωB97X the harmonic frequencies
 differed by 0.24 cm⁻¹, against a tolerance of 0.1 cm⁻¹. A finite-difference
 check (`validation_data/gpu/hessian-referee-nh3-wb97x.txt`) showed that both
 analytic Hessians differ by about ten times more (1.8 cm⁻¹ in the lowest
-mode) from a finite-difference Hessian of their own gradients, because
-neither includes the DFT grid response, while those finite-difference
+mode) from a finite-difference Hessian of their own gradients (consistent
+with neither including the DFT grid response), while those finite-difference
 Hessians agree between CPU and GPU to 0.03 cm⁻¹. The frequency tolerance
 was raised to 0.5 cm⁻¹; the first report is archived alongside the final
 one. The analytic-Hessian check and HDO were added afterwards.
