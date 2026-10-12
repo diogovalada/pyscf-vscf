@@ -1,0 +1,11 @@
+# NH3 wB97X/aug-cc-pVDZ (density fitting), RTX 3060, GPU4PySCF 1.8.1, PySCF 2.14.0
+# SCF conv_tol 1e-12, CPHF conv_tol 1e-10, finite-difference step 1e-3 bohr; last six harmonic frequencies (cm^-1)
+# and max |H_a - H_b| (Eh/bohr^2) between Hessians. Script: validation_data/gpu/hessian_referee.py.
+analytic-cpu  [ 982.43  1633.58  1633.809 3593.085 3730.935 3731.383]
+fd-cpu        [ 980.647 1633.463 1634.204 3592.982 3730.89  3731.265]
+analytic-gpu  [ 982.284 1633.819 1633.9   3593.042 3730.872 3731.416]
+fd-gpu        [ 980.644 1633.461 1634.2   3592.982 3730.916 3731.291]
+analytic-cpu fd-cpu:4.5e-04 analytic-gpu:3.5e-05 fd-gpu:4.3e-04
+fd-cpu analytic-cpu:4.5e-04 analytic-gpu:4.4e-04 fd-gpu:1.2e-05
+analytic-gpu analytic-cpu:3.5e-05 fd-cpu:4.4e-04 fd-gpu:4.3e-04
+fd-gpu analytic-cpu:4.3e-04 fd-cpu:1.2e-05 analytic-gpu:4.3e-04

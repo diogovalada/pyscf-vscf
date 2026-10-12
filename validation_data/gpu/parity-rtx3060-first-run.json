@@ -1,0 +1,415 @@
+{
+  "schema": "pyscf-vscf-gpu-parity",
+  "schema_version": 1,
+  "package_version": "0.3.1",
+  "passed": false,
+  "tolerances": {
+    "energy": 1e-08,
+    "dipole": 1e-05,
+    "finite_field_energy": 1e-08,
+    "gradient": 1e-06,
+    "harmonic_frequencies": 0.1,
+    "optimized_geometry": 0.0001,
+    "optimized_energy": 1e-08,
+    "scan_energies": 1e-08,
+    "scan_dipoles": 1e-05,
+    "scan_transition_wavenumbers": 0.01
+  },
+  "gpu": {
+    "device_name": "NVIDIA GeForce RTX 3060",
+    "compute_capability": "8.6",
+    "cuda_runtime_version": 12090,
+    "cuda_driver_version": 12060,
+    "cuda_visible_devices": null,
+    "gpu4pyscf": "1.8.1",
+    "cupy": "14.2.0"
+  },
+  "python": "3.12.3",
+  "wall_seconds": 167.02474531903863,
+  "checks": [
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "energy",
+      "max_abs_difference": 8.810729923425242e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "dipole",
+      "max_abs_difference": 3.612568644228986e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 1.5916157281026244e-12,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "gradient",
+      "max_abs_difference": 1.1595262439101361e-07,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.0009854509744400275,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "D2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.0007394085678242845,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "hf/cc-pvdz",
+      "quantity": "energy",
+      "max_abs_difference": 2.6261659513693303e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "hf/cc-pvdz",
+      "quantity": "dipole",
+      "max_abs_difference": 3.625620672575991e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "hf/cc-pvdz",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 2.575006874394603e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "hf/cc-pvdz",
+      "quantity": "gradient",
+      "max_abs_difference": 3.9325402934053955e-08,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "hf/cc-pvdz",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.0007047062495075807,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "optimized_geometry",
+      "max_abs_difference": 1.169892192842692e-07,
+      "tolerance": 0.0001,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "optimized_energy",
+      "max_abs_difference": 7.105427357601002e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "scan_energies",
+      "max_abs_difference": 2.3675283955526538e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "scan_dipoles",
+      "max_abs_difference": 1.0188301738933703e-06,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "hf/cc-pvdz",
+      "quantity": "scan_transition_wavenumbers",
+      "max_abs_difference": 2.38819484366104e-06,
+      "tolerance": 0.01,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "energy",
+      "max_abs_difference": 1.5347723092418164e-12,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "dipole",
+      "max_abs_difference": 9.999535022231498e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 1.4495071809506044e-12,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "gradient",
+      "max_abs_difference": 2.7319492845734317e-07,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.0016162726551556261,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "D2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.001487939388880477,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "energy",
+      "max_abs_difference": 6.536993168992922e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "dipole",
+      "max_abs_difference": 4.025626140213845e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 6.821210263296962e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "gradient",
+      "max_abs_difference": 1.4395786207543892e-07,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.02066985805049626,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "optimized_geometry",
+      "max_abs_difference": 2.116814542540979e-07,
+      "tolerance": 0.0001,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "optimized_energy",
+      "max_abs_difference": 1.0317080523236655e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "scan_energies",
+      "max_abs_difference": 6.394884621840902e-12,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "scan_dipoles",
+      "max_abs_difference": 8.015531335225923e-06,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "b3lyp/cc-pvdz/df",
+      "quantity": "scan_transition_wavenumbers",
+      "max_abs_difference": 9.881568985292688e-08,
+      "tolerance": 0.01,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "energy",
+      "max_abs_difference": 6.963318810448982e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "dipole",
+      "max_abs_difference": 1.8092820508464058e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 6.252776074688882e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "gradient",
+      "max_abs_difference": 4.307876411147049e-08,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.09180139142608823,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "D2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.06970156560691976,
+      "tolerance": 0.1,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "energy",
+      "max_abs_difference": 2.83648660115432e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "dipole",
+      "max_abs_difference": 5.03989654232484e-07,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "finite_field_energy",
+      "max_abs_difference": 2.7128521651320625e-11,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "gradient",
+      "max_abs_difference": 6.14223454320495e-08,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "system": "NH3",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "harmonic_frequencies",
+      "max_abs_difference": 0.23497972521113297,
+      "tolerance": 0.1,
+      "passed": false
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "optimized_geometry",
+      "max_abs_difference": 2.790723081791402e-08,
+      "tolerance": 0.0001,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "optimized_energy",
+      "max_abs_difference": 6.536993168992922e-13,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "scan_energies",
+      "max_abs_difference": 4.362732397567015e-12,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "scan_dipoles",
+      "max_abs_difference": 2.3929935973887595e-06,
+      "tolerance": 1e-05,
+      "passed": true
+    },
+    {
+      "system": "H2O",
+      "method": "wb97x/aug-cc-pvdz/df",
+      "quantity": "scan_transition_wavenumbers",
+      "max_abs_difference": 2.1082450984977186e-07,
+      "tolerance": 0.01,
+      "passed": true
+    }
+  ]
+}

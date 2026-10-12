@@ -39,14 +39,24 @@ from pyscf_vscf.molecule import Molecule
 from pyscf_vscf.workflows.harmonic import harmonic_analysis
 from pyscf_vscf.workflows.optimization import optimize_geometry
 
-# Fixed before the first GPU run. Energies: Eh; dipoles: atomic units;
-# gradients: Eh/bohr; Hessians: Eh/bohr^2; frequencies: cm^-1; geometry: A.
+# Fixed before the first GPU run, except harmonic_frequencies (first 0.1 cm^-1).
+# Energies: Eh; dipoles: atomic units; gradients: Eh/bohr; frequencies: cm^-1;
+# geometry: A.
+#
+# harmonic_frequencies was raised to 0.5 cm^-1 after the first run, where
+# NH3 at wB97X/aug-cc-pVDZ (density fitting) differed by 0.24 cm^-1. Neither
+# implementation is wrong: both analytic DFT Hessians omit the grid response,
+# and each differs from a finite-difference Hessian of its own gradients by
+# 4.4e-4 Eh/bohr^2 (about 1.8 cm^-1); those finite-difference Hessians agree
+# between CPU and GPU to 1.2e-5 Eh/bohr^2. The CPU-GPU difference (3.5e-5) is
+# ten times smaller than either implementation's own approximation. Evidence:
+# validation_data/gpu/hessian-referee-nh3-wb97x.txt.
 TOLERANCES = {
     "energy": 1e-8,
     "dipole": 1e-5,
     "finite_field_energy": 1e-8,
     "gradient": 1e-6,
-    "harmonic_frequencies": 0.1,
+    "harmonic_frequencies": 0.5,
     "optimized_geometry": 1e-4,
     "optimized_energy": 1e-8,
     "scan_energies": 1e-8,
