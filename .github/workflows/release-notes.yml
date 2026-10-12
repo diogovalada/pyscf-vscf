@@ -31,8 +31,7 @@ jobs:
             tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
           fi
           for tag in $tags; do
-            if ! notes=$(python3 scripts/release_notes.py "${tag#v}" \
-                --link-base "https://github.com/${GH_REPO}/blob/${tag}"); then
+            if ! notes=$(python3 scripts/release_notes.py "${tag#v}"); then
               echo "::warning::no changelog section for ${tag}; release left unchanged"
               continue
             fi

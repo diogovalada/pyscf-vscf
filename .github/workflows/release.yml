@@ -34,7 +34,7 @@ jobs:
           version=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
           test "${GITHUB_REF_NAME#v}" = "$version"
       - name: Verify the changelog has release notes for the tag
-        run: python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}" > /dev/null
+        run: uv run python scripts/release_notes.py "${GITHUB_REF_NAME#v}" --check-links > /dev/null
       - run: uv build
       - run: uvx twine check dist/*
       - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.vscf_two_mode
@@ -79,8 +79,7 @@ jobs:
         shell: bash
         run: |
           # The changelog section is the release body; GitHub appends the comparison link.
-          notes=$(python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}" \
-            --link-base "https://github.com/${GH_REPO}/blob/${GITHUB_REF_NAME}")
+          notes=$(python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}")
           args=(
             "$GITHUB_REF_NAME"
             dist/*

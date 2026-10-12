@@ -16,8 +16,8 @@ once a public release is tagged.
 
 - GitHub releases use the matching changelog section as their notes
   (`scripts/release_notes.py`); a release fails if the changelog has no
-  section for its version. A manual workflow fills in the notes of earlier
-  releases.
+  section for its version or links to a relative path. A manual workflow
+  fills in the notes of earlier releases.
 - The roadmap no longer lists unifying the two Debye constants or splitting
   the validators and save/load code; the two constants are kept deliberately
   (see `contracts.AU_DIPOLE_TO_DEBYE`).
@@ -32,7 +32,8 @@ once a public release is tagged.
 ## [0.3.0] - 2026-10-11
 
 0.3 replaces the two parallel electronic-structure paths of 0.2 with one. See
-the [migration guide](docs/migration-0.3.md); everything removed in 0.4 still
+the [migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md);
+everything removed in 0.4 still
 works in 0.3 with a `PyscfVscfDeprecationWarning`.
 
 ### Added

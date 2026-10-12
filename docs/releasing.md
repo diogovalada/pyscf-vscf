@@ -35,9 +35,11 @@ committed.
 9. PyPI publishing is disabled by default. Before enabling it, configure the
    GitHub `pypi` environment and the PyPI trusted publisher, then set the
    repository variable `PUBLISH_TO_PYPI` to `true`.
-10. The GitHub release body is the matching `CHANGELOG.md` section (the build
-   fails if the tag has none), followed by GitHub's comparison link; review
-   it. The *Release notes* workflow (Actions tab, run manually) rewrites the
+10. The GitHub release body is the matching `CHANGELOG.md` section, copied
+   verbatim and followed by GitHub's comparison link; review it. Links in the
+   changelog must be absolute URLs (a release body cannot resolve repository
+   paths); the build fails if the tag has no section or the section links to a
+   relative path. The *Release notes* workflow (Actions tab, run manually) rewrites the
    bodies of existing releases from the changelog.
 11. Read the Docs builds the documentation for the new tag (see below);
    confirm that the tag's build passed. For a new highest final release, also

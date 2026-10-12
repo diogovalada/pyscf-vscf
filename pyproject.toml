@@ -43,6 +43,7 @@ Changelog = "https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 dev = [
     "build",
+    "markdown-it-py>=3",
     "pytest",
     "pytest-cov",
     "ruff>=0.15,<0.16",

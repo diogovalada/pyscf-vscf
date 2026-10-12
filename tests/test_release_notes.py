@@ -20,7 +20,7 @@ CHANGELOG = """# Changelog
 
 ### Fixed
 
-- A fix; see the [guide](docs/guide.md) and [PySCF](https://pyscf.org).
+- A fix; see the [guide](https://example.org/guide) and [PySCF](https://pyscf.org).
 
 ## [1.1.0a1] - 2026-01-01
 
@@ -47,42 +47,41 @@ def test_missing_and_empty_sections_are_errors(capsys) -> None:
     assert "no section" in capsys.readouterr().err
 
 
-def test_relative_links_become_absolute() -> None:
-    notes = release_notes.absolute_links(
-        release_notes.changelog_section(CHANGELOG, "1.1.0"),
-        "https://github.com/o/r/blob/v1.1.0/",
-    )
-    assert "[guide](https://github.com/o/r/blob/v1.1.0/docs/guide.md)" in notes
-    assert "[PySCF](https://pyscf.org)" in notes
-
-
-def test_the_current_version_has_notes() -> None:
-    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    import pyscf_vscf
-
-    assert release_notes.changelog_section(text, pyscf_vscf.__version__)
-
-
-def test_link_rewriting_respects_markdown() -> None:
+def test_relative_links_are_found_with_commonmark_rules() -> None:
+    pytest.importorskip("markdown_it")
     text = "\n".join(
         [
-            '- [titled](docs/a.md "A guide") and ![image](assets/b.png)',
+            '- [titled](docs/a.md "A `guide`") and ![image](assets/b.png)',
             "- [angle](<docs/c d.md>), [anchor](#top), [mail](mailto:x@y.z)",
             "- [protocol-relative](//cdn.example.org/x.js) and [abs](https://e.org/y)",
-            "- code `[not](a/link)` stays",
+            "- a code span `[not](a/link)` and a [reference][ref]",
+            "- a multiline code span `[not](b/link)",
+            "  continued` here",
+            "",
             "[ref]: docs/ref.md 'Reference'",
-            "```",
+            "",
+            "```python",
             "[fenced](not/a/link)",
+            "```python is not a closing fence",
+            "[still fenced](not/c/link)",
             "```",
         ]
     )
-    out = release_notes.absolute_links(text, "https://b/blob/v1")
-    assert '[titled](https://b/blob/v1/docs/a.md "A guide")' in out
-    assert "![image](https://b/blob/v1/assets/b.png)" in out
-    assert "[angle](<https://b/blob/v1/docs/c d.md>)" in out
-    assert "[anchor](#top)" in out and "[mail](mailto:x@y.z)" in out
-    assert "[protocol-relative](//cdn.example.org/x.js)" in out
-    assert "[abs](https://e.org/y)" in out
-    assert "`[not](a/link)`" in out
-    assert "[ref]: https://b/blob/v1/docs/ref.md 'Reference'" in out
-    assert "[fenced](not/a/link)" in out
+    found = release_notes.relative_links(text)
+    assert sorted(found) == sorted(["docs/a.md", "assets/b.png", "docs/c%20d.md", "docs/ref.md"])
+
+
+def test_the_changelog_has_notes_and_absolute_links_for_every_version() -> None:
+    pytest.importorskip("markdown_it")
+    import pyscf_vscf
+
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    versions = [
+        version for version in release_notes.changelog_versions(text) if version != "Unreleased"
+    ]
+    assert pyscf_vscf.__version__ in versions
+    for version in versions:
+        section = release_notes.changelog_section(text, version)
+        assert release_notes.relative_links(section) == [], version
+    unreleased = text.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    assert release_notes.relative_links(unreleased) == []
