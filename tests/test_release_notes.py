@@ -61,3 +61,28 @@ def test_the_current_version_has_notes() -> None:
     import pyscf_vscf
 
     assert release_notes.changelog_section(text, pyscf_vscf.__version__)
+
+
+def test_link_rewriting_respects_markdown() -> None:
+    text = "\n".join(
+        [
+            '- [titled](docs/a.md "A guide") and ![image](assets/b.png)',
+            "- [angle](<docs/c d.md>), [anchor](#top), [mail](mailto:x@y.z)",
+            "- [protocol-relative](//cdn.example.org/x.js) and [abs](https://e.org/y)",
+            "- code `[not](a/link)` stays",
+            "[ref]: docs/ref.md 'Reference'",
+            "```",
+            "[fenced](not/a/link)",
+            "```",
+        ]
+    )
+    out = release_notes.absolute_links(text, "https://b/blob/v1")
+    assert '[titled](https://b/blob/v1/docs/a.md "A guide")' in out
+    assert "![image](https://b/blob/v1/assets/b.png)" in out
+    assert "[angle](<https://b/blob/v1/docs/c d.md>)" in out
+    assert "[anchor](#top)" in out and "[mail](mailto:x@y.z)" in out
+    assert "[protocol-relative](//cdn.example.org/x.js)" in out
+    assert "[abs](https://e.org/y)" in out
+    assert "`[not](a/link)`" in out
+    assert "[ref]: https://b/blob/v1/docs/ref.md 'Reference'" in out
+    assert "[fenced](not/a/link)" in out

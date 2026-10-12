@@ -36,8 +36,13 @@ jobs:
               echo "::warning::no changelog section for ${tag}; release left unchanged"
               continue
             fi
-            compare=$(gh release view "$tag" --json body --jq .body \
-              | grep -m1 '^\*\*Full Changelog\*\*' || true)
+            # A failed read must stop the run: the comparison link exists only in the
+            # current body. Only a missing comparison line is tolerated.
+            if ! body=$(gh release view "$tag" --json body --jq .body); then
+              echo "::error::could not read release ${tag}"
+              exit 1
+            fi
+            compare=$(printf '%s\n' "$body" | grep -m1 '^\*\*Full Changelog\*\*' || true)
             printf '%s\n\n%s\n' "$notes" "$compare" > body.md
             gh release edit "$tag" --notes-file body.md
             echo "updated ${tag}"
