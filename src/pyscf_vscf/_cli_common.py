@@ -134,16 +134,6 @@ def _print_error(message: str) -> None:
     print("  (run with --debug for a full traceback)", file=sys.stderr)
 
 
-def _print_worker_traceback(exc: BaseException) -> None:
-    failure = getattr(exc, "scan_failure", None)
-    if failure is None or not failure.partial.failures:
-        return
-    first = failure.partial.failures[0]
-    if first.traceback:
-        print(f"Traceback of the first failed scan point {list(first.index)}:", file=sys.stderr)
-        print(first.traceback, file=sys.stderr)
-
-
 def _print_frequencies(freqs_cm: Sequence[float]) -> None:
     """Print harmonic frequencies; imaginary modes appear as negative numbers."""
 

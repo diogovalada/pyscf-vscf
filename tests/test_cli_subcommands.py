@@ -74,14 +74,85 @@ def test_no_arguments_prints_help_and_fails(capsys) -> None:
     assert "scan1d" in capsys.readouterr().err
 
 
-def test_flag_style_invocation_routes_to_legacy_cli_with_notice(monkeypatch, tmp_path, capsys):
-    from pyscf_vscf import _cli_legacy
+def test_flag_style_invocation_is_refused_with_a_pointer(tmp_path, capsys) -> None:
+    assert cli.main(["--xyz", str(_water(tmp_path / "w.xyz")), "--task", "harmonic"]) == 2
+    err = capsys.readouterr().err
+    assert "removed in 0.4" in err
+    assert "pyscf-vscf scan1d" in err
 
-    seen = {}
-    monkeypatch.setattr(_cli_legacy, "main", lambda argv: seen.setdefault("argv", argv) and 0)
-    cli.main(["--xyz", str(_water(tmp_path / "w.xyz")), "--task", "harmonic"])
-    assert seen["argv"][0] == "--xyz"
-    assert "deprecated" in capsys.readouterr().err
+
+def test_missing_geometry_file_is_a_short_error(tmp_path, capsys) -> None:
+    assert cli.main(["harmonic", str(tmp_path / "nope.xyz")]) in (1, 2)
+    err = capsys.readouterr().err
+    assert "error:" in err
+    assert "nope.xyz" in err
+    assert "Traceback" not in err
+
+
+def test_output_parent_must_be_a_directory(tmp_path) -> None:
+    xyz = _water(tmp_path / "water.xyz")
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["harmonic", str(xyz), "--json", str(xyz / "out.json")])
+    assert excinfo.value.code == 2
+
+
+def test_non_finite_normal_ranges_fail_before_harmonic_analysis(monkeypatch, tmp_path) -> None:
+    from pyscf_vscf.workflows import scans
+
+    monkeypatch.setattr(
+        scans, "calc_normal_mode_direction", lambda *a, **k: pytest.fail("ran harmonic")
+    )
+    xyz = _water(tmp_path / "water.xyz")
+    argv = ["scan1d", str(xyz), "--bond", "0-1", "--coordinate", "normal"]
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main([*argv, "--range", "-0.1", "inf", "21"])
+    assert excinfo.value.code == 2
+
+
+def test_scans_default_to_memory_aware_process_parallelism(monkeypatch, tmp_path) -> None:
+    from pyscf_vscf import settings
+
+    monkeypatch.setattr(settings, "available_cpu_count", lambda **kwargs: 8)
+    monkeypatch.setattr(settings, "available_memory_mb", lambda **kwargs: 6000.0)
+    xyz = _water(tmp_path / "water.xyz")
+    parser = cli._build_parser()
+    argv = ["scan1d", str(xyz), "--bond", "0-1", "--range", "0.8", "1.2", "21"]
+
+    context = cli._prepare(parser.parse_args(argv), parser, lambda message: None)
+    # 0.75 * 6000 MB allows four 1 GiB workers; each gets an explicit budget.
+    assert context.parallel.workers == 4
+    assert os.environ[settings.MAX_MEMORY_ENV_VAR] == "1125"
+
+    os.environ.pop(settings.MAX_MEMORY_ENV_VAR)
+    context = cli._prepare(parser.parse_args([*argv, "--workers", "1"]), parser, print)
+    assert context.parallel.workers == 1
+    assert settings.MAX_MEMORY_ENV_VAR not in os.environ
+
+
+def test_opt_writes_next_to_the_input_by_default(monkeypatch, tmp_path, capsys) -> None:
+    from types import SimpleNamespace
+
+    from pyscf_vscf.workflows import optimization
+
+    captured = {}
+
+    def fake_optimize(molecule, factory, *, output_path, **kwargs):
+        captured["output_path"] = output_path
+        return SimpleNamespace(
+            converged=True,
+            backend="geomeTRIC",
+            output_path=output_path,
+            molecule=molecule,
+            stationarity=None,
+        )
+
+    monkeypatch.setattr(optimization, "optimize_geometry", fake_optimize)
+    xyz = _water(tmp_path / "geometry.xyz")
+
+    assert cli.main(["opt", str(xyz)]) == 0
+    assert captured["output_path"] == tmp_path / "geometry-opt.xyz"
+    out, err = capsys.readouterr()
+    assert "Runtime:" in err and "Runtime:" not in out
 
 
 @pytest.mark.parametrize(
@@ -271,13 +342,15 @@ def _legacy_cache(tmp_path: Path, geometry: str, dimension: int) -> Path:
     R = np.linspace(0.7, 1.6, 31)
     morse = 0.18 * (1.0 - np.exp(-2.2 * (R - 0.96))) ** 2
     path = tmp_path / f"legacy{dimension}d.npz"
+    # Schema-3 caches as 0.1-0.3 wrote them (the writers were removed in 0.4).
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if dimension == 1:
             dipoles = np.stack([np.zeros_like(R), 0.3 * R, np.full_like(R, 0.1)], axis=-1)
-            legacy.dump_lbs_frozen_1d_grid_cache(
-                path, molecule, settings, "0-1", R[0], R[-1], R.size, R, morse, dipoles
+            meta = legacy.lbs_frozen_1d_cache_metadata(
+                molecule, settings, "0-1", R[0], R[-1], R.size
             )
+            dump_grid_npz(path, meta=meta, arrays={"R_A": R, "E_Eh": morse, "MU_Debye": dipoles})
         else:
             spec = (R[0], R[-1], R.size)
             meta = legacy.lbs_frozen_2d_cache_metadata(

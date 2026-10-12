@@ -1,5 +1,9 @@
 # Migrating from 0.2 to 0.3
 
+!!! note
+    0.4 removed the interfaces this page lists as deprecated; see
+    [migrating to 0.4](migration-0.4.md).
+
 0.3 replaces the two parallel electronic-structure code paths of 0.2 with one:
 every calculation is built through a single PySCF construction seam, and scans
 are plans of electronic points evaluated by a resumable runner. The 0.2

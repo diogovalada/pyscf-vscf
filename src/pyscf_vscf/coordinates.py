@@ -9,7 +9,6 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
-from ._warnings import deprecated
 from ._arrays import immutable_array
 from ._identity import canonical_json, float64_array_identity, payload_fingerprint
 
@@ -62,20 +61,6 @@ class Bond:
 
     i: int
     j: int
-
-    @property
-    def O(self) -> int:  # noqa: E743 - retained compatibility spelling
-        """Deprecated water-specific spelling of ``i``."""
-
-        deprecated("Bond.O is deprecated; use Bond.i.")
-        return self.i
-
-    @property
-    def H(self) -> int:
-        """Deprecated water-specific spelling of ``j``."""
-
-        deprecated("Bond.H is deprecated; use Bond.j.")
-        return self.j
 
 
 @dataclass(frozen=True)

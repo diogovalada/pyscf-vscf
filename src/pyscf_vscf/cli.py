@@ -8,8 +8,8 @@ Subcommands::
     pyscf-vscf scan2d   GEOMETRY --bond I-J --bond K-L [--range ... --range ...]
     pyscf-vscf inspect  FILE
 
-Flag-style 0.2 invocations (``pyscf-vscf --xyz ... --task ...``) still work
-for one release through ``pyscf_vscf._cli_legacy``, with a notice.
+The flag-style 0.2 command line (``pyscf-vscf --xyz ... --task ...``) was
+removed in 0.4; such invocations print a pointer to the subcommands.
 """
 
 from __future__ import annotations
@@ -40,10 +40,10 @@ from ._cli_common import (
 )
 
 SUBCOMMANDS = ("harmonic", "opt", "scan1d", "scan2d", "inspect")
-_LEGACY_NOTICE = (
-    "pyscf-vscf: note: flag-style options (--xyz/--mmol/--task) are deprecated and will be "
-    "removed in 0.4; use subcommands such as 'pyscf-vscf scan1d GEOMETRY --bond 0-1'. "
-    "Run 'pyscf-vscf --help' for details."
+_LEGACY_REMOVED = (
+    "pyscf-vscf: error: the flag-style command line (--xyz/--mmol/--task) was removed in "
+    "0.4; use subcommands such as 'pyscf-vscf scan1d GEOMETRY --bond 0-1' (see "
+    "https://pyscf-vscf.readthedocs.io/en/stable/migration-0.3/ and 'pyscf-vscf --help')"
 )
 
 _EPILOG = """\
@@ -88,10 +88,8 @@ def main(argv: list[str] | None = None) -> int:
             "--version",
         }
     ):
-        from . import _cli_legacy
-
-        print(_LEGACY_NOTICE, file=sys.stderr)
-        return _cli_legacy.main(arguments)
+        print(_LEGACY_REMOVED, file=sys.stderr)
+        return 2
 
     parser = _build_parser()
     if not arguments:

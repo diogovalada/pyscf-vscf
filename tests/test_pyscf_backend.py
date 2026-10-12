@@ -517,7 +517,7 @@ def test_settings_mean_field_selects_unrestricted_method_for_open_shell(monkeypa
 
 
 @pytest.mark.pyscf
-def test_make_mean_field_pins_scf_controls_independent_of_pyscf_defaults(monkeypatch) -> None:
+def test_built_in_method_pins_scf_controls_independent_of_pyscf_defaults(monkeypatch) -> None:
     _import_pyscf_or_skip()
     backend = _import_backend_or_skip()
     from pyscf.dft import gen_grid
@@ -637,36 +637,6 @@ def test_molecule_to_pyscf_preserves_deuterium_isotope_mass() -> None:
     assert masses[1] == pytest.approx(MASS_AMU["D"])
     assert masses[1] > 1.5 * masses[2]
     assert nucprop[2]["mass"] == pytest.approx(MASS_AMU["D"])
-
-
-@pytest.mark.pyscf
-def test_make_mean_field_constructs_tiny_hf_water() -> None:
-    _import_pyscf_or_skip()
-    backend = _import_backend_or_skip()
-
-    from pyscf_vscf.molecule import Molecule
-
-    molecule_to_pyscf = backend.molecule_to_pyscf
-    make_mean_field = backend.make_mean_field
-    water = Molecule.from_arrays(
-        ["O", "H", "H"],
-        [
-            [0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.9572],
-            [0.9266, 0.0, -0.2396],
-        ],
-        label="water",
-    )
-    pmol = molecule_to_pyscf(water, basis="sto-3g")
-
-    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
-
-    with pytest.warns(PyscfVscfDeprecationWarning, match="make_mean_field"):
-        mf = make_mean_field(pmol, _hf_sto3g_settings(backend))
-
-    assert mf.mol is pmol
-    assert mf.mol.natm == 3
-    assert callable(mf.kernel)
 
 
 @pytest.mark.pyscf

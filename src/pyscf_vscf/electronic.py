@@ -12,7 +12,6 @@ from typing import Protocol
 import numpy as np
 
 from ._identity import FrozenJSONMapping
-from ._warnings import deprecated
 from .contracts import (
     AU_DIPOLE_TO_DEBYE,
     POINT_SCHEMA_VERSION,
@@ -37,13 +36,6 @@ class EnergyDipoleEvaluator(Protocol):
     def __call__(self, molecule: Molecule, settings: object) -> tuple[float, np.ndarray]: ...
 
 
-def provider_fingerprint(provider: ElectronicProvider) -> str:
-    """Deprecated spelling of ``provider_scientific_fingerprint``."""
-
-    deprecated("provider_fingerprint() is deprecated; use provider_scientific_fingerprint().")
-    return provider_scientific_fingerprint(provider)
-
-
 def energy_dipole(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
     """Run one built-in PySCF single point; return Hartree energy and Debye dipole.
 
@@ -64,6 +56,5 @@ __all__ = [
     "FrozenJSONMapping",
     "POINT_SCHEMA_VERSION",
     "energy_dipole",
-    "provider_fingerprint",
     "provider_scientific_fingerprint",
 ]

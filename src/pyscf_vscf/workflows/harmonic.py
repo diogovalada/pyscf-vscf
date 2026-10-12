@@ -15,7 +15,6 @@ from typing import Any
 import numpy as np
 
 from pyscf_vscf import harmonic as harmonic_helpers
-from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
 from pyscf_vscf.backends._pyscf_properties import nuclear_gradient as _converged_gradient
@@ -48,7 +47,6 @@ def harmonic_analysis(
     strict: bool = True,
     allow_fd_hessian: bool = False,
     debug: bool = False,
-    cfg: Any = None,
 ) -> harmonic_helpers.HarmonicResult:
     """Run the PySCF harmonic workflow.
 
@@ -59,11 +57,6 @@ def harmonic_analysis(
     mode and warn/fall back in non-strict mode.
     """
 
-    if cfg is not None:
-        if settings is not None:
-            raise TypeError("Pass settings, not both settings and cfg")
-        deprecated("harmonic_analysis(cfg=...) is deprecated; use settings=.")
-        settings = cfg
     if settings is None:
         raise TypeError("harmonic_analysis() needs electronic settings or a method factory")
     cfg = settings

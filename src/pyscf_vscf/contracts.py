@@ -23,7 +23,6 @@ from ._identity import (
     payload_fingerprint,
     to_jsonable,
 )
-from ._warnings import deprecated
 
 # Atomic units of dipole to Debye for the scan stack and its Debye views. This is
 # the value 0.1 and 0.2 used when writing Debye grid caches; it is kept so that
@@ -133,12 +132,6 @@ class ElectronicPointRequest:
 
         return payload_fingerprint(self.causal_payload(provider_scientific_fingerprint))
 
-    def fingerprint(self, provider_scientific_fingerprint: str) -> str:
-        """Deprecated spelling of ``causal_fingerprint``."""
-
-        deprecated("ElectronicPointRequest.fingerprint() is deprecated; use causal_fingerprint().")
-        return self.causal_fingerprint(provider_scientific_fingerprint)
-
 
 @dataclass(frozen=True)
 class ElectronicResult:
@@ -199,25 +192,6 @@ class ElectronicResult:
             immutable_json_mapping(self.execution_diagnostics),
         )
         object.__setattr__(self, "provenance", immutable_json_mapping(self.provenance))
-
-    @property
-    def provider_fingerprint(self) -> str:
-        """Deprecated alias of ``provider_scientific_fingerprint``."""
-
-        deprecated(
-            "ElectronicResult.provider_fingerprint is deprecated; "
-            "use provider_scientific_fingerprint."
-        )
-        return self.provider_scientific_fingerprint
-
-    @property
-    def point_fingerprint(self) -> str:
-        """Deprecated alias of ``point_causal_fingerprint``."""
-
-        deprecated(
-            "ElectronicResult.point_fingerprint is deprecated; use point_causal_fingerprint."
-        )
-        return self.point_causal_fingerprint
 
     def scientific_payload(self) -> dict[str, object]:
         """Return only values that define the scientific result."""

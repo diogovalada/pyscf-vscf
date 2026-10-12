@@ -47,8 +47,7 @@ Each automatic worker receives an explicit PySCF memory budget of at most
 are used.
 
 Override the defaults with `--max-parallel` (total threads), `--workers`
-(processes; the threads are split between them; `--pes-workers` in the
-flag-style CLI), and `--max-memory` (MB per process). Harmonic analysis and optimization use one
+(processes; the threads are split between them), and `--max-memory` (MB per process). Harmonic analysis and optimization use one
 process with `--max-parallel` threads. From Python, the environment variable
 `PYSCF_VSCF_MAX_MEMORY_MB` sets the same per-process budget for every PySCF
 molecule the package builds. Avoid combining uncontrolled process and BLAS

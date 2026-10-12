@@ -22,9 +22,9 @@ can change the result). Scan files additionally record the axes and the
 sampling definition, and are verified by array checksums and a content
 fingerprint when loaded.
 
-The rest of this page describes the schema-3 grid caches written by 0.1 and
-0.2 (`--dump-grid`), which 0.3 still reads (`--reuse`, `load_legacy_grid`,
-and the deprecated flag-style CLI).
+The rest of this page describes the schema-3 grid caches written by 0.1 to
+0.3 (`--dump-grid`). 0.4 no longer writes them but still reads them
+(`--reuse`, `load_legacy_grid`).
 
 ## What makes a 0.2 cache reusable
 
@@ -42,17 +42,15 @@ therefore do not invalidate the same surface: an `H2O` grid can be reused for
 `D2O` by supplying a geometry file with `D` atoms. Array checksums are always
 verified when a cache is loaded.
 
-## Reusing a 0.2 cache with the flag-style command line
+## Reusing a 0.2 cache
 
-With `--reuse-grid`, every electronic and grid option you omit is taken from
-the cache, after its checksums and fingerprints have been verified. Options
-you give explicitly must agree with the cache. A mismatch names each
-differing field:
+`--reuse` reads a 0.2 cache like a scan file, after verifying its checksums
+and fingerprints. The method and grid come from the cache, so method options
+and `--range` are refused; the geometry, charge, spin, and bonds must match
+the cache:
 
-```text
-pyscf-vscf: error: Grid cache mismatch for cache_identity_sha256: the cached grid was computed for a different calculation than the one requested
-  electronic_structure.basis: cache='sto-3g', requested='cc-pvdz'
-  scan.grid_A: cache has 15 values with shape [15] in [0.7, 1.4], requested 21 values with shape [21] in [0.7, 1.4]
+```bash
+pyscf-vscf scan1d water-opt.xyz --bond 0-1 --reuse old-grid.npz --states 4
 ```
 
 The kinetic-energy operator (`--keo`) and isotope masses come from the
@@ -71,20 +69,10 @@ calculations used PySCF's configured defaults at the time, which equal the
 values above unless a PySCF configuration file changed them. Such a change
 cannot be detected afterwards; regenerate the cache if that is a concern.
 
-## Failed scans and partial files
+## Failed scans
 
-If electronic points fail, the scan stops scheduling new points (or, with
-`--continue-on-error`, attempts every point) and reports each failed point by
-grid index and coordinate. The completed points are written to a diagnostic
-file: `--partial-out PATH`, or `<dump-grid>.partial.npz` when `--dump-grid`
-was given. A partial file stores absolute energies, a completion mask, and
-the failure messages. It is checksummed but deliberately is not a reusable
-grid cache.
-
-## Custom evaluators in Python
-
-Scan functions accept any energy/dipole evaluator through `energy_dipole_fn`.
-The evaluator returns Hartree energies and Cartesian Debye dipoles in the
-geometry frame. When writing or loading caches from a custom evaluator, pass
-a stable, non-`pyscf` `backend_identity` so its grids can never be confused
-with built-in PySCF grids.
+Points that fail are recorded in the point store (`--store`) with their
+error, and the run reports each one. A later run resumes from the stored
+points; `--retry-failed` attempts the failed points again, and
+`--continue-on-error` evaluates the remaining points after a failure. See
+[scans](scans.md).

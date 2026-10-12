@@ -8,6 +8,7 @@ recursive-include validation_data *.json *.md *.npz *.log *.mmol *.xyz *.txt *.p
 prune docs
 include docs/caching.md
 include docs/migration-0.3.md
+include docs/migration-0.4.md
 include docs/scans.md
 include docs/gpu.md
 include docs/installation.md

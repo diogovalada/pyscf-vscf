@@ -194,28 +194,6 @@ def test_failed_stationarity_check_warns_and_keeps_the_result(
     assert result.stationarity is None
 
 
-def test_run_opt_is_deprecated_and_keeps_writing_its_default_file(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
-
-    _patch_engine(monkeypatch, converged=True, opt_coords=_FakeMolecule.coords)
-    monkeypatch.chdir(tmp_path)
-
-    with pytest.warns(PyscfVscfDeprecationWarning, match="optimize_geometry"):
-        result = workflow.run_opt(
-            _FakeMolecule(), {"basis": "sto-3g"}, opt_out=None, opt_maxsteps=2
-        )
-
-    assert result.output_path == Path("h2.pyscf_opt.mmol")
-    assert (tmp_path / "h2.pyscf_opt.mmol").exists()
-    out = capsys.readouterr().out
-    assert "Optimized-geometry gradient check" in out
-    assert "Optimized geometry written to: h2.pyscf_opt.mmol" in out
-
-
 def test_geometric_cannot_reconfigure_or_close_logging(monkeypatch, tmp_path) -> None:
     import logging
     import logging.config

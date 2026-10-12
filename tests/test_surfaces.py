@@ -12,8 +12,9 @@ import pytest
 from pyscf_vscf.coordinates import Bond
 from pyscf_vscf.molecule import Molecule
 from pyscf_vscf import surfaces
-from pyscf_vscf import grid_2d_pes_dms as public_grid_2d_pes_dms
-from pyscf_vscf.surfaces import grid_1d_pes_dms, grid_1d_pes_dms_normal, grid_2d_pes_dms
+from pyscf_vscf.backends.pyscf import PySCFMeanFieldProvider
+from pyscf_vscf.scans import plan_bond_scan, plan_normal_scan
+from pyscf_vscf.settings import ESSettings
 
 pytestmark = pytest.mark.filterwarnings("ignore::pyscf_vscf._warnings.PyscfVscfDeprecationWarning")
 
@@ -26,101 +27,50 @@ def _water() -> Molecule:
     )
 
 
-def _fake_energy_dipole(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
-    coords = np.asarray(molecule.coords, dtype=float)
-    energy = float(np.sum(coords * coords))
-    dipole = np.sum(coords, axis=0)
-    return energy, dipole
+PROVIDER = PySCFMeanFieldProvider(ESSettings(method="hf", basis="sto-3g"))
 
 
-def test_grid_1d_pes_dms_uses_frozen_bond_geometry_and_zeroes_energy() -> None:
+def _geometry(plan, index: tuple[int, ...]) -> np.ndarray:
+    return np.asarray(plan.requests[str(plan.point_keys[index])].coordinates_A)
+
+
+def test_bond_scan_plan_stretches_one_bond_and_leaves_the_molecule_alone() -> None:
     mol = _water()
-    R, E, MU = grid_1d_pes_dms(
-        mol,
-        object(),
-        Bond(0, 1),
-        Rmin=0.8,
-        Rmax=1.2,
-        npts=5,
-        energy_dipole_fn=_fake_energy_dipole,
-    )
+    grid = np.linspace(0.8, 1.2, 5)
+    plan = plan_bond_scan(mol, PROVIDER, [Bond(0, 1)], [grid])
 
-    np.testing.assert_allclose(R, np.linspace(0.8, 1.2, 5))
-    assert E.shape == (5,)
-    assert MU.shape == (5, 3)
-    assert np.min(E) == pytest.approx(0.0)
+    assert plan.shape == (5,)
+    for index, length in enumerate(grid):
+        coords = _geometry(plan, (index,))
+        assert np.linalg.norm(coords[1] - coords[0]) == pytest.approx(length)
+        np.testing.assert_allclose(coords[2], mol.coords[2])
     np.testing.assert_allclose(mol.coords[1], [0.96, 0.0, 0.0])
-    assert MU[0, 0] < MU[-1, 0]
 
 
-def test_grid_1d_normal_validates_direction_shape() -> None:
-    mol = _water()
-    u_dir = np.zeros_like(mol.coords)
-    u_dir[1, 2] = 1.0
-
-    S, E, MU = grid_1d_pes_dms_normal(
-        mol,
-        object(),
-        u_dir,
-        smin=-0.1,
-        smax=0.1,
-        npts=3,
-        energy_dipole_fn=_fake_energy_dipole,
-    )
-
-    np.testing.assert_allclose(S, [-0.1, 0.0, 0.1])
-    assert E.shape == (3,)
-    assert MU.shape == (3, 3)
-    with pytest.raises(ValueError, match="u_dir shape"):
-        grid_1d_pes_dms_normal(
-            mol, object(), np.zeros((2, 3)), energy_dipole_fn=_fake_energy_dipole
-        )
-
-
-def test_public_normal_grid_normalizes_direction_to_angstrom_displacement() -> None:
+def test_normal_scan_plan_normalizes_the_direction_to_angstrom_displacements() -> None:
     mol = _water()
     u_dir = np.zeros_like(mol.coords)
     u_dir[1, 2] = 2.0
-    seen: list[np.ndarray] = []
+    plan = plan_normal_scan(mol, PROVIDER, u_dir, [-0.1, 0.0, 0.1])
 
-    def capture(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
-        del cfg
-        seen.append(molecule.coords.copy())
-        return 0.0, np.zeros(3)
-
-    grid_1d_pes_dms_normal(
-        mol,
-        object(),
-        u_dir,
-        smin=0.1,
-        smax=0.1,
-        npts=1,
-        energy_dipole_fn=capture,
+    np.testing.assert_allclose(
+        _geometry(plan, (2,)) - mol.coords, 0.1 * u_dir / np.linalg.norm(u_dir)
     )
+    with pytest.raises(ValueError, match="coordinate shape"):
+        plan_normal_scan(mol, PROVIDER, np.zeros((2, 3)), [0.0])
 
-    np.testing.assert_allclose(seen[0] - mol.coords, 0.1 * u_dir / np.linalg.norm(u_dir))
 
-
-def test_grid_2d_pes_dms_shapes_and_original_geometry() -> None:
+def test_two_bond_plan_has_the_grid_shape_and_keeps_the_molecule() -> None:
     mol = _water()
-    R1 = np.linspace(0.85, 1.05, 3)
-    R2 = np.linspace(0.9, 1.1, 4)
-
-    out_R1, out_R2, E, MU = grid_2d_pes_dms(
+    plan = plan_bond_scan(
         mol,
-        object(),
-        Bond(0, 1),
-        Bond(0, 2),
-        R1,
-        R2,
-        energy_dipole_fn=_fake_energy_dipole,
+        PROVIDER,
+        [Bond(0, 1), Bond(0, 2)],
+        [np.linspace(0.85, 1.05, 3), np.linspace(0.9, 1.1, 4)],
     )
 
-    np.testing.assert_allclose(out_R1, R1)
-    np.testing.assert_allclose(out_R2, R2)
-    assert E.shape == (3, 4)
-    assert MU.shape == (3, 4, 3)
-    assert np.min(E) == pytest.approx(0.0)
+    assert plan.shape == (3, 4)
+    assert plan.point_keys.shape == (3, 4)
     np.testing.assert_allclose(mol.coords[1], [0.96, 0.0, 0.0])
     np.testing.assert_allclose(mol.coords[2], [-0.24, 0.93, 0.0])
 
@@ -133,57 +83,34 @@ def test_grid_2d_pes_dms_shapes_and_original_geometry() -> None:
         (Bond(1, 0), Bond(0, 2)),
     ],
 )
-def test_public_grid_2d_realizes_shared_bond_lengths_for_all_orientations(
+def test_two_bond_plan_realizes_shared_bond_lengths_for_all_orientations(
     b1: Bond,
     b2: Bond,
 ) -> None:
-    mol = _water()
-    seen: list[np.ndarray] = []
-
-    def capture(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
-        del cfg
-        seen.append(molecule.coords.copy())
-        return 0.0, np.zeros(3)
-
-    public_grid_2d_pes_dms(
-        mol,
-        object(),
-        b1,
-        b2,
-        np.array([1.10]),
-        np.array([1.20]),
-        energy_dipole_fn=capture,
+    plan = plan_bond_scan(
+        _water(), PROVIDER, [b1, b2], [np.array([1.10, 1.15, 1.20]), np.array([1.20, 1.25, 1.30])]
     )
 
-    assert len(seen) == 1
-    assert np.linalg.norm(seen[0][b1.j] - seen[0][b1.i]) == pytest.approx(1.10)
-    assert np.linalg.norm(seen[0][b2.j] - seen[0][b2.i]) == pytest.approx(1.20)
+    coords = _geometry(plan, (0, 0))
+    assert np.linalg.norm(coords[b1.j] - coords[b1.i]) == pytest.approx(1.10)
+    assert np.linalg.norm(coords[b2.j] - coords[b2.i]) == pytest.approx(1.20)
 
 
-def test_public_grid_2d_realizes_disjoint_bond_lengths() -> None:
+def test_two_bond_plan_realizes_disjoint_bond_lengths() -> None:
     mol = Molecule.from_arrays(
         ["H", "F", "H", "Cl"],
         [[0.0, 0.0, 0.0], [0.9, 0.0, 0.0], [3.0, 0.0, 0.0], [4.2, 0.0, 0.0]],
     )
-    seen: list[np.ndarray] = []
-
-    def capture(molecule: Molecule, cfg: object) -> tuple[float, np.ndarray]:
-        del cfg
-        seen.append(molecule.coords.copy())
-        return 0.0, np.zeros(3)
-
-    grid_2d_pes_dms(
+    plan = plan_bond_scan(
         mol,
-        object(),
-        Bond(0, 1),
-        Bond(2, 3),
-        np.array([1.0]),
-        np.array([1.4]),
-        energy_dipole_fn=capture,
+        PROVIDER,
+        [Bond(0, 1), Bond(2, 3)],
+        [np.array([1.0, 1.1, 1.2]), np.array([1.4, 1.5, 1.6])],
     )
 
-    assert np.linalg.norm(seen[0][1] - seen[0][0]) == pytest.approx(1.0)
-    assert np.linalg.norm(seen[0][3] - seen[0][2]) == pytest.approx(1.4)
+    coords = _geometry(plan, (0, 0))
+    assert np.linalg.norm(coords[1] - coords[0]) == pytest.approx(1.0)
+    assert np.linalg.norm(coords[3] - coords[2]) == pytest.approx(1.4)
 
 
 def test_energy_dipole_coerces_mapping_before_selecting_basis(

@@ -88,35 +88,6 @@ print("scans-ok")
     assert proc.stdout.strip() == "scans-ok"
 
 
-def test_1d_lbs_grid_uses_executor_progress_and_preserves_geometry() -> None:
-    mol = _water()
-    executor_calls: list[object] = []
-    progress: list[tuple[int, int, str]] = []
-
-    R, E, MU = scans.grid_1d_pes_dms(
-        mol,
-        _cfg(),
-        "0-1",
-        Rmin=0.8,
-        Rmax=1.2,
-        npts=5,
-        energy_dipole_fn=_fake_energy_dipole,
-        executor_factory=lambda: _RecordingExecutor(executor_calls),
-        progress_fn=lambda done, total, label: progress.append((done, total, label)),
-    )
-
-    np.testing.assert_allclose(R, np.linspace(0.8, 1.2, 5))
-    assert E.shape == (5,)
-    assert MU.shape == (5, 3)
-    assert np.min(E) == pytest.approx(0.0)
-    assert executor_calls == ["enter", ("map", 5), "exit"]
-    assert progress[-1] == (5, 5, "1D grid points")
-    np.testing.assert_allclose(mol.coords[1], [0.96, 0.0, 0.0])
-    assert scans.local_bond_reduced_mass_amu(mol, Bond(0, 1)) == pytest.approx(
-        15.99491461957 * 1.00782503223 / (15.99491461957 + 1.00782503223)
-    )
-
-
 def test_local_bond_reduced_mass_uses_selected_atom_masses_for_non_water() -> None:
     mol = Molecule.from_arrays(
         ["H", "F"],
@@ -210,90 +181,35 @@ def test_calc_normal_mode_direction_uses_injected_harmonic_function() -> None:
     assert "Selected normal mode index 0" in logs[0]
 
 
-def test_1d_normal_grid_and_displacement_validation() -> None:
-    mol = _water()
-    u_dir = np.zeros_like(mol.coords)
-    u_dir[1, 2] = 1.0
-
-    S, E, MU = scans.grid_1d_pes_dms_normal(
-        mol,
-        _cfg(),
-        u_dir,
-        smin=-0.1,
-        smax=0.1,
-        npts=3,
-        energy_dipole_fn=_fake_energy_dipole,
-    )
-
-    np.testing.assert_allclose(S, [-0.1, 0.0, 0.1])
-    assert E.shape == (3,)
-    assert MU.shape == (3, 3)
-    with pytest.raises(ValueError, match="u_dir shape"):
-        scans.grid_1d_pes_dms_normal(
-            mol,
-            _cfg(),
-            np.zeros((2, 3)),
-            energy_dipole_fn=_fake_energy_dipole,
-        )
-
-
 @pytest.mark.parametrize(
-    ("result", "message"),
+    ("energy", "dipole", "message"),
     [
-        ((np.nan, np.zeros(3)), "energy must be finite"),
-        ((0.0, np.array([0.0, np.inf, 0.0])), "dipole must be finite"),
+        (np.nan, np.zeros(3), "energy must be finite"),
+        (0.0, np.array([0.0, np.inf, 0.0]), "dipole must be finite"),
     ],
 )
-def test_scan_rejects_nonfinite_evaluator_results(result, message) -> None:
+def test_relaxed_scan_rejects_nonfinite_point_results(energy, dipole, message) -> None:
+    def point(molecule, cfg, u_dir, s, gtol, maxiter):
+        del molecule, cfg, u_dir, gtol, maxiter
+        return SimpleNamespace(
+            energy_hartree=energy,
+            dipole_debye=dipole,
+            achieved_displacement_A=s,
+            constraint_residual_A=0.0,
+            converged=True,
+            n_iterations=1,
+            message="ok",
+        )
+
+    direction = np.zeros((3, 3))
+    direction[1, 0] = 1.0
     with pytest.raises(scans.ScanFailedError, match=message) as excinfo:
-        scans.grid_1d_pes_dms(
-            _water(),
-            _cfg(),
-            Bond(0, 1),
-            0.9,
-            1.0,
-            2,
-            energy_dipole_fn=lambda molecule, cfg: result,
+        scans.grid_1d_pes_dms_normal_relaxed(
+            _water(), _cfg(), direction, -0.1, 0.1, 3, relaxed_point_fn=point
         )
     failure = excinfo.value.partial.failures[0]
     assert failure.error_type == "ValueError"
     assert message in failure.message
-
-
-def test_2d_lbs_grid_realizes_both_frozen_bond_lengths() -> None:
-    mol = _water()
-    seen: list[np.ndarray] = []
-
-    def energy(molecule: object, cfg: object) -> tuple[float, np.ndarray]:
-        del cfg
-        coords = np.asarray(getattr(molecule, "coords"), dtype=float)
-        seen.append(coords.copy())
-        e = float(
-            np.linalg.norm(coords[1] - coords[0]) + 2.0 * np.linalg.norm(coords[2] - coords[0])
-        )
-        return e, coords.sum(axis=0)
-
-    R1 = np.linspace(0.85, 1.05, 3)
-    R2 = np.linspace(0.9, 1.1, 4)
-    out_R1, out_R2, E, MU = scans.grid_2d_pes_dms(
-        mol,
-        _cfg(),
-        Bond(0, 1),
-        Bond(0, 2),
-        R1,
-        R2,
-        energy_dipole_fn=energy,
-    )
-
-    np.testing.assert_allclose(out_R1, R1)
-    np.testing.assert_allclose(out_R2, R2)
-    assert E.shape == (3, 4)
-    assert MU.shape == (3, 4, 3)
-    assert np.min(E) == pytest.approx(0.0)
-    for coords, (r1, r2) in zip(seen, [(r1, r2) for r1 in R1 for r2 in R2]):
-        assert np.linalg.norm(coords[1] - coords[0]) == pytest.approx(r1)
-        assert np.linalg.norm(coords[2] - coords[0]) == pytest.approx(r2)
-    np.testing.assert_allclose(mol.coords[1], [0.96, 0.0, 0.0])
 
 
 def test_two_bond_stretch_is_orientation_independent_for_shared_atom() -> None:
@@ -313,34 +229,6 @@ def test_two_bond_stretch_is_orientation_independent_for_shared_atom() -> None:
     assert np.linalg.norm(reversed_bonds[2] - reversed_bonds[1]) == pytest.approx(0.8)
 
 
-def test_2d_lbs_grid_preserves_reversed_shared_bond_coordinates() -> None:
-    mol = Molecule.from_arrays(
-        ["H", "O", "H"],
-        np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-    )
-    seen: list[np.ndarray] = []
-
-    def energy(molecule: object, cfg: object) -> tuple[float, np.ndarray]:
-        del cfg
-        coords = np.asarray(getattr(molecule, "coords"), dtype=float)
-        seen.append(coords.copy())
-        return float(np.sum(coords * coords)), np.zeros(3)
-
-    scans.grid_2d_pes_dms(
-        mol,
-        _cfg(),
-        Bond(0, 1),
-        Bond(2, 1),
-        [1.2],
-        [0.8],
-        energy_dipole_fn=energy,
-    )
-
-    assert len(seen) == 1
-    assert np.linalg.norm(seen[0][0] - seen[0][1]) == pytest.approx(1.2)
-    assert np.linalg.norm(seen[0][2] - seen[0][1]) == pytest.approx(0.8)
-
-
 def test_two_bond_stretch_uses_explicit_anchors_for_disjoint_bonds() -> None:
     coords = np.array(
         [
@@ -358,48 +246,20 @@ def test_two_bond_stretch_uses_explicit_anchors_for_disjoint_bonds() -> None:
     assert np.linalg.norm(stretched[3] - stretched[2]) == pytest.approx(0.7)
 
 
-def test_2d_lbs_grid_rejects_invalid_coordinates_before_electronic_work() -> None:
-    mol = _water()
-    calls = 0
+def test_two_bond_plans_reject_invalid_bonds_and_lengths() -> None:
+    from pyscf_vscf.backends.pyscf import PySCFMeanFieldProvider
+    from pyscf_vscf.scans import plan_bond_scan
+    from pyscf_vscf.settings import ESSettings
 
-    def energy(molecule: object, cfg: object) -> tuple[float, np.ndarray]:
-        nonlocal calls
-        del molecule, cfg
-        calls += 1
-        return 0.0, np.zeros(3)
-
-    with pytest.raises(ValueError, match="two distinct bonds"):
-        scans.grid_2d_pes_dms(
-            mol,
-            _cfg(),
-            Bond(0, 1),
-            Bond(1, 0),
-            [0.9],
-            [1.0],
-            energy_dipole_fn=energy,
-        )
-    with pytest.raises(ValueError, match="positive and finite"):
-        scans.grid_2d_pes_dms(
-            mol,
-            _cfg(),
-            Bond(0, 1),
-            Bond(0, 2),
-            [0.9],
-            [0.0],
-            energy_dipole_fn=energy,
-        )
-    with pytest.raises(ValueError, match="two distinct atoms"):
-        scans.grid_2d_pes_dms(
-            mol,
-            _cfg(),
-            Bond(0, 0),
-            Bond(0, 2),
-            [0.9],
-            [1.0],
-            energy_dipole_fn=energy,
-        )
-
-    assert calls == 0
+    provider = PySCFMeanFieldProvider(ESSettings(method="hf", basis="sto-3g"))
+    grid = np.linspace(0.9, 1.1, 3)
+    for bonds, grids in (
+        ([Bond(0, 1), Bond(1, 0)], [grid, grid]),
+        ([Bond(0, 1), Bond(0, 2)], [grid, np.array([0.0, 0.5, 1.0])]),
+        ([Bond(0, 0), Bond(0, 2)], [grid, grid]),
+    ):
+        with pytest.raises(ValueError):
+            plan_bond_scan(_water(), provider, bonds, grids)
 
 
 def test_normal_relaxed_grid_is_represented_by_injected_point_optimizer() -> None:
@@ -486,7 +346,10 @@ def test_normal_relaxed_grid_warns_once_and_retains_diagnostics_when_not_strict(
         tuple(result)
 
 
-def test_1d_lbs_cache_metadata_validation_and_roundtrip(tmp_path: Path) -> None:
+def test_1d_lbs_cache_metadata_validation_and_legacy_read(tmp_path: Path) -> None:
+    from pyscf_vscf.artifacts.scans import load_legacy_grid
+    from pyscf_vscf.cache import dump_grid_npz
+
     mol = _water()
     cfg = _cfg()
     R = np.linspace(0.8, 1.2, 5)
@@ -494,22 +357,14 @@ def test_1d_lbs_cache_metadata_validation_and_roundtrip(tmp_path: Path) -> None:
     MU = np.zeros((5, 3))
     path = tmp_path / "grid_1d.npz"
 
-    scans.dump_lbs_frozen_1d_grid_cache(path, mol, cfg, Bond(0, 1), 0.8, 1.2, 5, R, E, MU)
-    out_R, out_E, out_MU = scans.load_lbs_frozen_1d_grid_cache(
-        path,
-        mol,
-        cfg,
-        "0-1",
-        0.8,
-        1.2,
-        5,
-    )
-
-    np.testing.assert_allclose(out_R, R)
-    np.testing.assert_allclose(out_E, E)
-    np.testing.assert_allclose(out_MU, MU)
     meta = scans.lbs_frozen_1d_cache_metadata(mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
     assert meta["identity"]["scan"]["bond_zero_based"] == [0, 1]
+    dump_grid_npz(path, meta=meta, arrays={"R_A": R, "E_Eh": E, "MU_Debye": MU})
+    legacy = load_legacy_grid(path)
+    np.testing.assert_allclose(legacy.axes[0], R)
+    np.testing.assert_allclose(legacy.relative_energies_Eh, E)
+    np.testing.assert_allclose(legacy.dipoles_debye, MU)
+    scans.validate_lbs_frozen_1d_cache_metadata(meta, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)
     legacy_meta = dict(meta, grid_cache_version=1)
     with pytest.raises(ValueError, match="Unsupported grid cache schema"):
         scans.validate_lbs_frozen_1d_cache_metadata(legacy_meta, mol, cfg, Bond(0, 1), 0.8, 1.2, 5)

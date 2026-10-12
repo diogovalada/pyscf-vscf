@@ -1,9 +1,11 @@
-"""Scan workflow helpers (0.2 tuple API).
+"""Scan workflow helpers: normal-mode selection, relaxed scans, and masses.
 
-The tuple-returning grid functions and schema-3 cache helpers are deprecated
-in favour of ``pyscf_vscf.scans`` (plans, runner, ``ScanResult``) and
-``pyscf_vscf.artifacts.scans`` (schema-4 files). Normal-mode selection,
-constrained relaxed scans, and coordinate/mass helpers remain current.
+Fixed-geometry scans are plans evaluated by the runner (``pyscf_vscf.scans``)
+and stored as schema-4 files (``pyscf_vscf.artifacts.scans``). The 0.2
+tuple-returning grid functions and schema-3 cache writers and loaders were
+removed in 0.4; ``load_legacy_grid`` still reads 0.1/0.2 caches. What remains
+here: normal-mode selection, constrained relaxed normal-coordinate scans,
+coordinate and mass helpers, and the schema-3 cache metadata helpers.
 
 This module sits above the pure coordinate/surface helpers and below the CLI.
 All expensive electronic-structure work is injectable.
@@ -22,12 +24,10 @@ import warnings
 
 import numpy as np
 
-from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
 from pyscf_vscf.cache import (
     dump_grid_npz,
     electronic_structure_provenance,
-    load_grid_npz,
     molecule_provenance,
     runtime_provenance,
     scientific_cache_metadata,
@@ -37,7 +37,7 @@ from pyscf_vscf.coordinates import Bond, parse_bond
 from pyscf_vscf.coordinates import stretch_along_bond as _stretch_along_bond
 from pyscf_vscf.coordinates import stretch_two_bonds as _stretch_two_bonds
 from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.electronic import EnergyDipoleEvaluator, energy_dipole
+from pyscf_vscf.electronic import EnergyDipoleEvaluator
 
 
 EnergyDipoleFn = EnergyDipoleEvaluator
@@ -442,143 +442,6 @@ def calc_normal_mode_direction(
     return selected
 
 
-def grid_1d_pes_dms(
-    molecule: Any,
-    cfg: Any,
-    bond: Bond | str | Any,
-    Rmin: float = 0.75,
-    Rmax: float = 1.25,
-    npts: int = 41,
-    *,
-    energy_dipole_fn: EnergyDipoleFn = energy_dipole,
-    executor_factory: ExecutorFactory | None = None,
-    molecule_factory: MoleculeFactory = molecule_with_coords,
-    progress_fn: ProgressFn | None = None,
-    log_fn: LogFn | None = None,
-    stop_on_error: bool = True,
-    batch_size: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Build a frozen local-bond 1D PES/DMS grid with injectable execution.
-
-    If any point raises, ``ScanFailedError`` is raised after the active
-    batch finishes; its ``partial`` attribute holds every completed point.
-    With ``stop_on_error=False`` all points are attempted before raising.
-    """
-
-    deprecated(
-        "grid_1d_pes_dms() is deprecated; use pyscf_vscf.scans.plan_bond_scan() and run_scan()."
-    )
-
-    b = normalize_bond(bond)
-    Rs = np.linspace(float(Rmin), float(Rmax), _npts(npts))
-    energies = np.full(Rs.size, np.nan, dtype=float)
-    dipoles = np.full((Rs.size, 3), np.nan, dtype=float)
-    completed = np.zeros(Rs.size, dtype=bool)
-    tasks = [
-        (idx, float(R), molecule, cfg, b, energy_dipole_fn, molecule_factory)
-        for idx, R in enumerate(Rs)
-    ]
-    if log_fn is not None:
-        log_fn(
-            f"Evaluating 1D grid: {Rs.size} points from {float(Rmin):.2f} to {float(Rmax):.2f} A"
-        )
-
-    run = _run_tasks(
-        _grid_1d_lbs_worker,
-        tasks,
-        total=Rs.size,
-        progress_label="1D grid points",
-        executor_factory=executor_factory,
-        progress_fn=progress_fn,
-        stop_on_error=stop_on_error,
-        batch_size=batch_size,
-    )
-    for idx, energy, dipole in run.values.values():
-        energies[idx] = energy
-        dipoles[idx] = dipole
-        completed[idx] = True
-    _raise_if_incomplete(
-        run,
-        scan_kind=f"1D local-bond ({bond_label(b)})",
-        axis_labels=("R_A",),
-        axes=(Rs,),
-        completed=completed,
-        energies=energies,
-        dipoles=dipoles,
-        point_of=lambda position: ((position,), (float(Rs[position]),)),
-    )
-    energies -= float(np.min(energies))
-    return Rs, energies, dipoles
-
-
-def grid_1d_pes_dms_normal(
-    molecule: Any,
-    cfg: Any,
-    u_dir: np.ndarray,
-    smin: float = -0.15,
-    smax: float = 0.15,
-    npts: int = 41,
-    *,
-    energy_dipole_fn: EnergyDipoleFn = energy_dipole,
-    executor_factory: ExecutorFactory | None = None,
-    molecule_factory: MoleculeFactory = molecule_with_coords,
-    progress_fn: ProgressFn | None = None,
-    log_fn: LogFn | None = None,
-    stop_on_error: bool = True,
-    batch_size: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Build a 1D PES/DMS grid along a fixed normal-mode displacement direction.
-
-    Failed points raise ``ScanFailedError`` as in ``grid_1d_pes_dms``.
-    """
-
-    deprecated(
-        "grid_1d_pes_dms_normal() is deprecated; use pyscf_vscf.scans.plan_normal_scan() and run_scan()."
-    )
-
-    direction = _normal_mode_direction_for_molecule(molecule, u_dir)
-    S = np.linspace(float(smin), float(smax), _npts(npts))
-    energies = np.full(S.size, np.nan, dtype=float)
-    dipoles = np.full((S.size, 3), np.nan, dtype=float)
-    completed = np.zeros(S.size, dtype=bool)
-    tasks = [
-        (idx, float(s), molecule, cfg, direction, energy_dipole_fn, molecule_factory)
-        for idx, s in enumerate(S)
-    ]
-    if log_fn is not None:
-        log_fn(
-            "Evaluating 1D grid (normal-mode path): "
-            f"{S.size} points from {float(smin):.2f} to {float(smax):.2f} A"
-        )
-
-    run = _run_tasks(
-        _grid_1d_normal_worker,
-        tasks,
-        total=S.size,
-        progress_label="1D grid points",
-        executor_factory=executor_factory,
-        progress_fn=progress_fn,
-        stop_on_error=stop_on_error,
-        batch_size=batch_size,
-    )
-    for idx, energy, dipole in run.values.values():
-        energies[idx] = energy
-        dipoles[idx] = dipole
-        completed[idx] = True
-    _raise_if_incomplete(
-        run,
-        scan_kind="1D normal-coordinate",
-        axis_labels=("s_A",),
-        axes=(S,),
-        completed=completed,
-        energies=energies,
-        dipoles=dipoles,
-        point_of=lambda position: ((position,), (float(S[position]),)),
-    )
-    energies -= float(np.min(energies))
-    return S, energies, dipoles
-
-
 def grid_1d_pes_dms_normal_relaxed(
     molecule: Any,
     cfg: Any,
@@ -697,101 +560,6 @@ def grid_1d_pes_dms_normal_relaxed(
     return result
 
 
-def grid_2d_pes_dms(
-    molecule: Any,
-    cfg: Any,
-    b1: Bond | str | Any,
-    b2: Bond | str | Any,
-    R1: Sequence[float] | np.ndarray,
-    R2: Sequence[float] | np.ndarray,
-    *,
-    energy_dipole_fn: EnergyDipoleFn = energy_dipole,
-    executor_factory: ExecutorFactory | None = None,
-    molecule_factory: MoleculeFactory = molecule_with_coords,
-    progress_fn: ProgressFn | None = None,
-    log_fn: LogFn | None = None,
-    stop_on_error: bool = True,
-    batch_size: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Build a frozen two-local-bond PES/DMS grid with injectable execution.
-
-    Failed points raise ``ScanFailedError`` as in ``grid_1d_pes_dms``.
-    """
-
-    deprecated(
-        "grid_2d_pes_dms() is deprecated; use pyscf_vscf.scans.plan_bond_scan() with two bonds and run_scan()."
-    )
-
-    bond1 = normalize_bond(b1)
-    bond2 = normalize_bond(b2)
-    R1_arr = np.asarray(R1, dtype=float)
-    R2_arr = np.asarray(R2, dtype=float)
-    _validate_scan_grid(R1_arr, "R1")
-    _validate_scan_grid(R2_arr, "R2")
-    # Validate topology and source geometry before scheduling any electronic point.
-    stretch_two_bonds(
-        _molecule_coords(molecule),
-        bond1,
-        bond2,
-        float(R1_arr[0]),
-        float(R2_arr[0]),
-    )
-    shape = (R1_arr.size, R2_arr.size)
-    energies = np.full(shape, np.nan, dtype=float)
-    dipoles = np.full(shape + (3,), np.nan, dtype=float)
-    completed = np.zeros(shape, dtype=bool)
-    tasks = [
-        (
-            i,
-            j,
-            molecule,
-            cfg,
-            bond1,
-            bond2,
-            float(r1),
-            float(r2),
-            energy_dipole_fn,
-            molecule_factory,
-        )
-        for i, r1 in enumerate(R1_arr)
-        for j, r2 in enumerate(R2_arr)
-    ]
-    if log_fn is not None:
-        log_fn(f"Evaluating 2D grid: {R1_arr.size}x{R2_arr.size} = {len(tasks)} points")
-
-    run = _run_tasks(
-        _grid_2d_lbs_worker,
-        tasks,
-        total=len(tasks),
-        progress_label="2D grid points",
-        executor_factory=executor_factory,
-        progress_fn=progress_fn,
-        stop_on_error=stop_on_error,
-        batch_size=batch_size,
-    )
-    for i, j, energy, dipole in run.values.values():
-        energies[i, j] = energy
-        dipoles[i, j] = dipole
-        completed[i, j] = True
-
-    def point_of(position: int) -> tuple[tuple[int, ...], tuple[float, ...]]:
-        i, j = divmod(position, R2_arr.size)
-        return (i, j), (float(R1_arr[i]), float(R2_arr[j]))
-
-    _raise_if_incomplete(
-        run,
-        scan_kind=f"2D local-bond ({bond_label(bond1)}, {bond_label(bond2)})",
-        axis_labels=("R1_A", "R2_A"),
-        axes=(R1_arr, R2_arr),
-        completed=completed,
-        energies=energies,
-        dipoles=dipoles,
-        point_of=point_of,
-    )
-    energies -= float(np.min(energies))
-    return R1_arr, R2_arr, energies, dipoles
-
-
 def dump_partial_scan_npz(
     path: Path | str,
     partial: PartialScanGrid,
@@ -888,76 +656,6 @@ def validate_lbs_frozen_1d_cache_metadata(
     validate_scientific_cache_metadata(dict(meta), expected)
 
 
-def dump_lbs_frozen_1d_grid_cache(
-    path: Path,
-    molecule: Any,
-    cfg: Any,
-    bond: Bond | str | Any,
-    rmin: float,
-    rmax: float,
-    npts: int,
-    R: np.ndarray,
-    E: np.ndarray,
-    MU: np.ndarray,
-    *,
-    scan: str = "lbs-frozen",
-    backend_identity: str = "pyscf",
-) -> None:
-    """Write a frozen 1D local-bond grid cache."""
-
-    deprecated("Schema-3 grid caches are deprecated; use pyscf_vscf.artifacts.scans.dump_scan().")
-
-    meta = lbs_frozen_1d_cache_metadata(
-        molecule,
-        cfg,
-        bond,
-        rmin,
-        rmax,
-        npts,
-        scan=scan,
-        backend_identity=backend_identity,
-    )
-    dump_grid_npz(path, meta=meta, arrays={"R_A": R, "E_Eh": E, "MU_Debye": MU})
-
-
-def load_lbs_frozen_1d_grid_cache(
-    path: Path,
-    molecule: Any,
-    cfg: Any,
-    bond: Bond | str | Any,
-    rmin: float,
-    rmax: float,
-    npts: int,
-    *,
-    scan: str = "lbs-frozen",
-    backend_identity: str = "pyscf",
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Load and validate a frozen 1D local-bond grid cache."""
-
-    deprecated(
-        "Schema-3 grid cache loaders are deprecated; use pyscf_vscf.artifacts.scans.load_scan() or load_legacy_grid()."
-    )
-
-    meta, arrays = load_grid_npz(path)
-    validate_lbs_frozen_1d_cache_metadata(
-        meta,
-        molecule,
-        cfg,
-        bond,
-        rmin,
-        rmax,
-        npts,
-        scan=scan,
-        backend_identity=backend_identity,
-    )
-    R = np.asarray(arrays["R_A"], dtype=float)
-    E = np.asarray(arrays["E_Eh"], dtype=float)
-    MU = np.asarray(arrays["MU_Debye"], dtype=float)
-    requested = np.linspace(float(rmin), float(rmax), _npts(npts))
-    _validate_grid_arrays_1d(R, E, MU, requested)
-    return R, E, MU
-
-
 def lbs_frozen_2d_cache_metadata(
     molecule: Any,
     cfg: Any,
@@ -1042,51 +740,6 @@ def validate_lbs_frozen_2d_cache(
     return R1, R2, E, MU
 
 
-def load_lbs_frozen_2d_grid_cache(
-    path: Path,
-    molecule: Any,
-    cfg: Any,
-    b1: Bond | str | Any,
-    b2: Bond | str | Any,
-    r1: Sequence[float],
-    r2: Sequence[float],
-    *,
-    keo: str = "gmatrix",
-    backend_identity: str = "pyscf",
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Load and validate a frozen 2D local-bond grid cache."""
-
-    deprecated(
-        "Schema-3 grid cache loaders are deprecated; use pyscf_vscf.artifacts.scans.load_scan() or load_legacy_grid()."
-    )
-
-    meta, arrays = load_grid_npz(path)
-    return validate_lbs_frozen_2d_cache(
-        meta,
-        arrays,
-        molecule,
-        cfg,
-        b1,
-        b2,
-        r1,
-        r2,
-        keo=keo,
-        backend_identity=backend_identity,
-    )
-
-
-def _grid_1d_lbs_worker(task: tuple[Any, ...]) -> tuple[int, float, np.ndarray]:
-    idx, R, molecule, cfg, bond, energy_fn, molecule_factory = task
-    coords = stretch_along_bond(_molecule_coords(molecule), bond, R)
-    return _indexed_energy_dipole(idx, molecule, cfg, coords, energy_fn, molecule_factory)
-
-
-def _grid_1d_normal_worker(task: tuple[Any, ...]) -> tuple[int, float, np.ndarray]:
-    idx, s, molecule, cfg, u_dir, energy_fn, molecule_factory = task
-    coords = normal_mode_displaced_coords(_molecule_coords(molecule), u_dir, s)
-    return _indexed_energy_dipole(idx, molecule, cfg, coords, energy_fn, molecule_factory)
-
-
 def _grid_1d_normal_relaxed_worker(task: tuple[Any, ...]) -> tuple[Any, ...]:
     idx, s, molecule, cfg, u_dir, relaxed_point_fn, gtol, maxiter = task
     result = relaxed_point_fn(molecule, cfg, u_dir, s, gtol, maxiter)
@@ -1102,13 +755,6 @@ def _grid_1d_normal_relaxed_worker(task: tuple[Any, ...]) -> tuple[Any, ...]:
         str(result.message),
         getattr(result, "configuration_snapshot", None),
     )
-
-
-def _grid_2d_lbs_worker(task: tuple[Any, ...]) -> tuple[int, int, float, np.ndarray]:
-    i, j, molecule, cfg, b1, b2, r1, r2, energy_fn, molecule_factory = task
-    coords = stretch_two_bonds(_molecule_coords(molecule), b1, b2, r1, r2)
-    energy, dipole = _point_energy_dipole(molecule, cfg, coords, energy_fn, molecule_factory)
-    return int(i), int(j), energy, dipole
 
 
 def _run_tasks(
@@ -1222,28 +868,6 @@ def _raise_if_incomplete(
     raise ScanFailedError(partial_grid.summary(), partial_grid)
 
 
-def _indexed_energy_dipole(
-    idx: int,
-    molecule: Any,
-    cfg: Any,
-    coords: np.ndarray,
-    energy_fn: EnergyDipoleFn,
-    molecule_factory: MoleculeFactory,
-) -> tuple[int, float, np.ndarray]:
-    energy, dipole = _point_energy_dipole(molecule, cfg, coords, energy_fn, molecule_factory)
-    return int(idx), energy, dipole
-
-
-def _point_energy_dipole(
-    molecule: Any,
-    cfg: Any,
-    coords: np.ndarray,
-    energy_fn: EnergyDipoleFn,
-    molecule_factory: MoleculeFactory,
-) -> tuple[float, np.ndarray]:
-    return _coerce_energy_dipole(energy_fn(molecule_factory(molecule, coords), cfg))
-
-
 def _coerce_energy_dipole(value: tuple[float, np.ndarray]) -> tuple[float, np.ndarray]:
     energy, dipole = value
     energy_value = float(energy)
@@ -1343,12 +967,6 @@ def molecule_analysis_masses(molecule: Molecule) -> np.ndarray:
     return molecule.analysis_masses()
 
 
-def _cfg_get(cfg: Any, name: str, default: Any) -> Any:
-    if isinstance(cfg, Mapping):
-        return cfg.get(name, default)
-    return getattr(cfg, name, default)
-
-
 def _npts(npts: int) -> int:
     count = int(npts)
     if count <= 0:
@@ -1361,13 +979,6 @@ def _grid_spec(spec: Sequence[float], name: str) -> tuple[float, float, int]:
     if len(values) != 3:
         raise ValueError(f"{name} must contain (min, max, npts)")
     return float(values[0]), float(values[1]), int(values[2])
-
-
-def _validate_scan_grid(values: np.ndarray, name: str) -> None:
-    if values.ndim != 1 or values.size == 0:
-        raise ValueError(f"{name} must be a non-empty one-dimensional grid")
-    if not np.all(np.isfinite(values)) or np.any(values <= 0.0):
-        raise ValueError(f"{name} bond lengths must be positive and finite")
 
 
 __all__ = [
@@ -1388,16 +999,10 @@ __all__ = [
     "bond_bond_g12_inv_amu",
     "bond_label",
     "calc_normal_mode_direction",
-    "dump_lbs_frozen_1d_grid_cache",
     "dump_partial_scan_npz",
-    "grid_1d_pes_dms",
-    "grid_1d_pes_dms_normal",
     "grid_1d_pes_dms_normal_relaxed",
-    "grid_2d_pes_dms",
     "lbs_frozen_1d_cache_metadata",
     "lbs_frozen_2d_cache_metadata",
-    "load_lbs_frozen_1d_grid_cache",
-    "load_lbs_frozen_2d_grid_cache",
     "local_bond_reduced_mass_amu",
     "molecule_analysis_masses",
     "molecule_with_coords",

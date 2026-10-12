@@ -293,12 +293,12 @@ def test_legacy_v3_cache_loads_as_relative_scan(tmp_path: Path) -> None:
     cfg = ESSettings(method="hf", basis="sto-3g", use_density_fit=False)
     R = np.linspace(0.8, 1.2, 5)
     path = tmp_path / "legacy.npz"
-    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
+    # A schema-3 cache as 0.1-0.3 wrote it (the writer was removed in 0.4).
+    from pyscf_vscf.cache import dump_grid_npz
 
-    with pytest.warns(PyscfVscfDeprecationWarning, match="dump_scan"):
-        legacy.dump_lbs_frozen_1d_grid_cache(
-            path, molecule, cfg, "0-1", 0.8, 1.2, 5, R, (R - 1.0) ** 2, np.zeros((5, 3))
-        )
+    meta = legacy.lbs_frozen_1d_cache_metadata(molecule, cfg, "0-1", 0.8, 1.2, 5)
+    arrays = {"R_A": R, "E_Eh": (R - 1.0) ** 2, "MU_Debye": np.zeros((5, 3))}
+    dump_grid_npz(path, meta=meta, arrays=arrays)
 
     loaded = load_legacy_grid(path)
     assert loaded.scan_kind == "legacy-1d"

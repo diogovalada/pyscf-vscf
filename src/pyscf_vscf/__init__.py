@@ -30,7 +30,6 @@ from .spectra import (
     integrated_cross_section_omega,
     integrated_cross_section_omega_to_km_per_mol,
 )
-from .surfaces import grid_1d_pes_dms, grid_2d_pes_dms
 from .validation import ConvergenceReport, ExactProductDVR, convergence_report, exact_nmode_dvr
 from .variational import TransitionRecord, variational_1d, variational_2d
 from .vscf import (
@@ -89,8 +88,6 @@ __all__ = [
     "convergence_report",
     "dump_nmode_model",
     "einstein_a_from_debye",
-    "grid_1d_pes_dms",
-    "grid_2d_pes_dms",
     "mass_weighted_freqs_modes",
     "integrated_cross_section_omega",
     "integrated_cross_section_omega_to_km_per_mol",

@@ -12,7 +12,6 @@ from .harmonic import (
 from .optimization import (
     OptimizationResult,
     optimization_convergence_kwargs,
-    run_opt,
 )
 
 __all__ = [
@@ -24,6 +23,5 @@ __all__ = [
     "harmonic_analysis",
     "nuclear_gradient",
     "optimization_convergence_kwargs",
-    "run_opt",
     "stationarity_diagnostic",
 ]

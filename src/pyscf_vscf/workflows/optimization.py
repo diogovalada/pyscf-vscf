@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +16,6 @@ from typing import Any
 
 import numpy as np
 
-from pyscf_vscf._warnings import deprecated
 from pyscf_vscf.backends import pyscf as pyscf_backend
 from pyscf_vscf.backends._pyscf_factory import ConfigurationGuard
 from pyscf_vscf.io import write_midas_mmol, write_xyz
@@ -31,7 +30,7 @@ _LOG = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class OptimizationResult:
-    """Result returned by ``run_opt``."""
+    """Result returned by ``optimize_geometry``."""
 
     molecule: Molecule
     converged: bool
@@ -93,35 +92,6 @@ def optimize_geometry(
         output_path=written,
         stationarity=stationarity,
     )
-
-
-def run_opt(
-    mol: Any,
-    cfg: Any,
-    *,
-    opt_out: Path | str | None,
-    opt_maxsteps: int | None,
-    strict: bool = True,
-    verbose: bool = False,
-    log_fn: Callable[[str], None] | None = None,
-    warn_fn: Callable[[str, str], None] | None = None,
-) -> OptimizationResult:
-    """Deprecated: optimize, print a summary, and always write the geometry.
-
-    ``opt_out=None`` writes ``<label>.pyscf_opt.mmol``. Use
-    ``optimize_geometry``, which writes a file only when asked.
-    """
-
-    deprecated("run_opt() is deprecated; use optimize_geometry().")
-    del verbose, warn_fn
-    emit_log = log_fn or _noop_log
-    path = Path(f"{mol.label}.pyscf_opt.mmol") if opt_out is None else Path(opt_out)
-    emit_log("Starting geometry optimization (backend=geomeTRIC)")
-    result = optimize_geometry(mol, cfg, output_path=path, max_steps=opt_maxsteps, strict=strict)
-    if result.stationarity is not None:
-        print(format_optimization_stationarity_diagnostic(result.stationarity))
-    print(f"Optimized geometry written to: {result.output_path}", flush=True)
-    return result
 
 
 def _factory_gradient_scanner(
@@ -346,5 +316,4 @@ __all__ = [
     "format_optimization_stationarity_diagnostic",
     "optimization_convergence_kwargs",
     "optimize_geometry",
-    "run_opt",
 ]

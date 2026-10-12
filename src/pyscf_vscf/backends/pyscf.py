@@ -18,7 +18,6 @@ from typing import Any
 import numpy as np
 
 from .._identity import immutable_json_mapping, to_jsonable
-from .._warnings import deprecated
 from ..cache import runtime_provenance
 from ..constants import ANG_TO_BOHR, MASS_AMU, atomic_mass_amu
 from ..contracts import (
@@ -44,7 +43,6 @@ from ._pyscf_factory import (
     PySCFResources,
     SettingsFactory,
     build_mean_field,
-    configure_settings_mean_field,
     require_pyscf,
 )
 from ._pyscf_properties import (
@@ -409,30 +407,6 @@ def molecule_to_pyscf(molecule: Any, basis: str = "aug-cc-pVTZ"):
     return pmol
 
 
-def make_mean_field(
-    pmol: Any,
-    cfg: Any,
-    *,
-    field_au: np.ndarray | None = None,
-    field_origin_A: np.ndarray | None = None,
-):
-    """Deprecated: create and run the built-in mean field on an existing molecule.
-
-    Use ``converged_mean_field`` or ``PySCFMeanFieldProvider``.
-    """
-
-    deprecated(
-        "make_mean_field() is deprecated; use converged_mean_field() or PySCFMeanFieldProvider."
-    )
-    settings = coerce_es_settings(cfg)
-    if str(settings.device).strip().lower() != "cpu":
-        raise ValueError("make_mean_field() runs on the CPU only; use converged_mean_field()")
-    mean_field = configure_settings_mean_field(pmol, settings)
-    build = _legacy_build(pmol, mean_field, SettingsFactory(settings))
-    converge(build, field_au=field_au, field_origin_A=field_origin_A)
-    return mean_field
-
-
 def energy_gradient_at_coords_bohr(
     molecule: Any,
     cfg: Any,
@@ -544,18 +518,6 @@ def normal_relaxed_point(
     )
 
 
-def _legacy_build(molecule: Any, mean_field: Any, factory: MeanFieldFactory):
-    from .._identity import immutable_json_mapping as _freeze
-    from ._pyscf_factory import MeanFieldBuild, configuration_snapshot
-
-    return MeanFieldBuild(
-        mean_field=mean_field,
-        molecule=molecule,
-        method_identity=_freeze(factory.scientific_settings_payload()),
-        configuration_snapshot=_freeze(configuration_snapshot(mean_field)),
-    )
-
-
 def _molecule_coords(molecule: Any) -> np.ndarray:
     coords = np.asarray(getattr(molecule, "coords"), dtype=float)
     if coords.ndim != 2 or coords.shape[1] != 3:
@@ -630,7 +592,6 @@ __all__ = [
     "energy_gradient_at_coords_bohr",
     "is_available",
     "legacy_energy_dipole",
-    "make_mean_field",
     "method_factory",
     "molecule_to_pyscf",
     "normal_relaxed_point",

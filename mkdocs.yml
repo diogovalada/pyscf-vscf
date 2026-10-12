@@ -69,6 +69,7 @@ nav:
       - n-mode surfaces and VCI: nmode-vci.md
       - Correlated and finite-field providers: correlated-providers.md
       - Running the validations: running-validations.md
+      - Migrating to 0.4: migration-0.4.md
       - Migrating from 0.2: migration-0.3.md
   - API reference:
       - Scans and spectra: api/scans.md
@@ -80,4 +81,4 @@ nav:
       - DVR and harmonic analysis: api/dvr.md
       - Molecules, files, and constants: api/molecules.md
       - Validation helpers: api/validation.md
-      - 0.2 scan layer and cache helpers: api/deprecated.md
+      - Relaxed scans, 0.2 caches, and scan helpers: api/legacy.md

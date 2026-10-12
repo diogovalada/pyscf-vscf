@@ -20,20 +20,30 @@ from typing import TextIO
 import numpy as np
 import warnings
 
-from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
-from pyscf_vscf import Bond, ESSettings, __version__
-from pyscf_vscf.cache import runtime_provenance
-from pyscf_vscf.io import dump_grid_npz, read_xyz
-from pyscf_vscf.settings import apply_thread_env_updates
-from pyscf_vscf.workflows.optimization import run_opt
-from pyscf_vscf.workflows.scans import (
-    grid_2d_pes_dms,
-    lbs_frozen_2d_cache_metadata,
-    load_lbs_frozen_2d_grid_cache,
+_FROZEN = (
+    "The NH3 generation scripts (generate_nh3_three_mode.py, expand_nh3_three_mode.py) "
+    "regenerate the archived grids with the 0.2 scan API, which pyscf-vscf 0.4 removed. "
+    "Run them with 0.3, e.g. uv run --no-project --with 'pyscf-vscf==0.3.1' python "
+    "scripts/generate_nh3_three_mode.py ..."
 )
 
-# These scripts regenerate the archived schema-3 NH3 grids, so they keep using
-# the 0.2 grid API on purpose.
+# These scripts regenerated the archived schema-3 NH3 grids with the 0.2 grid
+# API, which 0.4 removed; they are kept as the provenance of those grids.
+try:
+    from pyscf_vscf._warnings import PyscfVscfDeprecationWarning
+    from pyscf_vscf import Bond, ESSettings, __version__
+    from pyscf_vscf.cache import runtime_provenance
+    from pyscf_vscf.io import dump_grid_npz, read_xyz
+    from pyscf_vscf.settings import apply_thread_env_updates
+    from pyscf_vscf.workflows.optimization import run_opt
+    from pyscf_vscf.workflows.scans import (
+        grid_2d_pes_dms,
+        lbs_frozen_2d_cache_metadata,
+        load_lbs_frozen_2d_grid_cache,
+    )
+except ImportError as exc:
+    raise SystemExit(_FROZEN) from exc
+
 warnings.filterwarnings("ignore", category=PyscfVscfDeprecationWarning)
 
 

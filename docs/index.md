@@ -64,9 +64,9 @@ Reduced-dimensional results inherit the error of the omitted coordinates.
 | VSCF on n-mode potentials | `vscf` | Stable |
 | n-mode surfaces, triatomic `J=0`, VCI, transition moments, multilevel surfaces, correlated providers | `nmode`, `kinetic`, `vci`, `transition_moments`, `multilevel`, `backends.pyscf_correlated` | Evolving; may change between minor releases |
 
-APIs deprecated in 0.3 (the 0.2 tuple scans, schema-3 cache writers, and the
-flag-style command line) keep working with a warning and will be removed in
-0.4.
+0.4 removed the APIs deprecated in 0.3 (the 0.2 tuple scans, schema-3 cache
+writers and loaders, and the flag-style command line); 0.2 caches remain
+readable. See the [migration guide](migration-0.4.md).
 
 ## Validation
 
