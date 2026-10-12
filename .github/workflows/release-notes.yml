@@ -1,0 +1,44 @@
+name: Release notes
+
+# Sets the body of existing GitHub releases from CHANGELOG.md, for releases
+# published before the release workflow did so. Run it from the Actions tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Space-separated tags (empty: every release with a changelog section)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set release bodies from CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAGS: ${{ inputs.tags }}
+        shell: bash
+        run: |
+          tags="$TAGS"
+          if [ -z "$tags" ]; then
+            tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
+          fi
+          for tag in $tags; do
+            if ! notes=$(python3 scripts/release_notes.py "${tag#v}" \
+                --link-base "https://github.com/${GH_REPO}/blob/${tag}"); then
+              echo "::warning::no changelog section for ${tag}; release left unchanged"
+              continue
+            fi
+            compare=$(gh release view "$tag" --json body --jq .body \
+              | grep -m1 '^\*\*Full Changelog\*\*' || true)
+            printf '%s\n\n%s\n' "$notes" "$compare" > body.md
+            gh release edit "$tag" --notes-file body.md
+            echo "updated ${tag}"
+          done

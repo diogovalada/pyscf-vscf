@@ -14,6 +14,10 @@ once a public release is tagged.
 
 ### Changed
 
+- GitHub releases use the matching changelog section as their notes
+  (`scripts/release_notes.py`); a release fails if the changelog has no
+  section for its version. A manual workflow fills in the notes of earlier
+  releases.
 - The roadmap no longer lists unifying the two Debye constants or splitting
   the validators and save/load code; the two constants are kept deliberately
   (see `contracts.AU_DIPOLE_TO_DEBYE`).
