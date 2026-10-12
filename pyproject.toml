@@ -24,6 +24,7 @@ keywords = [
     "quantum chemistry",
     "computational chemistry",
     "GPU",
+    "GPU4PySCF",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
