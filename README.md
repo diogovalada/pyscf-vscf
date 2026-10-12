@@ -189,7 +189,7 @@ tutorials, guides, and the API reference. The guides are also in `docs/`:
 - [Advanced n-mode and VCI guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/nmode-vci.md)
 - [Correlated and finite-field providers](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/correlated-providers.md)
 - [Running the validations](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/running-validations.md)
-- [Changelog](https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md) and [roadmap](https://github.com/diogovalada/pyscf-vscf/blob/main/ROADMAP.md)
+- [Changelog](https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md)
 
 ## Validation
 

@@ -2,7 +2,6 @@ include LICENSE
 include CITATION.cff
 include CHANGELOG.md
 include CONTRIBUTING.md
-include ROADMAP.md
 include DATA_LICENSE.md
 recursive-include validation_data *.json *.md *.npz *.log *.mmol *.xyz *.txt *.py
 prune docs
