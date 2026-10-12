@@ -7,204 +7,122 @@ once a public release is tagged.
 
 ### Added
 
-- Documentation site on Read the Docs (MkDocs), with tutorials and an API
-  reference generated from the docstrings. It is built for `main` (`latest`)
-  and for each release from the first one that contains the build
-  configuration; earlier tags have no documentation build.
+- Documentation at <https://pyscf-vscf.readthedocs.io/>, with tutorials and
+  an API reference.
 
 ### Changed
 
-- GitHub releases use the matching changelog section as their notes
-  (`scripts/release_notes.py`); a release fails if the changelog has no
-  section for its version or links to a relative path. A manual workflow
-  fills in the notes of earlier releases.
-- The roadmap no longer lists unifying the two Debye constants or splitting
-  the validators and save/load code; the two constants are kept deliberately
-  (see `contracts.AU_DIPOLE_TO_DEBYE`).
-- The documentation states that relaxed normal-coordinate scans cannot
-  resume.
+- GitHub release notes are taken from this changelog.
+- The command-line help and the guides state that relaxed normal-coordinate
+  scans cannot resume.
 
 ### Fixed
 
-- The README quickstart output shows the transition-dipole signs that 0.3
+- The README's example output shows the transition-dipole signs that 0.3
   prints.
 
 ## [0.3.0] - 2026-10-11
 
-0.3 replaces the two parallel electronic-structure paths of 0.2 with one. The
-0.2 interfaces it replaces are deprecated, not removed: they still work, with
-a `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
+0.3 builds every calculation through one PySCF code path and runs scans as
+resumable plans; results stored by 0.2 remain valid. The 0.2 interfaces it
+replaces are deprecated, not removed: they still work, with a
+`PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
 [migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md).
 
 ### Added
 
-- One construction seam for every PySCF calculation
-  (`backends/_pyscf_factory.py`): `SettingsFactory` for the built-in method and
-  `MethodRecipe` for any user-supplied PySCF method (functional, dispersion,
-  solvent, ECP, ...), identified by a declared manifest. A canonical snapshot of
-  the configured mean field is recorded as provenance, and undeclared
-  geometry-dependent configuration is rejected in plan runs, optimizations,
-  and finite-difference Hessians.
-  `PySCFMeanFieldProvider(factory=...)`, `harmonic_analysis`, and
-  `optimize_geometry` accept recipes.
-- `contracts.py`: backend-independent point requests, results, and the provider
-  protocol.
-- `PointStore` (SQLite): resumable, shared storage of electronic points with
-  attempt history, explicit retry of failed points, and conflict detection.
-- `run_plan` / `RunnerSettings`: evaluates any plan (scans and n-mode plans)
-  serially or in spawned workers, with completion-driven submission,
-  provider-identity checks, and fail-fast or continue policies.
-- Typed scans (`pyscf_vscf.scans`): `plan_bond_scan`, `plan_normal_scan`,
-  `run_scan`, `ScanResult` (absolute energies, atomic-unit dipoles),
-  `bond_spectrum`, `normal_coordinate_spectrum`, and a default bond grid
-  relative to the bond length (r_e - 0.40 A to r_e + 0.70 A, 41 points),
-  chosen by benchmark (see `docs/scans.md`).
-- Schema-4 scan files (`artifacts.scans.dump_scan` / `load_scan`) and
-  `load_legacy_grid` for 0.1/0.2 caches.
-- Subcommand command line: `pyscf-vscf harmonic|opt|scan1d|scan2d|inspect`
-  with `--store`, `--output`, `--reuse`, `--recipe`, and `--workers`. `--reuse`
-  takes the method and grid from the scan file (method options and `--range`
-  are refused) and checks
-  the geometry, charge, spin, bonds, and coordinate kind.
-- VSCF intensities: `NModeDipole` and `vscf_spectrum(dipole=...)` attach a
-  `VSCFTransitionMoment` (with state overlap and an `approximate` flag) to each
-  transition.
-- `optimize_geometry`, which writes a file only when asked and rebuilds the
-  method at every step.
-- A packaged water example from PySCF surfaces to VSCF and VCI with
-  intensities (`python -m pyscf_vscf.examples.water_vscf_vci`).
-- `read_geometry` and top-level exports of the readers and the new API;
-  `py.typed` and strict mypy checking of the new core modules; docstrings for
-  every public function and class; `docs/scans.md` and
-  `docs/migration-0.3.md`.
+- Any PySCF method through `MethodRecipe` (functional, dispersion, solvent,
+  ECP, ...), in scans, n-mode plans, harmonic analysis, and optimization, and
+  with `--recipe` on the command line.
+- Resumable, parallel scans: `run_plan` evaluates any scan or n-mode plan in
+  worker processes, and `PointStore` (`--store`) keeps every point, resumes
+  interrupted runs, and retries failed points on request (`--retry-failed`).
+- Typed scans (`plan_bond_scan`, `plan_normal_scan`, `run_scan`,
+  `ScanResult`) and scan files (`dump_scan`, `load_scan`; `load_legacy_grid`
+  reads 0.1/0.2 caches).
+- A subcommand command line: `pyscf-vscf harmonic | opt | scan1d | scan2d |
+  inspect`.
+- A default bond grid around the bond length (r_e - 0.40 A to r_e + 0.70 A,
+  41 points), chosen by benchmark.
+- VSCF transition moments and intensities (`vscf_spectrum(dipole=...)`).
+- A water example from PySCF surfaces to VSCF and VCI with intensities
+  (`python -m pyscf_vscf.examples.water_vscf_vci`).
+- Type information (`py.typed`) and docstrings for the public API.
 
 ### Changed
 
-- Python 3.11 or newer is required; NumPy 1.23.2 or newer; geomeTRIC 1.0.2 or
-  newer (1.0 and 1.0.1 import `pkg_resources`, which fresh environments lack).
-- Flag-style command lines (`--xyz ... --task ...`) run unchanged through the
-  0.2 interface and print a deprecation notice.
-- `PySCFMeanFieldProvider.evaluate` no longer changes PySCF's process-wide
-  thread count; dipoles are computed from the density with CPU integrals (the
-  same formula as PySCF's `dip_moment`). Built-in provider fingerprints are
-  unchanged. Its `max_memory_mb` (and the CCSD(T) provider's) now defaults to
-  the runner's per-worker budget, else 4000 MB.
-- The correlated CCSD(T) provider builds its RHF reference through the seam
-  (still conventional, without density fitting).
-- `optimize_geometry` and `pyscf-vscf opt` no longer let geomeTRIC reconfigure
-  logging (it replaced and closed the root logger's handlers); geomeTRIC's
-  progress log is shown only when the `pyscf_vscf` logger shows INFO messages
-  (`-v`).
-- Library diagnostics use the `pyscf_vscf` logger and `RuntimeWarning`
-  instead of printing; the command lines show them with `-v`.
-- Final VSCF modals follow the package's deterministic sign convention.
-- Duplicated private validators are shared through one module.
-- Signed transition dipoles from the 1D and 2D DVR solvers follow the
-  package's deterministic eigenvector sign convention, so some signs differ
-  from 0.2 (intensities are unchanged); the archived water report was
-  regenerated accordingly.
+- Requires Python 3.11, NumPy 1.23.2, and geomeTRIC 1.0.2 or newer.
+- `--reuse` takes the method and grid from the scan file, and refuses method
+  options and `--range`.
+- Evaluating a point no longer changes PySCF's process-wide thread count.
+  Provider memory defaults to the runner's per-worker budget, else 4000 MB.
+- Library messages go to the `pyscf_vscf` logger and `RuntimeWarning`
+  instead of standard output; `-v` shows them on the command line.
+- Signed transition dipoles and VSCF modals follow a fixed sign convention,
+  so some signs differ from 0.2. Intensities are unchanged.
 
 ### Fixed
 
-- Iterative eigensolvers (VCI, the 2D DVR, and the exact n-mode reference)
-  could omit copies of degenerate levels; they now recover every copy, and
-  VCI no longer fails when the potential carries a large constant offset.
-- Damped VSCF (`modal_mixing < 1`) could report convergence far from
-  self-consistency; convergence is now judged on the undamped update. The
-  archived NH3 report was regenerated (some states take one more iteration).
-- `product_dvr_2d` rejects a kinetic G matrix that is not positive definite;
-  harmonic helpers reject non-finite masses.
-- Harmonic frequencies printed by the command line include imaginary modes.
-- Tensor-product surfaces no longer change when the caller mutates the arrays
-  they were built from; multilevel composition refuses models of different
-  electronic systems and accepts cubic fits.
-- Fractional charge or spin is refused instead of truncated; bond
-  specifications with negative indices are refused.
-- `load_legacy_grid` checks the stored arrays against the cache's declared
-  grid, as the 0.2 loaders did.
-- The water validation script exits nonzero when its acceptance criteria
-  fail; the NH3 analysis verifies its archive before running.
+- VCI and the exact reference solvers could drop copies of degenerate states,
+  and VCI failed for potentials with a large constant offset.
+- Damped VSCF (`modal_mixing < 1`) could report convergence too early.
+- The command line's harmonic output omitted imaginary frequencies.
+- Optimization let geomeTRIC replace and close the caller's logging handlers.
+- Fitted surfaces could change if the caller later modified the input arrays.
+- Multilevel composition accepted models of different molecules or charge
+  states.
+- Fractional charge or spin was truncated, and negative bond indices,
+  non-finite masses, and invalid kinetic G matrices were accepted.
 
 ### Deprecated
 
-- `grid_1d_pes_dms`, `grid_1d_pes_dms_normal`, `grid_2d_pes_dms`, schema-3 cache
-  writers and loaders, custom `energy_dipole_fn` evaluators, `make_mean_field`,
-  `run_opt`, `harmonic_analysis(cfg=...)`, `ElectronicResult.provider_fingerprint`
-  and `.point_fingerprint`, `ElectronicPointRequest.fingerprint()`,
-  `provider_fingerprint()`, `NModeSurfaceModel.fingerprint()`, `Bond.O`,
-  `Bond.H`, and the flag-style command line. All will be removed in 0.4.
+- The 0.2 tuple scan functions (`grid_1d_pes_dms` and relatives), schema-3
+  cache files, `energy_dipole_fn` evaluators, `make_mean_field`, `run_opt`,
+  the flag-style command line, and several older spellings. The migration
+  guide lists each with its replacement.
 
 ## [0.2.2] - 2026-10-10
 
 ### Added
 
-- Command line: `--json` structured results, km/mol intensity columns,
-  grid-boundary flags (`*`, threshold `--boundary-warn`, default `1e-5`),
-  `--continue-on-error`, `--partial-out`, `--debug`, `--max-memory`, `--ri`,
-  `--rmin2/--rmax2/--npts2` for 2D scans, `--intensity isotropic`, and help
-  text that states every default.
-- Python: `ScanFailedError`, `PartialScanGrid`, and `ScanPointFailure` report
-  failed scan points with their grid index, coordinates, and traceback and
-  keep every completed point; scan functions accept `stop_on_error` and
-  `batch_size`; `dump_partial_scan_npz` writes a diagnostic (never reusable)
-  file of completed points.
-- `TransitionRecord.grid_boundary_weight`, `ground_grid_boundary_weight`, km/mol
-  intensity properties, and `as_dict(extended=True)`. The default `as_dict()`
-  output is unchanged.
-- `settings.resolve_scf_controls`, `available_cpu_count`, `available_memory_mb`,
-  and the per-process memory budget `PYSCF_VSCF_MAX_MEMORY_MB`.
-- `docs/caching.md`, issue templates, Python 3.14 support, and CI jobs for the
-  lowest supported dependency versions and a branch-coverage gate.
+- Command-line options: `--json` results, km/mol intensities,
+  `--intensity isotropic`, `--continue-on-error`, `--partial-out`,
+  `--max-memory`, `--ri`, `--debug`, and second-bond grids for 2D scans
+  (`--rmin2`, `--rmax2`, `--npts2`).
+- States that reach the edge of the grid are flagged with `*` (threshold
+  `--boundary-warn`), and `TransitionRecord` reports their boundary weights.
+- A failed scan point raises `ScanFailedError`, which keeps every completed
+  point and reports each failure's grid point and traceback.
+- Python 3.14 support.
 
 ### Changed
 
-- Scans run in parallel by default: up to one worker per available CPU,
-  limited by the number of points and by available memory, each with an
-  explicit PySCF memory budget; leftover CPUs become threads of the workers. `--max-parallel` now defaults to the available
-  CPU count instead of 8, which also sets the thread count of harmonic
-  analysis and optimization. An explicit `--pes-workers` keeps the previous
-  behaviour.
-- Unset SCF controls are applied explicitly as package defaults (convergence
-  `1e-10` Eh, 50 cycles, DFT grid level 3), so a PySCF configuration file can
-  no longer change them. New caches record the resolved values as provenance;
-  cache identities and existing caches are unchanged.
-- Exceptions raised while evaluating scan points now surface as
-  `ScanFailedError` (a `RuntimeError`) carrying the completed points; the
-  original exception type and message are kept in its failure records.
-- The command line reports errors as one line (exit code 1; argument errors
-  exit with 2) instead of a traceback, validates bonds, grids, normal-coordinate
-  bounds, and output paths before any calculation, and writes the runtime line
-  to standard error.
-- `--reuse-grid` takes omitted electronic and grid options from the verified
-  cache, and cache mismatches list each differing field.
-- The default optimization output follows the input format (`.xyz` for
-  `--xyz`). Optimization output suffixes are validated before optimizing.
-- Cache options are rejected for harmonic and optimization tasks, and `--scan`
-  is rejected for 2D scans, instead of being ignored.
-- SciPy 1.13 or newer is required.
-- `FUTURE WORK.md` is now `ROADMAP.md`; the README was rewritten.
+- Scans run in parallel by default (up to one worker per CPU, limited by the
+  number of points and by memory); `--max-parallel` defaults to the number of
+  available CPUs.
+- SCF defaults (convergence 1e-10 Eh, 50 cycles, DFT grid level 3) are set
+  explicitly, so a PySCF configuration file can no longer change them. Cache
+  identities are unchanged.
+- Command-line errors are a single line instead of a traceback, and inputs
+  are checked before any calculation.
+- `--reuse-grid` takes omitted options from the cache and lists each field
+  that does not match.
+- The default optimization output keeps the input format.
+- Requires SciPy 1.13 or newer.
 
 ### Fixed
 
-- Signed transition dipoles and eigenvector phases could flip sign between
-  NumPy/LAPACK builds because the sign convention picked its pivot by exact
-  maximum, and symmetric problems have mirror components equal to roundoff.
-  Components within a relative `1e-8` of the maximum are now treated as tied
-  and resolved by a fixed order. Results without such near ties, including
-  the archived validation reports, are unchanged.
+- Signed transition dipoles could flip sign between NumPy/LAPACK builds.
+- The analytic-Hessian fallback used the Hartree-Fock Hessian for some DFT
+  methods.
 - The n-mode, VCI, and transition-moment APIs failed with SciPy older than
-  1.13 on the package's read-only arrays; the dependency floor is corrected.
-- The analytic-Hessian fallback selected the Hartree-Fock Hessian for DFT
-  objects without a `Hessian` method, and reported an `AttributeError` raised
-  inside PySCF's Hessian code as a missing Hessian.
-- Python error messages no longer tell API users to pass command-line flags.
+  1.13.
 
 ### Known limitations
 
-- The default 1D/2D bond grid (0.75-1.25 A) is too narrow for converged O-H
-  states: for water at B3LYP/cc-pVDZ the fundamental is 76 cm^-1 too high.
-  Such states are now flagged; choose a wider `--rmin`/`--rmax`. The defaults
-  are planned to change in 0.3.
+- The default bond grid (0.75-1.25 A) is too narrow for converged O-H states:
+  the water fundamental is 76 cm^-1 too high at B3LYP/cc-pVDZ. Choose a wider
+  `--rmin`/`--rmax`; 0.3.0 replaced the default.
 
 ## [0.2.1] - 2026-08-17
 
