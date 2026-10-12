@@ -5,6 +5,24 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+### Added
+
+- Documentation site (MkDocs) with tutorials and an API reference generated
+  from the docstrings.
+
+### Changed
+
+- The roadmap no longer lists unifying the two Debye constants or splitting
+  the validators and save/load code; the two constants are kept deliberately
+  (see `contracts.AU_DIPOLE_TO_DEBYE`).
+- The documentation states that relaxed normal-coordinate scans cannot
+  resume.
+
+### Fixed
+
+- The README quickstart output shows the transition-dipole signs that 0.3
+  prints.
+
 ## [0.3.0] - 2026-10-11
 
 0.3 replaces the two parallel electronic-structure paths of 0.2 with one. See

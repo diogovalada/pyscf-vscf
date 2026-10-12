@@ -35,6 +35,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/diogovalada/pyscf-vscf"
+Documentation = "https://diogovalada.github.io/pyscf-vscf/"
 Repository = "https://github.com/diogovalada/pyscf-vscf"
 Issues = "https://github.com/diogovalada/pyscf-vscf/issues"
 Changelog = "https://github.com/diogovalada/pyscf-vscf/blob/main/CHANGELOG.md"
@@ -47,6 +48,11 @@ dev = [
     "ruff>=0.15,<0.16",
     "mypy>=1.10",
     "twine"
+]
+docs = [
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5,<10",
+    "mkdocstrings[python]>=1.0"
 ]
 
 [project.scripts]

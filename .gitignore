@@ -17,3 +17,4 @@ logs/
 !validation_data/logs/
 !validation_data/logs/*.log
 results/
+site/

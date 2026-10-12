@@ -1,0 +1,81 @@
+site_name: pyscf-vscf
+site_description: Anharmonic vibrational spectra (DVR, VSCF, VCI) on PySCF potential and dipole surfaces
+site_url: https://diogovalada.github.io/pyscf-vscf/
+repo_url: https://github.com/diogovalada/pyscf-vscf
+repo_name: diogovalada/pyscf-vscf
+edit_uri: ""
+copyright: MIT-licensed code; archived validation data CC BY 4.0
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            members_order: source
+            filters: ["!^_"]
+            separate_signature: true
+            show_signature_annotations: true
+            heading_level: 2
+
+not_in_nav: |
+  releasing.md
+  examples/current-package-state.md
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Tutorials:
+      - Water O-H stretch spectrum: tutorials/water-stretch.md
+      - Water VSCF and VCI from PySCF: tutorials/water-vscf-vci.md
+      - Your own PySCF method: tutorials/custom-method.md
+  - Guides:
+      - Scans, point store, and parallel runs: scans.md
+      - Reusing points and scans: caching.md
+      - Intensity conventions: intensity-conventions.md
+      - n-mode surfaces and VCI: nmode-vci.md
+      - Correlated and finite-field providers: correlated-providers.md
+      - Running the validations: running-validations.md
+      - Migrating from 0.2: migration-0.3.md
+  - API reference:
+      - Scans and spectra: api/scans.md
+      - Execution and storage: api/execution.md
+      - Electronic structure: api/electronic.md
+      - Workflows: api/workflows.md
+      - VSCF, VCI, and transition moments: api/vscf-vci.md
+      - n-mode surfaces and coordinates: api/nmode.md
+      - DVR and harmonic analysis: api/dvr.md
+      - Molecules, files, and constants: api/molecules.md
+      - Validation helpers: api/validation.md
+      - 0.2 scan layer and cache helpers: api/deprecated.md

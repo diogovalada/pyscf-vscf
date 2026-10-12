@@ -88,3 +88,13 @@ jobs:
       - run: uv run --isolated --no-project --with ./dist/*.whl python -m pyscf_vscf.examples.nmode_vci
       - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.vscf_two_mode
       - run: uv run --isolated --no-project --with ./dist/*.tar.gz python -m pyscf_vscf.examples.nmode_vci
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra docs
+      - run: uv run mkdocs build --strict
