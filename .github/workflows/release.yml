@@ -68,6 +68,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
       - uses: actions/download-artifact@v4
         with:
           name: distributions
@@ -79,7 +80,8 @@ jobs:
         shell: bash
         run: |
           # The changelog section is the release body; GitHub appends the comparison link.
-          notes=$(python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}")
+          notes=$(uv run --no-project --with markdown-it-py \
+            python scripts/release_notes.py "${GITHUB_REF_NAME#v}" --unwrap)
           args=(
             "$GITHUB_REF_NAME"
             dist/*

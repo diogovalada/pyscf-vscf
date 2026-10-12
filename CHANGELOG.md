@@ -32,9 +32,10 @@ once a public release is tagged.
 ## [0.3.0] - 2026-10-11
 
 0.3 replaces the two parallel electronic-structure paths of 0.2 with one. See
-the [migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md);
-everything removed in 0.4 still
-works in 0.3 with a `PyscfVscfDeprecationWarning`.
+the
+[migration guide](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md);
+everything removed in 0.4 still works in 0.3 with a
+`PyscfVscfDeprecationWarning`.
 
 ### Added
 

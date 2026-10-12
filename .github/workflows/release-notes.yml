@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
       - name: Set release bodies from CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
@@ -31,7 +32,8 @@ jobs:
             tags=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
           fi
           for tag in $tags; do
-            if ! notes=$(python3 scripts/release_notes.py "${tag#v}"); then
+            if ! notes=$(uv run --no-project --with markdown-it-py \
+                python scripts/release_notes.py "${tag#v}" --unwrap); then
               echo "::warning::no changelog section for ${tag}; release left unchanged"
               continue
             fi

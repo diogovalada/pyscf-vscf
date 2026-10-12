@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """Print the CHANGELOG.md section of one version as GitHub release notes.
 
-The release workflow publishes this text verbatim as the body of the GitHub
-release, so the changelog is the single source of release notes. A release
-body has no file context, so links in the changelog must be absolute URLs;
-``--check-links`` parses the section as CommonMark (with ``markdown-it-py``)
-and fails if any link or image points to a relative path. Exits with status 1
-if the version has no section, the section is empty, or a checked link is
-relative.
+The release workflow publishes this text as the body of the GitHub release,
+so the changelog is the single source of release notes. Two differences
+between a changelog file and a release body are handled with a CommonMark
+parser (``markdown-it-py``):
+
+- a release body has no file context, so links in the changelog must be
+  absolute URLs; ``--check-links`` fails if any link or image points to a
+  relative path;
+- GitHub renders every newline of a release body as a line break, so
+  ``--unwrap`` joins the lines of each wrapped paragraph (outside block
+  quotes, and only where the paragraph has no hard line break), which renders
+  identically as CommonMark.
+
+Exits with status 1 if the version has no section, the section is empty, or
+a checked link is relative.
 """
 
 from __future__ import annotations
@@ -74,6 +82,34 @@ def relative_links(markdown: str) -> list[str]:
     return found
 
 
+def unwrap_paragraphs(markdown: str) -> str:
+    """Join the soft-wrapped lines of each paragraph onto one line."""
+
+    from markdown_it import MarkdownIt
+
+    tokens = MarkdownIt("commonmark").enable("table").parse(markdown)
+    spans: list[tuple[int, int]] = []
+    quote_depth = 0
+    for index, token in enumerate(tokens):
+        if token.type == "blockquote_open":
+            quote_depth += 1
+        elif token.type == "blockquote_close":
+            quote_depth -= 1
+        elif token.type == "paragraph_open" and token.map and quote_depth == 0:
+            start, end = token.map
+            inline = tokens[index + 1]
+            hard_break = any(child.type == "hardbreak" for child in inline.children or [])
+            if end - start > 1 and not hard_break:
+                spans.append((start, end))
+    lines = markdown.split("\n")
+    for start, end in reversed(spans):
+        joined = " ".join(
+            [lines[start].rstrip()] + [line.strip() for line in lines[start + 1 : end]]
+        )
+        lines[start:end] = [joined]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version", help="version without the leading v, e.g. 0.3.1")
@@ -82,6 +118,11 @@ def main(argv: list[str] | None = None) -> int:
         "--check-links",
         action="store_true",
         help="fail if the section links to a relative path (needs markdown-it-py)",
+    )
+    parser.add_argument(
+        "--unwrap",
+        action="store_true",
+        help="join wrapped paragraph lines for GitHub release bodies (needs markdown-it-py)",
     )
     args = parser.parse_args(argv)
     try:
@@ -98,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
+    if args.unwrap:
+        notes = unwrap_paragraphs(notes)
     print(notes)
     return 0
 

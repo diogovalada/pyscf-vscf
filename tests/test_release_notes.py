@@ -85,3 +85,62 @@ def test_the_changelog_has_notes_and_absolute_links_for_every_version() -> None:
         assert release_notes.relative_links(section) == [], version
     unreleased = text.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
     assert release_notes.relative_links(unreleased) == []
+
+
+def _rendered(markdown: str) -> str:
+    import re
+
+    from markdown_it import MarkdownIt
+
+    html = MarkdownIt("commonmark").enable("table").render(markdown)
+    return re.sub(r"\s+", " ", html).strip()
+
+
+def test_unwrapping_joins_paragraph_lines_without_changing_the_rendering() -> None:
+    pytest.importorskip("markdown_it")
+    text = "\n".join(
+        [
+            "Intro sentence that",
+            "continues here with a `code",
+            "span` and a [link](https://e.org/x).",
+            "",
+            "- A list item",
+            "  wrapped over lines.",
+            "  - Nested item",
+            "    also wrapped.",
+            "",
+            "> A quote",
+            "> wrapped.",
+            "",
+            "Hard break\\",
+            "kept.",
+            "",
+            "```",
+            "code line one",
+            "code line two",
+            "```",
+            "",
+            "| a | b |",
+            "| - | - |",
+            "| 1 | 2 |",
+        ]
+    )
+    unwrapped = release_notes.unwrap_paragraphs(text)
+    assert "Intro sentence that continues here with a `code span` and a [link]" in unwrapped
+    assert "- A list item wrapped over lines." in unwrapped
+    assert "  - Nested item also wrapped." in unwrapped
+    assert "> A quote\n> wrapped." in unwrapped
+    assert "Hard break\\\nkept." in unwrapped
+    assert "code line one\ncode line two" in unwrapped
+    assert "| a | b |\n| - | - |\n| 1 | 2 |" in unwrapped
+    assert _rendered(unwrapped) == _rendered(text)
+
+
+def test_unwrapped_changelog_sections_render_unchanged() -> None:
+    pytest.importorskip("markdown_it")
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    for version in release_notes.changelog_versions(text):
+        if version == "Unreleased":
+            continue
+        section = release_notes.changelog_section(text, version)
+        assert _rendered(release_notes.unwrap_paragraphs(section)) == _rendered(section), version
