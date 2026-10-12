@@ -29,9 +29,9 @@ def normalize_device(value: object) -> str:
 
 
 def is_gpu_object(value: Any) -> bool:
-    """True if ``value`` is a GPU4PySCF object."""
+    """True if ``value`` is a GPU4PySCF object (or an instance of a subclass of one)."""
 
-    return type(value).__module__.split(".")[0] == "gpu4pyscf"
+    return any(cls.__module__.split(".")[0] == "gpu4pyscf" for cls in type(value).__mro__)
 
 
 def require_gpu() -> tuple[Any, Any]:
@@ -85,18 +85,30 @@ def to_gpu(mean_field: Any) -> Any:
 def visible_gpu_ids() -> tuple[str, ...]:
     """Return the CUDA device identifiers worker processes can be pinned to.
 
-    ``CUDA_VISIBLE_DEVICES`` is honoured when set; otherwise every device CuPy
+    ``CUDA_VISIBLE_DEVICES`` is honoured when set, as CUDA reads it: entries
+    after the first invalid one (such as ``-1``) are hidden, and the list is
+    cut to the number of devices CUDA reports. Otherwise every device CuPy
     reports is used.
     """
 
     configured = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if configured is not None:
-        ids = tuple(item.strip() for item in configured.split(",") if item.strip())
-        if not ids or ids[0].startswith("-"):
-            raise RuntimeError("device='gpu': CUDA_VISIBLE_DEVICES hides every device")
-        return ids
-    _, cupy = require_gpu()
-    return tuple(str(index) for index in range(int(cupy.cuda.runtime.getDeviceCount())))
+    if configured is None:
+        _, cupy = require_gpu()
+        return tuple(str(index) for index in range(int(cupy.cuda.runtime.getDeviceCount())))
+    ids: list[str] = []
+    for item in configured.split(","):
+        item = item.strip()
+        if not item or item.startswith("-"):
+            break
+        ids.append(item)
+    if not ids:
+        raise RuntimeError("device='gpu': CUDA_VISIBLE_DEVICES hides every device")
+    try:
+        _, cupy = require_gpu()
+        count = int(cupy.cuda.runtime.getDeviceCount())
+    except ImportError:
+        count = len(ids)
+    return tuple(ids[:count])
 
 
 def gpu_provenance() -> dict[str, object]:

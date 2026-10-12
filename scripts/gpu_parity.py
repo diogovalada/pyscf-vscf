@@ -36,7 +36,7 @@ from pyscf_vscf.backends.pyscf import converged_mean_field
 from pyscf_vscf.backends._pyscf_factory import ElectronicSystem
 from pyscf_vscf.contracts import ElectronicPointRequest
 from pyscf_vscf.molecule import Molecule
-from pyscf_vscf.workflows.harmonic import harmonic_analysis
+from pyscf_vscf.workflows.harmonic import analytic_hessian, harmonic_analysis
 from pyscf_vscf.workflows.optimization import optimize_geometry
 
 # Fixed before the first GPU run, except harmonic_frequencies (first 0.1 cm^-1).
@@ -51,11 +51,16 @@ from pyscf_vscf.workflows.optimization import optimize_geometry
 # between CPU and GPU to 1.2e-5 Eh/bohr^2. The CPU-GPU difference (3.5e-5) is
 # ten times smaller than either implementation's own approximation. Evidence:
 # validation_data/gpu/hessian-referee-nh3-wb97x.txt.
+#
+# The analytic Hessian check and HDO were added after the first run (review
+# round 1); the Hessian tolerance, 1e-4 Eh/bohr^2, is about three times the
+# largest difference seen there (3.5e-5, NH3 at wB97X).
 TOLERANCES = {
     "energy": 1e-8,
     "dipole": 1e-5,
     "finite_field_energy": 1e-8,
     "gradient": 1e-6,
+    "hessian": 1e-4,
     "harmonic_frequencies": 0.5,
     "optimized_geometry": 1e-4,
     "optimized_energy": 1e-8,
@@ -77,6 +82,7 @@ AMMONIA = (
 SYSTEMS = {
     "H2O": Molecule.from_arrays(*WATER, label="H2O"),
     "D2O": Molecule.from_arrays(["O", "D", "D"], WATER[1], label="D2O"),
+    "HDO": Molecule.from_arrays(["O", "H", "D"], WATER[1], label="HDO"),
     "NH3": Molecule.from_arrays(*AMMONIA, label="NH3"),
 }
 METHODS = {
@@ -171,6 +177,15 @@ def check_points(report: Report, name: str, molecule: Molecule, label: str, sett
         report.error(name, label, "gradient", exc)
 
 
+def check_hessian(report: Report, name: str, molecule: Molecule, label: str, settings) -> None:
+    try:
+        cpu = analytic_hessian(converged_mean_field(molecule, settings).mean_field)
+        gpu = analytic_hessian(converged_mean_field(molecule, _gpu(settings)).mean_field)
+        report.compare(name, label, "hessian", cpu, gpu)
+    except Exception as exc:
+        report.error(name, label, "hessian", exc)
+
+
 def check_harmonic(report: Report, name: str, molecule: Molecule, label: str, settings) -> None:
     try:
         cpu = harmonic_analysis(molecule, settings)
@@ -192,7 +207,7 @@ def check_optimization(
             label,
             "optimized_energy",
             _point(cpu.molecule, settings).total_energy_Eh,
-            _point(gpu.molecule, settings).total_energy_Eh,
+            _point(gpu.molecule, _gpu(settings)).total_energy_Eh,
         )
     except Exception as exc:
         report.error(name, label, "optimized_geometry", exc)
@@ -240,8 +255,10 @@ def main(argv: list[str] | None = None) -> int:
     systems = {"H2O": SYSTEMS["H2O"]} if args.quick else SYSTEMS
     for label, settings in methods.items():
         for name, molecule in systems.items():
-            if name != "D2O":  # same electrons as H2O; only the frequencies differ
+            # D2O and HDO have the electrons of H2O; only their frequencies differ.
+            if name not in {"D2O", "HDO"}:
                 check_points(report, name, molecule, label, settings)
+                check_hessian(report, name, molecule, label, settings)
             check_harmonic(report, name, molecule, label, settings)
         check_optimization(report, "H2O", SYSTEMS["H2O"], label, settings)
         check_scan(report, label, settings, args.workers)

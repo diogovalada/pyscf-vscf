@@ -161,6 +161,10 @@ class PySCFMeanFieldProvider:
                 "provider": "mean-field-recipe",
                 "method": dict(self.factory.scientific_settings_payload()),
             }
+            # The seam converts on the factory's device whatever its manifest says, so
+            # the device is recorded here too; CPU payloads are unchanged.
+            if self.device != "cpu":
+                method_fields["device"] = self.device
         return {
             "schema": "pyscf-vscf-provider-settings",
             "schema_version": 1,
@@ -191,7 +195,9 @@ class PySCFMeanFieldProvider:
     def device(self) -> str:
         """``"cpu"`` or ``"gpu"``: where the method runs."""
 
-        return str(getattr(self.factory, "device", "cpu"))
+        from ._gpu import normalize_device
+
+        return normalize_device(getattr(self.factory, "device", "cpu"))
 
     def memory_budget_mb(self) -> int:
         """Return the PySCF memory budget: ``max_memory_mb``, else the
@@ -419,6 +425,8 @@ def make_mean_field(
         "make_mean_field() is deprecated; use converged_mean_field() or PySCFMeanFieldProvider."
     )
     settings = coerce_es_settings(cfg)
+    if str(settings.device).strip().lower() != "cpu":
+        raise ValueError("make_mean_field() runs on the CPU only; use converged_mean_field()")
     mean_field = configure_settings_mean_field(pmol, settings)
     build = _legacy_build(pmol, mean_field, SettingsFactory(settings))
     converge(build, field_au=field_au, field_origin_A=field_origin_A)

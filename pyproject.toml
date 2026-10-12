@@ -54,11 +54,11 @@ dev = [
 # The ctk extra installs the CUDA libraries CuPy needs from PyPI.
 gpu-cuda12 = [
     "gpu4pyscf-cuda12x>=1.8; sys_platform == 'linux'",
-    "cupy-cuda12x[ctk]>=13; sys_platform == 'linux'"
+    "cupy-cuda12x[ctk]>=14; sys_platform == 'linux'"
 ]
 gpu-cuda13 = [
     "gpu4pyscf-cuda13x>=1.8; sys_platform == 'linux'",
-    "cupy-cuda13x[ctk]>=13; sys_platform == 'linux'"
+    "cupy-cuda13x[ctk]>=14; sys_platform == 'linux'"
 ]
 docs = [
     "mkdocs>=1.6,<2",
@@ -84,6 +84,10 @@ markers = [
     "cache: requires existing cache artifacts",
     "gpu: requires GPU4PySCF and a CUDA device (run manually on GPU hardware)",
 ]
+
+[tool.uv]
+# The CUDA 12 and CUDA 13 builds of GPU4PySCF and CuPy cannot be installed together.
+conflicts = [[{ extra = "gpu-cuda12" }, { extra = "gpu-cuda13" }]]
 
 [tool.ruff]
 line-length = 99

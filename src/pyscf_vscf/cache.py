@@ -96,6 +96,9 @@ def electronic_structure_identity(cfg, *, backend_identity: str = "pyscf") -> di
     if not backend:
         raise ValueError("backend_identity must be a non-empty stable identifier")
     values["backend"] = backend
+    # Only GPU runs record the device, so CPU cache identities are unchanged.
+    if str(getattr(settings, "device", "cpu")).strip().lower() != "cpu":
+        values["device"] = str(settings.device).strip().lower()
     return values
 
 

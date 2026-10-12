@@ -13,6 +13,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import os
 import pickle
+import sys
 import time
 import traceback
 from collections.abc import Callable, Mapping
@@ -529,8 +530,16 @@ def _worker_init(
 ) -> None:
     from .settings import MAX_MEMORY_ENV_VAR, apply_thread_env_updates
 
-    if gpu_ids:
-        # Before anything initializes CUDA in this process.
+    if len(gpu_ids) > 1:
+        # Visibility must be set before CUDA starts in this process. Spawned workers
+        # re-import the main script first; if it imported CuPy or GPU4PySCF, CUDA may
+        # already be running on the parent's device list.
+        if "cupy" in sys.modules or "gpu4pyscf" in sys.modules:
+            raise RuntimeError(
+                "GPU workers cannot be pinned: CuPy or GPU4PySCF was imported before the "
+                "worker started (import them inside functions, not at the top of the main "
+                "script)"
+            )
         with gpu_counter.get_lock():
             index = int(gpu_counter.value)
             gpu_counter.value = index + 1
