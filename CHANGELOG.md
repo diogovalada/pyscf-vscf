@@ -5,9 +5,11 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-12
+
 0.4 adds optional GPU execution and removes the interfaces deprecated in
 0.3. Stored point stores, scan files, and 0.2 grid caches remain readable.
-See [migrating to 0.4](https://pyscf-vscf.readthedocs.io/en/latest/migration-0.4/).
+See [migrating to 0.4](https://github.com/diogovalada/pyscf-vscf/blob/v0.4.0/docs/migration-0.4.md).
 
 ### Added
 
@@ -326,7 +328,8 @@ with a `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
 
 - Ambiguous frequency-independent `sigma_int` and arbitrary-unit dipole labels.
 
-[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/diogovalada/pyscf-vscf/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/diogovalada/pyscf-vscf/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/diogovalada/pyscf-vscf/compare/v0.2.1...v0.2.2

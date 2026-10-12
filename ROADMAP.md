@@ -17,7 +17,8 @@ Later:
 
 - GPU: reuse worker processes across scans, to amortize CUDA start-up; verify
   multi-GPU runs on hardware (pinning is unit-tested only); measure datacenter
-  GPUs.
+  GPUs; support AMD GPUs (ROCm) once GPU4PySCF publishes ROCm builds (the
+  package reaches the GPU only through GPU4PySCF and CuPy).
 
 - Backend-neutral VPT2/GVPT2 support, staged from a solver that consumes
   user-supplied harmonic, cubic, and semi-diagonal quartic force fields to
