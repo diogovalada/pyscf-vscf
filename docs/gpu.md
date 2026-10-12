@@ -110,7 +110,10 @@ mode) from a finite-difference Hessian of their own gradients (consistent
 with neither including the DFT grid response), while those finite-difference
 Hessians agree between CPU and GPU to 0.03 cm⁻¹. The frequency tolerance
 was raised to 0.5 cm⁻¹; the first report is archived alongside the final
-one. The analytic-Hessian check and HDO were added afterwards.
+one. The analytic-Hessian check and HDO were added afterwards; its
+tolerance, 1e-4 Eh/bohr², was set from the NH3 difference (3.5e-5), and
+water at ωB97X later came closest to it (9.0e-5). Harmonic frequencies
+agree within 0.002 cm⁻¹ for HF and B3LYP and within 0.24 cm⁻¹ for ωB97X.
 
 ```bash
 python scripts/gpu_parity.py --output gpu-parity.json
