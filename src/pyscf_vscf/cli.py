@@ -9,7 +9,7 @@ Subcommands::
     pyscf-vscf inspect  FILE
 
 Flag-style 0.2 invocations (``pyscf-vscf --xyz ... --task ...``) still work
-for one release through :mod:`pyscf_vscf._cli_legacy`, with a notice.
+for one release through ``pyscf_vscf._cli_legacy``, with a notice.
 """
 
 from __future__ import annotations
@@ -325,7 +325,8 @@ def _build_parser() -> argparse.ArgumentParser:
         default="bond",
         help=(
             "scan the bond length, the normal mode most aligned with it, or that mode with "
-            "all other coordinates relaxed (default: bond)"
+            "all other coordinates relaxed (default: bond; normal-relaxed scans cannot use "
+            "--store, --output, or --reuse, so they cannot resume)"
         ),
     )
     scan1d.add_argument(

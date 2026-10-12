@@ -25,6 +25,11 @@ from ._identity import (
 )
 from ._warnings import deprecated
 
+# Atomic units of dipole to Debye for the scan stack and its Debye views. This is
+# the value 0.1 and 0.2 used when writing Debye grid caches; it is kept so that
+# old caches and new scans of one surface agree exactly. The VSCF/VCI transition
+# moments use the CODATA value constants.ATOMIC_DIPOLE_TO_DEBYE (2.541746473);
+# the two differ by 1.9e-7 relative, far below any physical significance.
 AU_DIPOLE_TO_DEBYE = 2.541746
 POINT_SCHEMA_VERSION = 1
 
@@ -129,7 +134,7 @@ class ElectronicPointRequest:
         return payload_fingerprint(self.causal_payload(provider_scientific_fingerprint))
 
     def fingerprint(self, provider_scientific_fingerprint: str) -> str:
-        """Deprecated spelling of :meth:`causal_fingerprint`."""
+        """Deprecated spelling of ``causal_fingerprint``."""
 
         deprecated("ElectronicPointRequest.fingerprint() is deprecated; use causal_fingerprint().")
         return self.causal_fingerprint(provider_scientific_fingerprint)

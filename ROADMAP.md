@@ -13,16 +13,9 @@ subcommand command line, and VSCF intensities. Planned for 0.4:
 
 - Remove the APIs deprecated in 0.3 (the 0.2 tuple scan functions, schema-3
   writers, the flag-style command line, compatibility spellings).
-- Move constrained relaxed scans onto the plan runner and point store.
 - Optional GPU4PySCF execution (`device="gpu"`) once a benchmark on supported
   hardware shows a worthwhile speed-up and CPU/GPU parity tests pass; the
   construction seam already converts arrays to NumPy at its boundary.
-- Unify the two atomic-unit-to-Debye constants (2.541746 for scans,
-  2.541746473 for VCI/VSCF moments).
-- A documentation site generated from the docstrings (every public object
-  is documented as of 0.3).
-- Shorter dataclass validators and save/load code split out of `vci.py` and
-  `nmode.py`.
 
 Later:
 
@@ -36,6 +29,9 @@ Later:
   kinetic-energy operators beyond the current triatomic `J=0` implementation.
 - Full-dimensional workflows and broader chemical-coordinate support.
 - Exactly constrained relaxed local-bond (`lbs-relaxed`) scans.
+- Constrained relaxed normal-coordinate scans on the plan runner and point
+  store, so that interrupted relaxed scans can resume (they cannot yet), if
+  these scans see enough use to justify a dedicated request type.
 - DIIS or quasi-Newton acceleration for difficult VSCF iterations.
 - Larger-system sparse modal solvers.
 

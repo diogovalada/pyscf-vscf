@@ -69,7 +69,8 @@ unattempted points.
 | `Bond.O`, `Bond.H` | `Bond.i`, `Bond.j` |
 
 `grid_1d_pes_dms_normal_relaxed` (constrained relaxed scans) is not
-deprecated; it moves onto the runner in a later release.
+deprecated and is not on the plan runner: relaxed scans cannot use a point
+store, so an interrupted relaxed scan starts again from the beginning.
 
 ### Your own PySCF method
 

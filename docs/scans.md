@@ -68,6 +68,12 @@ attempts every point. In both cases completed points are kept.
 The CLI chooses workers automatically: up to one per CPU, limited by the
 number of points and by memory (see [installation](installation.md)).
 
+Constrained relaxed normal-coordinate scans (`scan1d --coordinate
+normal-relaxed`, `grid_1d_pes_dms_normal_relaxed`) optimize every other
+coordinate at each point and do not run on the plan runner: they cannot use a
+point store or scan files, so an interrupted relaxed scan starts again from
+the beginning.
+
 ## Grids
 
 Bond grids default to a range around the bond length in the input geometry,

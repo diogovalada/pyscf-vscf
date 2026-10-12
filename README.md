@@ -42,9 +42,9 @@ pyscf-vscf scan1d water-opt.xyz --bond 0-1 --method b3lyp --basis cc-pvdz \
 ```text
 v  nu/cm^-1   mu_axis/D   I_axis/(km/mol)   int_axis/(m^2/s)   orientation: polarized along bond axis
 1   3644.8     2.6930e-02     1.9877e+01     6.2173e-11
-2   7136.8     8.8835e-03     4.2353e+00     1.3247e-11
+2   7136.8    -8.8835e-03     4.2353e+00     1.3247e-11
 3  10481.2     2.0528e-03     3.3214e-01     1.0389e-12
-4  13683.0     4.9706e-04     2.5422e-02     7.9517e-14
+4  13683.0    -4.9706e-04     2.5422e-02     7.9517e-14
 ```
 
 Bonds are zero-based atom indices. The 41 points run in parallel
@@ -177,6 +177,9 @@ APIs deprecated in 0.3 (the 0.2 tuple scans, schema-3 cache writers, and the
 flag-style command line) keep working with a warning and are removed in 0.4.
 
 ## Documentation
+
+The [documentation site](https://diogovalada.github.io/pyscf-vscf/) has
+tutorials, guides, and the API reference. The guides are also in `docs/`:
 
 - [Scans, the point store, and parallel runs](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/scans.md)
 - [Migrating from 0.2](https://github.com/diogovalada/pyscf-vscf/blob/v0.3.0/docs/migration-0.3.md)
