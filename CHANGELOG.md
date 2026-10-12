@@ -69,11 +69,11 @@ with a `PyscfVscfDeprecationWarning`, and will be removed in 0.4. See the
 - Damped VSCF (`modal_mixing < 1`) could report convergence too early.
 - The command line's harmonic output omitted imaginary frequencies.
 - Optimization let geomeTRIC replace and close the caller's logging handlers.
-- Fitted surfaces could change if the caller later modified the input arrays.
 - Multilevel composition accepted models of different molecules or charge
   states, and rejected cubic fits.
-- Fractional charge or spin was truncated, and negative bond indices,
-  non-finite masses, and invalid kinetic G matrices were accepted.
+- Stricter input checks: fractional charge or spin (previously truncated),
+  negative bond indices, non-finite masses, and invalid kinetic G matrices
+  are now refused.
 
 ### Deprecated
 
