@@ -9,9 +9,10 @@ interfaces remain evolving alpha APIs.
 
 0.3 added one PySCF construction seam with user-supplied method recipes, a
 resumable point store and plan runner, typed scans with schema-4 files, a
-subcommand command line, and VSCF intensities. 0.4 added optional GPU
-execution through GPU4PySCF (`device="gpu"`) and removed the APIs deprecated
-in 0.3.
+subcommand command line, and VSCF intensities. 0.4 adds optional GPU
+execution through GPU4PySCF (`device="gpu"`). Planned for 0.4: remove the
+APIs deprecated in 0.3 (the 0.2 tuple scan functions, schema-3 writers, the
+flag-style command line, compatibility spellings).
 
 Later:
 

@@ -78,7 +78,8 @@ density fitting, and the GPU's double-precision throughput, so measure it
 for your own calculations (`scripts/gpu_benchmark.py`). As one example, an
 RTX 3060 (a consumer card, whose double precision is 1/64 of its single
 precision) against one core of an AMD EPYC 7402, energy and dipole of one
-point (`validation_data/gpu/benchmark-rtx3060.json`):
+point (`validation_data/gpu/benchmark-rtx3060.json`). *CPU cores matched* is
+the CPU time divided by the GPU time:
 
 | Molecule | Method | Density fitting | CPU, 1 core (s) | GPU (s) | CPU cores matched |
 | --- | --- | --- | --- | --- | --- |
@@ -94,9 +95,11 @@ A 24-point water bond scan at ωB97X/aug-cc-pVTZ with density fitting ran at
 95, 120, and 124 points per minute with one, two, and three workers sharing
 the GPU, and at 122 points per minute on three CPU cores.
 
-- On this card the GPU matched one to six CPU cores; it helps most with
-  density fitting and larger molecules or basis sets.
-- For small molecules without density fitting, the CPU is faster.
+- On this card the ratio ranged from 0.03 to 5.5. It was largest (1.5-5.5)
+  for DFT with density fitting, and grew with the molecule and basis set.
+- For small molecules the CPU was faster in most cases: HF on water, with or
+  without density fitting, and DFT without density fitting in small basis
+  sets (ωB97X/aug-cc-pVTZ water without density fitting was a tie).
 - GPUs with fast double precision (V100, A100, H100) can be expected to do
   considerably better; these numbers do not measure them.
 - Several workers can share one GPU (`--workers`); for small molecules this
