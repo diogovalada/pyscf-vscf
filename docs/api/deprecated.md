@@ -9,6 +9,8 @@ do not warn, such as the provenance helpers in `cache`, are not deprecated.
 under the same names.
 
 ::: pyscf_vscf.workflows.scans
+    options:
+      filters: ["!^_", "!^Bond$", "!^parse_bond$"]
 
 ::: pyscf_vscf.electronic
     options:

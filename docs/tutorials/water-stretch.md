@@ -66,8 +66,11 @@ ground state to `v` quanta of the stretch:
   [intensity conventions](../intensity-conventions.md)).
 
 `--store water.sqlite` keeps every electronic point: if the run is
-interrupted or a point fails, running the same command again resumes from
-the stored points. `--output oh.npz` keeps the finished scan.
+interrupted, running the same command again resumes from the stored points.
+Points that failed (for example, an SCF that did not converge) are recorded
+and not retried automatically; add `--retry-failed` to try them again, and
+`--continue-on-error` to evaluate the remaining points after a failure.
+`--output oh.npz` keeps the finished scan.
 
 ## More states, isotropic intensities
 
@@ -173,9 +176,10 @@ and dipoles (atomic units); `dump_scan` and `load_scan` in
 ## Local and normal modes
 
 `pyscf-vscf harmonic water-opt.xyz --method b3lyp --basis cc-pvdz` reports
-harmonic normal-mode frequencies of 1658.5, 3749.9, and 3851.0 cm^-1. These
-describe the symmetric and antisymmetric combinations of both stretches, not
-the single local O-H stretch scanned here, so they are not directly
-comparable with the 3644.8 cm^-1 fundamental. For coupled stretches, use
+harmonic normal-mode frequencies of 1658.5 cm^-1 (the bend) and 3749.9 and
+3851.0 cm^-1. The latter two are the symmetric and antisymmetric
+combinations of both stretches, not the single local O-H stretch scanned
+here, so they are not directly comparable with the 3644.8 cm^-1
+fundamental. For coupled stretches, use
 `scan2d` with both bonds, or the n-mode workflow in the
 [next tutorial](water-vscf-vci.md).

@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
-AMU = 1822.888486209  # electron masses
+AMU = 1822.888486209
+"""One unified atomic mass unit (dalton) in electron masses."""
 ANG_TO_BOHR = 1.889726124565062
+"""Bohr radii per angstrom."""
 HARTREE_TO_CM = 219474.6313705
-ATOMIC_DIPOLE_TO_DEBYE = 2.541746473  # CODATA; scans use contracts.AU_DIPOLE_TO_DEBYE
+"""Wavenumbers (cm^-1) per hartree."""
+ATOMIC_DIPOLE_TO_DEBYE = 2.541746473
+"""Debye per atomic unit of dipole (CODATA), used by the VSCF/VCI transition
+moments; the scan stack uses ``contracts.AU_DIPOLE_TO_DEBYE`` (2.541746)."""
 DEBYE_TO_CM = 3.33564e-30
+"""Coulomb-metres (C m) per debye; "CM" is the SI unit, not wavenumbers."""
 SPEED_OF_LIGHT_M_S = 299792458.0
+"""Speed of light in vacuum, m s^-1."""
 VACUUM_PERMITTIVITY_F_M = 8.8541878128e-12
+"""Vacuum permittivity, F m^-1."""
 HBAR_J_S = 1.054571817e-34
+"""Reduced Planck constant, J s."""
 AVOGADRO_MOL_INV = 6.02214076e23
+"""Avogadro constant, mol^-1."""
 
 MASS_AMU = {
     "C": 12.0,
@@ -21,6 +31,9 @@ MASS_AMU = {
     "N": 14.00307400443,
     "O": 15.99491461957,
 }
+"""Most-abundant-isotope masses (amu) for these elements, plus deuterium.
+Other elements fall back to PySCF's ``elements.MASSES`` (standard atomic
+weights, not single-isotope masses)."""
 
 
 ELEMENT_SYMBOLS = tuple(
@@ -30,6 +43,7 @@ ELEMENT_SYMBOLS = tuple(
     Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc
     Lv Ts Og""".split()
 )
+"""Element symbols ordered by atomic number (``ELEMENT_SYMBOLS[0]`` is H)."""
 _ATOMIC_NUMBERS = {symbol.upper(): index for index, symbol in enumerate(ELEMENT_SYMBOLS, 1)}
 
 
