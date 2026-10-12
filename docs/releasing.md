@@ -13,7 +13,9 @@ committed.
    `git ls-files --others --exclude-standard`; account for every local file and
    verify that the release branch is synchronized with its upstream.
 2. Confirm `CHANGELOG.md`, `CITATION.cff`, `pyproject.toml`, and
-   `pyscf_vscf.__version__` agree.
+   `pyscf_vscf.__version__` agree. The archived reports record the package
+   version, so step 3's regenerated reports must be committed with the
+   version bump; CI fails otherwise.
 3. Run the pure and PySCF test suites, regenerate both archived
    validation reports, and compare them with the committed reports using
    `scripts/compare_validation_reports.py`. The comparison requires identical
