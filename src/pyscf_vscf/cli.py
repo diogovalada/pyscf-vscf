@@ -178,6 +178,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "--dft-grid-level", type=int, default=None, help="DFT grid level (default: 3)"
         )
         group.add_argument(
+            "--device",
+            choices=["cpu", "gpu"],
+            default=None,
+            help=(
+                "run the electronic structure on the CPU (PySCF) or a GPU (GPU4PySCF, "
+                "installed with the gpu-cuda12 or gpu-cuda13 extra) (default: cpu)"
+            ),
+        )
+        group.add_argument(
             "--recipe",
             default=None,
             metavar="MODULE:NAME",
@@ -208,7 +217,7 @@ def _build_parser() -> argparse.ArgumentParser:
             default=None,
             help=(
                 "worker processes for scan points (default: automatic, limited by CPUs, "
-                "points, and available memory)"
+                "points, and available memory; with --device gpu, one per GPU)"
             ),
         )
         group.add_argument(
@@ -474,6 +483,8 @@ def _prepare_scan(context: _Context, parser: argparse.ArgumentParser) -> None:
                 "--reuse reads a finished scan; it cannot be combined with --store/--output"
             )
         explicit = [flag for flag, name in _METHOD_OPTIONS if getattr(args, name) is not None]
+        if args.device is not None:
+            explicit.append("--device")
         if args.range is not None:
             explicit.append("--range")
         if explicit:
@@ -499,8 +510,15 @@ def _prepare_method(context: _Context) -> None:
     import os
 
     args = context.args
+    device = args.device or "cpu"
     if args.recipe is not None:
         context.factory = _load_recipe(args.recipe)
+        if args.device is not None:
+            on_device = getattr(context.factory, "on_device", None)
+            if callable(on_device):
+                context.factory = on_device(device)
+            elif getattr(context.factory, "device", "cpu") != device:
+                raise _CLIError(f"{args.recipe} cannot be moved to --device {device}")
     else:
         defaults = ESSettings()
         context.settings = ESSettings(
@@ -511,11 +529,26 @@ def _prepare_method(context: _Context) -> None:
             scf_conv_tol=args.scf_conv_tol,
             scf_max_cycle=args.scf_max_cycle,
             dft_grid_level=args.dft_grid_level,
+            device=device,
         )
         context.factory = SettingsFactory(context.settings)
 
     max_parallel = args.max_parallel or available_cpu_count() or DEFAULT_MAX_PARALLEL
     computing = args.command in {"scan1d", "scan2d"} and args.reuse is None
+    workers = args.workers
+    if getattr(context.factory, "device", "cpu") == "gpu" and (
+        args.command in {"harmonic", "opt"} or computing
+    ):
+        from .backends._gpu import require_gpu, visible_gpu_ids
+
+        try:
+            require_gpu()
+            gpu_ids = visible_gpu_ids()
+        except (ImportError, RuntimeError) as exc:
+            raise _CLIError(str(exc)) from exc
+        if workers is None and computing:
+            # One worker per GPU; more can share a GPU with --workers.
+            workers = len(gpu_ids)
     n_points = None
     if computing:
         from .scans import DEFAULT_BOND_GRID_POINTS
@@ -527,9 +560,9 @@ def _prepare_method(context: _Context) -> None:
     parallel = derive_parallel_settings(
         args.command if computing else "harmonic",
         max_parallel=max_parallel,
-        pes_workers=args.workers,
+        pes_workers=workers,
         n_points=n_points,
-        available_memory_mb=available_memory_mb() if computing and args.workers is None else None,
+        available_memory_mb=available_memory_mb() if computing and workers is None else None,
         max_memory_mb=args.max_memory,
     )
     context.parallel = parallel
@@ -755,7 +788,8 @@ def _run_relaxed_scan(context: _Context) -> dict[str, Any]:
     grid = context.grids[0] if context.grids else _default_normal_grid()
     parallel = context.parallel
     executor_factory = None
-    if parallel.workers and parallel.workers > 1:
+    # Relaxed points on a GPU run in this process: its workers are not pinned to devices.
+    if parallel.workers and parallel.workers > 1 and context.provider.device != "gpu":
         executor_factory = partial(
             ProcessPoolExecutor,
             max_workers=parallel.workers,

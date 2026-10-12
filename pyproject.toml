@@ -50,6 +50,16 @@ dev = [
     "mypy>=1.10",
     "twine"
 ]
+# GPU execution through GPU4PySCF (Linux, NVIDIA compute capability 7.0+).
+# The ctk extra installs the CUDA libraries CuPy needs from PyPI.
+gpu-cuda12 = [
+    "gpu4pyscf-cuda12x>=1.8; sys_platform == 'linux'",
+    "cupy-cuda12x[ctk]>=13; sys_platform == 'linux'"
+]
+gpu-cuda13 = [
+    "gpu4pyscf-cuda13x>=1.8; sys_platform == 'linux'",
+    "cupy-cuda13x[ctk]>=13; sys_platform == 'linux'"
+]
 docs = [
     "mkdocs>=1.6,<2",
     "mkdocs-material>=9.5,<10",
@@ -72,6 +82,7 @@ markers = [
     "slow: slow tests not intended for default local runs",
     "scientific: scientific regression or benchmark checks",
     "cache: requires existing cache artifacts",
+    "gpu: requires GPU4PySCF and a CUDA device (run manually on GPU hardware)",
 ]
 
 [tool.ruff]

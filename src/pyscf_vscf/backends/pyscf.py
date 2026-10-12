@@ -88,7 +88,9 @@ class PySCFMeanFieldProvider:
     is advisory: worker processes apply it at start-up, and ``evaluate``
     never changes PySCF's process-wide thread count. ``max_memory_mb`` is the
     PySCF memory budget of each calculation; by default the runner's worker
-    budget (``RunnerSettings.max_memory_mb``) applies, else 4000 MB.
+    budget (``RunnerSettings.max_memory_mb``) applies, else 4000 MB. The
+    method's ``device`` (``ESSettings.device`` or ``MethodRecipe.device``)
+    selects CPU or GPU execution.
     """
 
     settings: object = None
@@ -185,6 +187,12 @@ class PySCFMeanFieldProvider:
             },
         }
 
+    @property
+    def device(self) -> str:
+        """``"cpu"`` or ``"gpu"``: where the method runs."""
+
+        return str(getattr(self.factory, "device", "cpu"))
+
     def memory_budget_mb(self) -> int:
         """Return the PySCF memory budget: ``max_memory_mb``, else the
         ``PYSCF_VSCF_MAX_MEMORY_MB`` worker setting, else 4000 MB."""
@@ -196,13 +204,18 @@ class PySCFMeanFieldProvider:
     def execution_provenance(self) -> Mapping[str, object]:
         """Return runtime resources and software versions outside causal identity."""
 
-        return {
+        provenance: dict[str, object] = {
             "threads_requested": self.threads,
             "max_memory_mb": self.memory_budget_mb(),
             "host": gethostname(),
             "user_annotations": to_jsonable(self.user_annotations),
             "runtime": runtime_provenance(),
         }
+        if self.device == "gpu":
+            from ._gpu import gpu_provenance
+
+            provenance["gpu"] = gpu_provenance()
+        return provenance
 
     def evaluate(self, request: ElectronicPointRequest) -> ElectronicResult:
         """Evaluate one immutable request without changing its causal identity."""

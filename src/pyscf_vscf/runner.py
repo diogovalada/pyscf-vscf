@@ -57,6 +57,11 @@ class RunnerSettings:
     bounds submitted work (default: twice the worker count). Thread limits
     need the default ``spawn`` start method, because forked workers inherit
     the parent's already-started thread pools.
+
+    For a GPU provider (``provider.device == "gpu"``) each worker is pinned to
+    one visible CUDA device, round-robin, so ``workers`` is the total over all
+    GPUs; GPU workers need ``spawn``, because CUDA cannot be used after
+    ``fork``.
     """
 
     workers: int | None = None
@@ -181,6 +186,13 @@ def run_plan(
     for key, request in requests.items():
         if request.causal_fingerprint(provider_id) != key:
             raise ValueError("A plan request does not match its point causal fingerprint")
+    gpu_ids: tuple[str, ...] = ()
+    if policy.workers is not None and str(getattr(provider, "device", "cpu")) == "gpu":
+        if policy.start_method != "spawn":
+            raise ValueError("GPU workers need start_method='spawn': CUDA cannot be forked")
+        from .backends._gpu import visible_gpu_ids
+
+        gpu_ids = visible_gpu_ids()
 
     results: dict[str, ElectronicResult] = {}
     failures: dict[str, PointFailure] = {}
@@ -312,6 +324,7 @@ def run_plan(
                 abandon,
                 failures,
                 attempted,
+                gpu_ids,
             )
     except KeyboardInterrupt:
         interrupted = True
@@ -350,6 +363,7 @@ def _run_parallel(
     abandon: Callable[[str, int | None], None],
     failures: Mapping[str, PointFailure],
     attempted: set[str],
+    gpu_ids: tuple[str, ...] = (),
 ) -> str | None:
     """Evaluate ``pending`` in worker processes; return an executor error, if any.
 
@@ -367,6 +381,8 @@ def _run_parallel(
         ) from exc
     workers = int(policy.workers or 1)
     limit = int(policy.max_in_flight or 2 * workers)
+    context = mp.get_context(policy.start_method)
+    gpu_counter = context.Value("i", 0) if gpu_ids else None
     queue = list(pending)
     in_flight: dict[Future, tuple[str, int | None]] = {}
     executor_error: str | None = None
@@ -397,9 +413,9 @@ def _run_parallel(
         environment.apply()
         executor = ProcessPoolExecutor(
             max_workers=workers,
-            mp_context=mp.get_context(policy.start_method),
+            mp_context=context,
             initializer=_worker_init,
-            initargs=(policy.threads_per_worker, policy.max_memory_mb),
+            initargs=(policy.threads_per_worker, policy.max_memory_mb, gpu_ids, gpu_counter),
         )
     except Exception as exc:
         environment.restore()
@@ -505,9 +521,20 @@ def validate_result(
         raise ValueError("Result is missing the requested dipole")
 
 
-def _worker_init(threads: int | None, max_memory_mb: int | None) -> None:
+def _worker_init(
+    threads: int | None,
+    max_memory_mb: int | None,
+    gpu_ids: tuple[str, ...] = (),
+    gpu_counter: Any = None,
+) -> None:
     from .settings import MAX_MEMORY_ENV_VAR, apply_thread_env_updates
 
+    if gpu_ids:
+        # Before anything initializes CUDA in this process.
+        with gpu_counter.get_lock():
+            index = int(gpu_counter.value)
+            gpu_counter.value = index + 1
+        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_ids[index % len(gpu_ids)]
     apply_thread_env_updates(threads, os.environ)
     if max_memory_mb is not None:
         os.environ[MAX_MEMORY_ENV_VAR] = str(int(max_memory_mb))

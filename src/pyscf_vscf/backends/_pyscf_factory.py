@@ -22,12 +22,13 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
 from .._arrays import immutable_array
+from . import _gpu
 from .._identity import FrozenJSONMapping, immutable_json_mapping, payload_fingerprint
 from ..settings import (
     ESSettings,
@@ -178,6 +179,7 @@ class SettingsFactory:
     Unset SCF controls resolve to the package defaults, and the auxiliary
     basis resolves to its default for the main basis. Restricted references
     are used for closed shells and unrestricted ones otherwise.
+    ``settings.device`` selects CPU (PySCF) or GPU (GPU4PySCF) execution.
     """
 
     settings: ESSettings
@@ -205,13 +207,24 @@ class SettingsFactory:
                 scf_conv_tol=controls.conv_tol,
                 scf_max_cycle=controls.max_cycle,
                 dft_grid_level=controls.dft_grid_level,
+                device=_gpu.normalize_device(settings.device),
             ),
         )
 
-    def scientific_settings_payload(self) -> Mapping[str, object]:
-        """Return the resolved settings that define the built-in method."""
+    @property
+    def device(self) -> str:
+        """``"cpu"`` or ``"gpu"``."""
 
-        return {
+        return self.settings.device
+
+    def scientific_settings_payload(self) -> Mapping[str, object]:
+        """Return the resolved settings that define the built-in method.
+
+        ``device`` appears only for GPU methods, so CPU identities are those of
+        earlier releases.
+        """
+
+        payload: dict[str, object] = {
             "method": self.settings.method,
             "basis": self.settings.basis,
             "use_density_fit": self.settings.use_density_fit,
@@ -220,6 +233,9 @@ class SettingsFactory:
             "scf_max_cycle": self.settings.scf_max_cycle,
             "dft_grid_level": self.settings.dft_grid_level,
         }
+        if self.settings.device != "cpu":
+            payload["device"] = self.settings.device
+        return payload
 
     def build_molecule(self, system: ElectronicSystem) -> Any:
         """Build a ``gto.Mole`` in angstrom with the configured basis."""
@@ -295,6 +311,10 @@ class MethodRecipe:
     ``variable_snapshot_fields`` declares snapshot fields that may
     legitimately change with geometry; every other snapshot field must agree
     between builds.
+
+    ``device="gpu"`` converts the configured mean field with ``to_gpu()``
+    (GPU4PySCF); ``mean_field`` itself still returns a CPU object. The
+    ``implementation`` then defaults to ``"gpu4pyscf"``.
     """
 
     recipe_id: str
@@ -307,8 +327,12 @@ class MethodRecipe:
     implementation: str = "pyscf-cpu"
     implementation_digest: str | None = None
     variable_snapshot_fields: tuple[str, ...] = ()
+    device: str = "cpu"
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "device", _gpu.normalize_device(self.device))
+        if self.device == "gpu" and str(self.implementation).strip() == "pyscf-cpu":
+            object.__setattr__(self, "implementation", "gpu4pyscf")
         for name in ("recipe_id", "recipe_version", "implementation"):
             value = str(getattr(self, name)).strip()
             if not value:
@@ -332,9 +356,26 @@ class MethodRecipe:
             "variable_snapshot_fields",
             tuple(sorted(str(name) for name in self.variable_snapshot_fields)),
         )
+        if self.device == "cpu" and self.implementation == "gpu4pyscf":
+            raise ValueError("implementation='gpu4pyscf' needs device='gpu'")
         if self.implementation_digest is not None:
             digest = str(self.implementation_digest).strip()
             object.__setattr__(self, "implementation_digest", digest or None)
+
+    def on_device(self, device: str) -> MethodRecipe:
+        """Return this recipe for ``device`` (``"cpu"`` or ``"gpu"``).
+
+        The default implementation names follow the device; a custom
+        ``implementation`` is kept.
+        """
+
+        device = _gpu.normalize_device(device)
+        if device == self.device:
+            return self
+        implementation = self.implementation
+        if implementation in {"pyscf-cpu", "gpu4pyscf"}:
+            implementation = "gpu4pyscf" if device == "gpu" else "pyscf-cpu"
+        return replace(self, device=device, implementation=implementation)
 
     def scientific_settings_payload(self) -> Mapping[str, object]:
         """Return the manifest that identifies the recipe."""
@@ -353,6 +394,7 @@ class MethodRecipe:
             if self.molecule is None
             else _callable_name(self.molecule),
             "variable_snapshot_fields": list(self.variable_snapshot_fields),
+            **({"device": self.device} if self.device != "cpu" else {}),
         }
 
     def build_molecule(self, system: ElectronicSystem) -> Any:
@@ -388,7 +430,10 @@ def build_mean_field(
     """Build the molecule and configured mean field for ``system``.
 
     The molecule must reproduce the system's nuclei, geometry, charge, and
-    spin; the mean field must be unconverged and bound to that molecule.
+    spin; the mean field must be unconverged and bound to that molecule. For a
+    factory with ``device == "gpu"`` the configured mean field is converted
+    with ``to_gpu()``; a factory that returns a GPU object itself must declare
+    that device.
     """
 
     policy = resources or PySCFResources()
@@ -405,6 +450,14 @@ def build_mean_field(
         mean_field, "converged", False
     ):
         raise ValueError("The method factory must not run the SCF (do not call kernel())")
+    device = _gpu.normalize_device(getattr(factory, "device", "cpu"))
+    if _gpu.is_gpu_object(mean_field):
+        raise ValueError(
+            "The method factory returned a GPU4PySCF object; return the CPU object and "
+            "set device='gpu' instead, so the method's identity records the device"
+        )
+    if device == "gpu":
+        mean_field = _gpu.to_gpu(mean_field)
     if budget is not None and hasattr(mean_field, "max_memory"):
         mean_field.max_memory = budget
     mean_field.verbose = int(policy.verbose)

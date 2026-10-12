@@ -49,12 +49,22 @@ class ConvergedMeanField:
 
 
 def to_numpy(value: Any) -> np.ndarray:
-    """Return ``value`` as a NumPy array, copying from device memory if needed."""
+    """Return ``value`` as a NumPy array, copying from device memory if needed.
 
-    getter = getattr(value, "get", None)
-    if callable(getter) and type(value).__module__.split(".")[0] == "cupy":
-        value = getter()
+    Device arrays (CuPy, or anything with ``__cuda_array_interface__``) refuse
+    implicit conversion, so they are copied with ``get()``.
+    """
+
+    if _is_device_array(value):
+        value = value.get()
     return np.asarray(value)
+
+
+def _is_device_array(value: Any) -> bool:
+    return callable(getattr(value, "get", None)) and (
+        hasattr(value, "__cuda_array_interface__")
+        or type(value).__module__.split(".")[0] == "cupy"
+    )
 
 
 def apply_electric_field(
@@ -273,7 +283,7 @@ def current_pyscf_threads() -> int | None:
 
 
 def _like(array: np.ndarray, reference: Any) -> Any:
-    if type(reference).__module__.split(".")[0] == "cupy":
+    if _is_device_array(reference):
         import cupy
 
         return cupy.asarray(array)

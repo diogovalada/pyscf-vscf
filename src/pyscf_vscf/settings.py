@@ -49,7 +49,12 @@ BLAS_THREAD_ENV_VARS = (
 
 @dataclass
 class ESSettings:
-    """Inputs that determine an electronic-structure calculation."""
+    """Inputs that determine an electronic-structure calculation.
+
+    ``device="gpu"`` runs the same method through GPU4PySCF (an optional
+    dependency); it is part of the method's identity, so CPU and GPU results
+    are never mixed.
+    """
 
     method: str = "wb97x"
     basis: str = "aug-cc-pVTZ"
@@ -58,6 +63,7 @@ class ESSettings:
     scf_conv_tol: float | None = None
     scf_max_cycle: int | None = None
     dft_grid_level: int | None = None
+    device: str = "cpu"
 
 
 @dataclass(frozen=True)
