@@ -37,7 +37,24 @@ committed.
    repository variable `PUBLISH_TO_PYPI` to `true`.
 10. Review the generated GitHub release notes against the matching changelog
    section.
-11. Read the Docs builds the documentation for the new tag; confirm the build
-   passed and that `stable` now shows the release.
+11. Read the Docs builds the documentation for the new tag (see below);
+   confirm that the tag's build passed. For a new highest final release, also
+   confirm that `stable` now shows it; prereleases and backports below the
+   current highest release do not move `stable`.
 
 Never release from a dirty worktree or by uploading an unreviewed local build.
+
+## Documentation hosting
+
+The documentation is built by Read the Docs (Community, free for open source)
+from `.readthedocs.yaml` and `mkdocs.yml`, for each version from its own
+checkout. Tags created before these files existed (0.3.0 and earlier) cannot
+be built. One-time project setup on readthedocs.org:
+
+- import the GitHub repository; the project slug sets the URL
+  (`pyscf-vscf.readthedocs.io` is assumed by the README and package metadata);
+- set the default version to `stable` once a release containing the build
+  files exists, and to `latest` until then;
+- add an automation rule with version type *Tag*, match *Any version*, and
+  action *Activate version*, so that every new release tag is built (the
+  rule applies to tags created after it).

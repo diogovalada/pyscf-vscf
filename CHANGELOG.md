@@ -8,7 +8,9 @@ once a public release is tagged.
 ### Added
 
 - Documentation site on Read the Docs (MkDocs), with tutorials and an API
-  reference generated from the docstrings, built for every release.
+  reference generated from the docstrings. It is built for `main` (`latest`)
+  and for each release from the first one that contains the build
+  configuration; earlier tags have no documentation build.
 
 ### Changed
 
