@@ -5,6 +5,33 @@ once a public release is tagged.
 
 ## [Unreleased]
 
+0.4 adds optional GPU execution and removes the interfaces deprecated in
+0.3. Stored point stores, scan files, and 0.2 grid caches remain readable.
+See [migrating to 0.4](https://pyscf-vscf.readthedocs.io/en/latest/migration-0.4/).
+
+### Added
+
+- Optional GPU execution through GPU4PySCF: `ESSettings(device="gpu")`,
+  `MethodRecipe(device="gpu")` or `recipe.on_device("gpu")`, `--device gpu` on
+  the command line, and the `gpu-cuda12` and `gpu-cuda13` extras (Linux,
+  NVIDIA compute capability 7.0+). The device is part of the method's
+  identity, so CPU and GPU points are never mixed; CPU identities are
+  unchanged. Scan workers are pinned to GPUs round-robin.
+- `scripts/gpu_parity.py` compares GPU with CPU results, and
+  `scripts/gpu_benchmark.py` measures the speed-up; their RTX 3060 reports are
+  in `validation_data/gpu/`.
+
+### Removed
+
+- The interfaces deprecated in 0.3: the flag-style command line
+  (`--xyz ... --task ...`), `grid_1d_pes_dms`, `grid_1d_pes_dms_normal`,
+  `grid_2d_pes_dms`, `energy_dipole_fn` evaluators, the schema-3 cache writer
+  and loaders (0.2 caches stay readable with `load_legacy_grid` and
+  `--reuse`), `make_mean_field`, `run_opt`, `harmonic_analysis(cfg=...)`, and
+  the old fingerprint and `Bond.O`/`Bond.H` spellings.
+- The scripts that generated the archived NH3 grids now need pyscf-vscf 0.3;
+  validating the archived data does not.
+
 ## [0.3.1] - 2026-10-12
 
 ### Added
