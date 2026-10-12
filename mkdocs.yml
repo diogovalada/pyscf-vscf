@@ -63,6 +63,7 @@ nav:
       - Your own PySCF method: tutorials/custom-method.md
   - Guides:
       - Scans, point store, and parallel runs: scans.md
+      - GPU execution: gpu.md
       - Reusing points and scans: caching.md
       - Intensity conventions: intensity-conventions.md
       - n-mode surfaces and VCI: nmode-vci.md
